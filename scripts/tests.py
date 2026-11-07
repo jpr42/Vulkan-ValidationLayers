@@ -259,7 +259,8 @@ def RunVVLTests(args):
         # These are tests we have decided are worth using Thread Sanitize as it will take about 9x longer to run a test
         # We have also seen TSAN turn bug out and make each test incrementally take longer
         # (https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/8931)
-        positive = ['*SyncVal.*', '*Threading.*', '*SyncObject.*']
+        # VvlCore tests call layer internals directly and need no device, so they are cheap to run under TSan too
+        positive = ['*SyncVal.*', '*Threading.*', '*SyncObject.*', 'VvlCore*']
         negative = ['*Video*']
     else:
         run_syncval_without_core = True

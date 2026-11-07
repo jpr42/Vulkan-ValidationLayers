@@ -20,8 +20,8 @@
 
 LIBRARY VkLayer_khronos_validation
 EXPORTS
-vkGetInstanceProcAddr
-vkGetDeviceProcAddr
-vkEnumerateInstanceLayerProperties
-vkEnumerateInstanceExtensionProperties
-vkNegotiateLoaderLayerInterfaceVersion
+vkGetInstanceProcAddr PRIVATE
+vkGetDeviceProcAddr PRIVATE
+vkEnumerateInstanceLayerProperties PRIVATE
+vkEnumerateInstanceExtensionProperties PRIVATE
+vkNegotiateLoaderLayerInterfaceVersion PRIVATE

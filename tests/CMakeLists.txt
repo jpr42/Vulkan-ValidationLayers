@@ -337,6 +337,15 @@ set(TEST_SOURCES
     unit/ray_tracing_spheres_positive.cpp
     vvl_utils/small_vector.cpp
     vvl_utils/pnext_chain_extraction.cpp
+    vvl_core/dispatch_instance.cpp
+    vvl_core/dispatch_key_lookup.cpp
+    vvl_core/fence.cpp
+    vvl_core/gpuav_shared_resources_cache.cpp
+    vvl_core/handle_wrapper.cpp
+    vvl_core/object_lifetimes.cpp
+    vvl_core/range_map.cpp
+    vvl_core/range_map_erase.cpp
+    vvl_core/thread_safety_counter.cpp
 )
 vvl_add_test_sources(vk_layer_validation_tests ${TEST_SOURCES})
 
@@ -370,9 +379,9 @@ add_dependencies(vk_layer_validation_tests vvl)
 option(VVL_MOCK_ANDROID "Enable building for Android on desktop for testing with MockICD setup")
 if(VVL_MOCK_ANDROID)
     # We don't want to build the android APK, so we just set the minimum Android settings
-    target_sources(VkLayer_utils PRIVATE android/mock/android/hardware_buffer.cpp)
-    target_compile_definitions(VkLayer_utils PUBLIC VK_USE_PLATFORM_ANDROID_KHR VVL_MOCK_ANDROID __ANDROID__)
-    target_include_directories(VkLayer_utils SYSTEM PUBLIC android/mock)
+    target_sources(vvl_core PRIVATE android/mock/android/hardware_buffer.cpp)
+    target_compile_definitions(vvl_core PUBLIC VK_USE_PLATFORM_ANDROID_KHR VVL_MOCK_ANDROID __ANDROID__)
+    target_include_directories(vvl_core SYSTEM PUBLIC android/mock)
 elseif (ANDROID)
     add_subdirectory(android)
     return()

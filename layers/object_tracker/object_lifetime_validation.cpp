@@ -61,28 +61,37 @@ VulkanTypedHandle ObjTrackStateTypedHandle(const ObjectState& track_state) {
 
 void ObjectState::MakePoisonous(Tracker& tracker, VulkanTypedHandle poisoner,
                                 const std::vector<VulkanTypedHandle>& parent_poison_chain) {
-    auto lock = WriteLock();
-    if ((status_flags & kObjectStatusPoisoned) != 0) {
-        return;  // Already poisoned, once is enough
-    }
+    // Copy what is needed under the lock and propagate after releasing it, so this object's lock is never held while
+    // taking another one (see Tracker::RecordDestroyObject)
+    std::vector<VulkanTypedHandle> poisonees;
+    std::vector<VulkanTypedHandle> chain;
+    {
+        auto lock = WriteLock();
+        if ((status_flags & kObjectStatusPoisoned) != 0) {
+            return;  // Already poisoned, once is enough
+        }
 
-    status_flags |= kObjectStatusPoisoned;
+        status_flags |= kObjectStatusPoisoned;
 
-    assert(poison_chain.empty());
-    poison_chain.insert(poison_chain.begin(), parent_poison_chain.begin(), parent_poison_chain.end());
-    poison_chain.emplace_back(poisoner);
+        assert(poison_chain.empty());
+        poison_chain.insert(poison_chain.begin(), parent_poison_chain.begin(), parent_poison_chain.end());
+        poison_chain.emplace_back(poisoner);
 
-    // Stop propagating poisoness if current object is pipeline layout and maintenance4 is enabled.
-    // Pipeline layout itself remains poisoned (you can't use it) but all the objects that used it
-    // upon creation are still valid (according to maintenance4).
-    if (object_type == kVulkanObjectTypePipelineLayout && tracker.IsMaintenance4Enabled()) {
-        return;
+        // Stop propagating poisoness if current object is pipeline layout and maintenance4 is enabled.
+        // Pipeline layout itself remains poisoned (you can't use it) but all the objects that used it
+        // upon creation are still valid (according to maintenance4).
+        if (object_type == kVulkanObjectTypePipelineLayout && tracker.IsMaintenance4Enabled()) {
+            return;
+        }
+
+        poisonees.assign(objects_to_poison.begin(), objects_to_poison.end());
+        chain = poison_chain;
     }
 
     // Propagate poisoness to the users of this object
-    for (VulkanTypedHandle poisonee : objects_to_poison) {
+    for (VulkanTypedHandle poisonee : poisonees) {
         if (auto poisonee_state = tracker.GetObjectState(poisonee)) {
-            poisonee_state->MakePoisonous(tracker, ObjTrackStateTypedHandle(*this), poison_chain);
+            poisonee_state->MakePoisonous(tracker, ObjTrackStateTypedHandle(*this), chain);
         }
     }
 }
@@ -292,31 +301,35 @@ bool Tracker::ValidateDestroyObject(VulkanTypedHandle object, const VkAllocation
 
 void Tracker::RecordDestroyObject(VulkanTypedHandle object, const Location& loc) {
     if (auto object_state = GetObjectState(object)) {
+        // Poison users of this object (except the scenarios when users don't care)
+        const bool pipeline_layout_maintenance4 = object.type == kVulkanObjectTypePipelineLayout && is_device_maintenance4_enabled_;
+        // Pipeline layouts don't access their set layouts after vkCreatePipelineLayout
+        const bool is_set_layout = object.type == kVulkanObjectTypeDescriptorSetLayout;
+        const bool poison_users = !pipeline_layout_maintenance4 && !is_set_layout;
+
+        // Snapshot the links under this object's lock, then update the linked objects without holding it. Holding it while
+        // locking a linked object can deadlock: destroying a pipeline layout and a pipeline that uses it on two threads
+        // would each hold their own lock while waiting for the other one.
+        std::vector<VulkanTypedHandle> poisonees;
+        std::vector<VulkanTypedHandle> poisoners;
         {
-            // Lock to iterate over objects_to_poison and poisoners arrays
-            // NOTE: another possible solution is to get the snapshots of these array
             auto read_lock = object_state->ReadLock();
-
-            // Poison users of this object (except the scenarios when users don't care)
-            const bool pipeline_layout_maintenance4 =
-                object.type == kVulkanObjectTypePipelineLayout && is_device_maintenance4_enabled_;
-            // Pipeline layouts don't access their set layouts after vkCreatePipelineLayout
-            const bool is_set_layout = object.type == kVulkanObjectTypeDescriptorSetLayout;
-            const bool poison_users = !pipeline_layout_maintenance4 && !is_set_layout;
-
             if (poison_users) {
-                for (VulkanTypedHandle poisonee : object_state->objects_to_poison) {
-                    if (auto poisonee_state = GetObjectState(poisonee)) {
-                        poisonee_state->MakePoisonous(*this, object, {});
-                    }
-                }
+                poisonees.assign(object_state->objects_to_poison.begin(), object_state->objects_to_poison.end());
             }
-            // Tell poisoners no need to poison this object, it's destroyed
-            for (VulkanTypedHandle poisoner : object_state->poisoners) {
-                if (auto poisoner_state = GetObjectState(poisoner)) {
-                    auto poisoner_lock = poisoner_state->WriteLock();
-                    poisoner_state->objects_to_poison.erase(object);
-                }
+            poisoners = object_state->poisoners;
+        }
+
+        for (VulkanTypedHandle poisonee : poisonees) {
+            if (auto poisonee_state = GetObjectState(poisonee)) {
+                poisonee_state->MakePoisonous(*this, object, {});
+            }
+        }
+        // Tell poisoners no need to poison this object, it's destroyed
+        for (VulkanTypedHandle poisoner : poisoners) {
+            if (auto poisoner_state = GetObjectState(poisoner)) {
+                auto poisoner_lock = poisoner_state->WriteLock();
+                poisoner_state->objects_to_poison.erase(object);
             }
         }
         DestroyObjectSilently(object, loc);

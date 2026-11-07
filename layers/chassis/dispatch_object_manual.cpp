@@ -617,7 +617,6 @@ static std::shared_mutex dispatch_lock;
 
 std::atomic<uint64_t> HandleWrapper::global_unique_id{1};
 vvl::concurrent_unordered_map<uint64_t, uint64_t, 4, HashedUint64> HandleWrapper::unique_id_mapping;
-bool HandleWrapper::wrap_handles{true};
 
 // Must be defined before device_data
 static ASHostGeomCacheInitializer as_host_geom_cache_initializer;
@@ -632,7 +631,9 @@ static std::atomic<DispatchDevice*> last_used_device = nullptr;
 
 static DispatchInstance* GetInstanceFromKey(void* key) {
     ReadLockGuard lock(instance_mutex);
-    return instance_data[key].get();
+    // find, not operator[]: inserting on a miss would modify the map under a read lock
+    auto it = instance_data.find(key);
+    return it != instance_data.end() ? it->second.get() : nullptr;
 }
 
 DispatchInstance* GetDispatchInstance(VkInstance instance) { return GetInstanceFromKey(GetDispatchKey(instance)); }
@@ -656,7 +657,9 @@ static DispatchDevice* GetDeviceFromKey(void* key) {
         return last_device;
     }
     ReadLockGuard lock(device_mutex);
-    last_device = device_data[key].get();
+    // find, not operator[]: inserting on a miss would modify the map under a read lock
+    auto it = device_data.find(key);
+    last_device = it != device_data.end() ? it->second.get() : nullptr;
     last_used_device.store(last_device);
     if (!last_device) {
         // If this occurs from atexit() using the layer, it would be better to provide a location where this happened, but
@@ -943,6 +946,7 @@ DispatchDevice::DispatchDevice(DispatchInstance* instance, VkPhysicalDevice gpu,
       host_image_copy_props_copy_dst_layouts(stateless_device_data.host_image_copy_props_copy_dst_layouts),
       phys_dev_ext_props(stateless_device_data.phys_dev_ext_props),
       physical_device(gpu) {
+    wrap_handles = instance->wrap_handles;
     passthrough_handles = vku::FindStructInPNextChain<VkDeviceDeviceMemoryReportCreateInfoEXT>(pCreateInfo->pNext) != nullptr ||
                           enabled_features.reportAddressBinding;
     InitValidationObjects();

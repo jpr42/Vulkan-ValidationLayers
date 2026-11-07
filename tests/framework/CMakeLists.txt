@@ -58,6 +58,9 @@ add_library(vk_test_framework STATIC
     render_pass_helper.cpp
     feature_requirements.h
     feature_requirements.cpp
+    # Loads the Vulkan loader with dlopen()/LoadLibrary(). Generated with the layer code, but only the tests use it.
+    ${VVL_SOURCE_DIR}/layers/${API_TYPE}/generated/vk_function_pointers.h
+    ${VVL_SOURCE_DIR}/layers/${API_TYPE}/generated/vk_function_pointers.cpp
 )
 if (APPLE)
     target_sources(vk_test_framework PRIVATE
@@ -76,7 +79,7 @@ find_package(GTest CONFIG)
 find_package(glslang CONFIG)
 find_package(SPIRV-Tools CONFIG)
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "(GNU|Clang)")
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     target_compile_options(vk_test_framework PUBLIC
         -Wno-sign-compare
         -Wno-shorten-64-to-32
@@ -101,12 +104,13 @@ elseif(MSVC)
 endif()
 
 target_link_libraries(vk_test_framework PUBLIC
-    VkLayer_utils
+    vvl_core
     glslang::SPIRV
     SPIRV-Tools-static
     SPIRV-Headers::SPIRV-Headers
     GTest::gtest
     GTest::gtest_main
+    ${CMAKE_DL_LIBS}
     $<TARGET_NAME_IF_EXISTS:PkgConfig::XCB>
     $<TARGET_NAME_IF_EXISTS:PkgConfig::X11>
     $<TARGET_NAME_IF_EXISTS:PkgConfig::WAYlAND_CLIENT>
@@ -120,10 +124,7 @@ target_compile_definitions(vk_test_framework PRIVATE CONFIG_HEADER_FILE="config_
 
 target_sources(vk_test_framework PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/config_$<CONFIG>.h)
 
-target_include_directories(vk_test_framework PUBLIC
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${VVL_SOURCE_DIR}/layers/external
-)
+target_include_directories(vk_test_framework PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 if(SLANG_INSTALL_DIR)
     target_link_libraries(vk_test_framework PUBLIC slang::slang)

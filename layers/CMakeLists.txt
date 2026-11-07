@@ -21,192 +21,70 @@
 # based on the target API variant (e.g. Vulkan SC)
 set(LAYER_NAME "VkLayer_khronos_validation")
 
-add_library(VkLayer_utils STATIC)
-target_sources(VkLayer_utils PRIVATE
-    containers/container_utils.h
-    containers/custom_containers.h
-    containers/limits.h
-    containers/small_container.h
-    containers/array_range_map.h
-    containers/small_range_map.h
-    containers/small_vector.h
-    containers/span.h
-    error_message/logging.h
-    error_message/logging.cpp
-    error_message/error_location.cpp
-    error_message/error_location.h
-    error_message/record_object.h
-    error_message/log_message_type.h
-    external/xxhash.h
-    external/inplace_function.h
-    ${API_TYPE}/generated/error_location_helper.cpp
-    ${API_TYPE}/generated/error_location_helper.h
-    ${API_TYPE}/generated/feature_requirements_helper.cpp
-    ${API_TYPE}/generated/feature_requirements_helper.h
-    ${API_TYPE}/generated/test_icd_helper.h
-    ${API_TYPE}/generated/pnext_chain_extraction.cpp
-    ${API_TYPE}/generated/pnext_chain_extraction.h
-    ${API_TYPE}/generated/vk_function_pointers.cpp
-    ${API_TYPE}/generated/vk_function_pointers.h
-    ${API_TYPE}/generated/vk_validation_error_messages.cpp
-    ${API_TYPE}/generated/vk_validation_error_messages.h
-    ${API_TYPE}/generated/vk_layer_dispatch_table.h
-    ${API_TYPE}/generated/vk_dispatch_table_helper.h
-    ${API_TYPE}/generated/vk_dispatch_table_helper.cpp
-    ${API_TYPE}/generated/vk_object_types.h
-    ${API_TYPE}/generated/vk_object_types.cpp
-    ${API_TYPE}/generated/vk_api_version.h
-    ${API_TYPE}/generated/vk_extension_helper.h
-    ${API_TYPE}/generated/vk_extension_helper.cpp
-    utils/action_command_utils.h
-    utils/assert_utils.h
-    utils/cast_utils.h
-    utils/convert_utils.cpp
-    utils/convert_utils.h
-    utils/dispatch_utils.cpp
-    utils/dispatch_utils.h
-    utils/file_system_utils.cpp
-    utils/file_system_utils.h
-    utils/hash_util.h
-    utils/hash_util.cpp
-    utils/hash_vk_types.h
-    utils/image_utils.h
-    utils/image_utils.cpp
-    utils/image_layout_utils.h
-    utils/image_layout_utils.cpp
-    utils/lock_utils.h
-    utils/math_utils.h
-    utils/vk_layer_extension_utils.cpp
-    utils/vk_layer_extension_utils.h
-    utils/keyboard.cpp
-    utils/keyboard.h
-    utils/ray_tracing_utils.cpp
-    utils/ray_tracing_utils.h
-    utils/sync_utils.cpp
-    utils/sync_utils.h
-    utils/text_utils.cpp
-    utils/text_utils.h
-    utils/vk_struct_compare.cpp
-    utils/vk_struct_compare.h
-    utils/vk_api_utils.h
-    vk_layer_config.h
-    vk_layer_config.cpp
-)
+# Defines that every VVL target needs and that must match between the layer and the code that links it (tests): they decide
+# which Vulkan structs, entry points and dispatch table entries exist. vvl_core links this PUBLIC, so the layer and the tests get
+# the same set; the test ICD, which does not link vvl_core, links it directly.
+add_library(vvl_defines INTERFACE)
+target_compile_definitions(vvl_defines INTERFACE VK_ENABLE_BETA_EXTENSIONS)
+if(WIN32)
+    target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_WIN32_KHR)
 
-target_link_libraries(VkLayer_utils PUBLIC
-    Vulkan::Headers
-    Vulkan::LayerSettings
-    Vulkan::SafeStruct
-    Vulkan::UtilityHeaders
-    ${CMAKE_DL_LIBS}
-)
-target_include_directories(VkLayer_utils SYSTEM PRIVATE external)
-target_include_directories(VkLayer_utils PUBLIC . ${API_TYPE})
-
-option(USE_CUSTOM_HASH_MAP "Use a custom hashing library that is faster than std::unordered_map and std::unordered_set (default: ON)" ON)
-
-if(DEFINED USE_ROBIN_HOOD_HASHING)
-    message(DEPRECATION "USE_ROBIN_HOOD_HASHING has been deprecated. Please use USE_CUSTOM_HASH_MAP option instead.")
-    set(USE_CUSTOM_HASH_MAP ${USE_ROBIN_HOOD_HASHING})
-endif()
-
-if (USE_CUSTOM_HASH_MAP)
-    message(STATUS "Using parallel_hashmap as custom hash maps")
-    target_compile_definitions(VkLayer_utils PUBLIC USE_CUSTOM_HASH_MAP)
-    # Prefer using a locally installed parallel-hashmap package before using the in-tree sources.
-    # This approach supports installation with package managers such as conan
-    find_package(phmap CONFIG)
-    if (TARGET phmap)
-        target_link_libraries(VkLayer_utils PRIVATE phmap)
-    else()
-        add_subdirectory(external/parallel_hashmap)
+    # Allow usage of unsafe CRT functions and minimize what Windows.h leaks
+    target_compile_definitions(vvl_defines INTERFACE _CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN)
+elseif(ANDROID)
+    target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
+elseif(APPLE)
+    target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_METAL_EXT)
+    if (IOS)
+        target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_IOS_MVK)
+    endif()
+    if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_MACOS_MVK)
     endif()
 else()
-    message(STATUS "Using STL maps instead of custom hash maps")
-endif()
+    option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
+    option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
+    option(BUILD_WSI_XLIB_XRANDR_SUPPORT "Build X11 Xrandr WSI support" ON)
+    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
 
-# Using mimalloc on non-Windows OSes currently results in unit test instability with some
-# OS version / driver combinations. On 32-bit systems, using mimalloc cause an increase in
-# the amount of virtual address space needed, which can also cause stability problems.
-if (WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-   find_package(mimalloc CONFIG)
-   option(USE_MIMALLOC "Use mimalloc, a fast malloc/free replacement library" ${mimalloc_FOUND})
-   if (USE_MIMALLOC)
-      target_compile_definitions(VkLayer_utils PUBLIC USE_MIMALLOC)
-      target_link_libraries(VkLayer_utils PUBLIC mimalloc-static)
-   endif()
-endif()
+    if (BUILD_WSI_XCB_SUPPORT OR BUILD_WSI_XLIB_SUPPORT OR BUILD_WSI_WAYLAND_SUPPORT)
+        find_package(PkgConfig REQUIRED QUIET)
+    endif()
 
-target_compile_options(VkLayer_utils PRIVATE "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4100,-Wno-unused-parameter>")
+    # GLOBAL: the tests (a sibling directory) link these imported targets too
+    if(BUILD_WSI_XCB_SUPPORT)
+        pkg_check_modules(XCB REQUIRED QUIET IMPORTED_TARGET GLOBAL xcb)
+        target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_XCB_KHR)
+    endif()
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    target_compile_options(VkLayer_utils PRIVATE
-        -Wno-sign-conversion
-        -Wno-implicit-int-conversion
-    )
-elseif(MSVC)
-    target_compile_options(VkLayer_utils PRIVATE
-        /wd4324 # padding
-        /wd4458 # hiding class member
-        /wd4457 # hiding function parameter
-        /wd4702 # unreachable code
-        /wd4389 # signed/unsigned mismatch
-    )
-endif()
+    if(BUILD_WSI_XLIB_SUPPORT)
+        pkg_check_modules(X11 REQUIRED QUIET IMPORTED_TARGET GLOBAL x11)
+        target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_XLIB_KHR)
+        if(BUILD_WSI_XLIB_XRANDR_SUPPORT)
+            pkg_check_modules(XRANDR REQUIRED QUIET IMPORTED_TARGET GLOBAL xrandr)
+            target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_XLIB_XRANDR_EXT)
+        endif()
+    endif()
 
-if(APPLE)
-    # Github runners recently updated from Apple Clang 17 to 21
-    # This caused issues with the current custom hash solution
-    target_compile_options(VkLayer_utils PUBLIC
-        -Wno-deprecated-declarations
-    )
-endif()
-
-option(DEBUG_CAPTURE_KEYBOARD "Every QueueSubmit if F1 is pressed, a DebugCapture function will be called and a custom action can be done (default: OFF)" OFF)
-if (DEBUG_CAPTURE_KEYBOARD)
-    target_compile_definitions(VkLayer_utils PUBLIC DEBUG_CAPTURE_KEYBOARD)
-    if(WIN32)
-    else()
-        # needed for XQueryKeymap
-        find_package(X11 REQUIRED)
-        target_link_libraries(VkLayer_utils PRIVATE ${X11_LIBRARIES})
-        target_include_directories(VkLayer_utils PRIVATE ${X11_INCLUDE_DIR})
-
-        # needed for xcb_key_symbols_alloc
-        find_library(XCB_LIB xcb REQUIRED)
-        find_path(XCB_INCLUDE_DIR xcb/xcb.h REQUIRED)
-        find_library(XCB_KEYSYMS_LIB xcb-keysyms REQUIRED)
-        find_path(XCB_KEYSYMS_INCLUDE_DIR xcb/xcb_keysyms.h REQUIRED)
-        target_link_libraries(VkLayer_utils PRIVATE ${XCB_LIB} ${XCB_KEYSYMS_LIB})
-        target_include_directories(VkLayer_utils PRIVATE ${XCB_INCLUDE_DIR} ${XCB_KEYSYMS_INCLUDE_DIR})
+    if(BUILD_WSI_WAYLAND_SUPPORT)
+        pkg_check_modules(WAYlAND_CLIENT QUIET REQUIRED IMPORTED_TARGET GLOBAL wayland-client)
+        target_compile_definitions(vvl_defines INTERFACE VK_USE_PLATFORM_WAYLAND_KHR)
     endif()
 endif()
 
-# Found to significantly cut VVL build time
-#
-# Note: If using ccache, see the CCACHE_SLOPPINESS note in tests/CMakeLists.txt
-target_precompile_headers(VkLayer_utils PRIVATE
-    <algorithm>
-    <functional>
-    <memory>
-    <mutex>
-    <sstream>
-    <string>
-    <unordered_map>
-    <vector>
-    <vulkan/vulkan.h>
-    containers/custom_containers.h
-)
-
-add_subdirectory(gpuav/spirv)
-
-if(IOS)
-    add_library(vvl SHARED)
-else()
-    add_library(vvl MODULE)
+if (ANNOTATED_SPEC_LINK)
+    message("ANNOTATED_SPEC_LINK is ${ANNOTATED_SPEC_LINK}")
+    target_compile_definitions(vvl_defines INTERFACE ANNOTATED_SPEC_LINK=${ANNOTATED_SPEC_LINK})
 endif()
 
-target_sources(vvl PRIVATE
+# --------------------------------------------------------------------------------------------------------------------------
+# vvl_core: everything but the exported entry points, so unit tests can call layer internals directly instead of through a
+# driver. Code that must exist once per process (exported entry points, DllMain, operator new/delete replacements) belongs in
+# vvl instead.
+# --------------------------------------------------------------------------------------------------------------------------
+add_library(vvl_core STATIC)
+
+target_sources(vvl_core PRIVATE
     # Slowest files to compile come first,
     # having them near the end could introduce needless waits
     ${API_TYPE}/generated/dispatch_vector.cpp
@@ -557,92 +435,104 @@ target_sources(vvl PRIVATE
     layer_options.h
     layer_options_validation.h
     profiling/profiling.h
+    containers/container_utils.h
+    containers/custom_containers.h
+    containers/limits.h
+    containers/small_container.h
+    containers/array_range_map.h
+    containers/small_range_map.h
+    containers/small_vector.h
+    containers/span.h
+    error_message/logging.h
+    error_message/logging.cpp
+    error_message/error_location.cpp
+    error_message/error_location.h
+    error_message/record_object.h
+    error_message/log_message_type.h
+    external/xxhash.h
+    external/inplace_function.h
+    ${API_TYPE}/generated/error_location_helper.cpp
+    ${API_TYPE}/generated/error_location_helper.h
+    ${API_TYPE}/generated/feature_requirements_helper.cpp
+    ${API_TYPE}/generated/feature_requirements_helper.h
+    ${API_TYPE}/generated/test_icd_helper.h
+    ${API_TYPE}/generated/pnext_chain_extraction.cpp
+    ${API_TYPE}/generated/pnext_chain_extraction.h
+    ${API_TYPE}/generated/vk_validation_error_messages.cpp
+    ${API_TYPE}/generated/vk_validation_error_messages.h
+    ${API_TYPE}/generated/vk_layer_dispatch_table.h
+    ${API_TYPE}/generated/vk_dispatch_table_helper.h
+    ${API_TYPE}/generated/vk_dispatch_table_helper.cpp
+    ${API_TYPE}/generated/vk_object_types.h
+    ${API_TYPE}/generated/vk_object_types.cpp
+    ${API_TYPE}/generated/vk_api_version.h
+    ${API_TYPE}/generated/vk_extension_helper.h
+    ${API_TYPE}/generated/vk_extension_helper.cpp
+    utils/action_command_utils.h
+    utils/assert_utils.h
+    utils/cast_utils.h
+    utils/convert_utils.cpp
+    utils/convert_utils.h
+    utils/dispatch_utils.cpp
+    utils/dispatch_utils.h
+    utils/file_system_utils.cpp
+    utils/file_system_utils.h
+    utils/hash_util.h
+    utils/hash_util.cpp
+    utils/hash_vk_types.h
+    utils/image_utils.h
+    utils/image_utils.cpp
+    utils/image_layout_utils.h
+    utils/image_layout_utils.cpp
+    utils/lock_utils.h
+    utils/math_utils.h
+    utils/vk_layer_extension_utils.cpp
+    utils/vk_layer_extension_utils.h
+    utils/keyboard.cpp
+    utils/keyboard.h
+    utils/ray_tracing_utils.cpp
+    utils/ray_tracing_utils.h
+    utils/sync_utils.cpp
+    utils/sync_utils.h
+    utils/text_utils.cpp
+    utils/text_utils.h
+    utils/vk_struct_compare.cpp
+    utils/vk_struct_compare.h
+    utils/vk_api_utils.h
+    vk_layer_config.h
+    vk_layer_config.cpp
 )
+# Adds the SPIR-V instrumentation passes to vvl_core, and the step that compiles the GPU-AV shaders
+add_subdirectory(gpuav/spirv)
 
-get_target_property(LAYER_SOURCES vvl SOURCES)
+get_target_property(LAYER_SOURCES vvl_core SOURCES)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${LAYER_SOURCES})
 
-if(MSVC)
-    target_sources(vvl PRIVATE
-        types.natvis
-        external/parallel_hashmap/natvis/phmap.natvis
-        ${LAYER_NAME}.json.in
-    )
+target_include_directories(vvl_core PRIVATE . ${API_TYPE})
+# Other targets (e.g. tests calling layer internals) see these as system headers: the layer headers are checked with
+# vvl_core's own warning settings when vvl_core builds, so other targets' stricter warnings don't apply to them
+target_include_directories(vvl_core SYSTEM INTERFACE . ${API_TYPE})
+# Public headers (e.g. containers/custom_containers.h) include from here, so consumers need it too
+target_include_directories(vvl_core SYSTEM PUBLIC external)
 
-    set(GPUAV_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gpuav/shaders")
-    file(GLOB_RECURSE GPUAV_SHADERS
-        "${GPUAV_SHADERS_DIR}/*.slang"
-        "${GPUAV_SHADERS_DIR}/*.vert"
-        "${GPUAV_SHADERS_DIR}/*.comp"
-        "${GPUAV_SHADERS_DIR}/*.h"
-    )
-    add_custom_target(Shaders SOURCES ${GPUAV_SHADERS})
-    source_group(TREE ${GPUAV_SHADERS_DIR} PREFIX "GPU-AV Shaders" FILES ${GPUAV_SHADERS})
-endif()
+target_link_libraries(vvl_core PUBLIC
+    vvl_defines
+    Vulkan::Headers
+    Vulkan::LayerSettings
+    Vulkan::SafeStruct
+    Vulkan::UtilityHeaders
+    SPIRV-Headers::SPIRV-Headers
+    SPIRV-Tools-opt
+)
 
-option(BUILD_SELF_VVL "Setup a VVL build that will be used for self validation" FALSE)
-if (BUILD_SELF_VVL)
-    target_compile_definitions(VkLayer_utils PUBLIC BUILD_SELF_VVL)
-    target_compile_definitions(vvl PUBLIC BUILD_SELF_VVL)
-endif()
-
-option(VVL_WORKAROUND_QUALCOMM "Work around Qualcomm driver bugs (default: OFF)" OFF)
-if (VVL_WORKAROUND_QUALCOMM)
-    target_compile_definitions(vvl PRIVATE VVL_WORKAROUND_QUALCOMM)
-endif()
-
-set_target_properties(vvl PROPERTIES OUTPUT_NAME ${LAYER_NAME})
-
-if(MSVC)
-    target_link_options(vvl PRIVATE /DEF:${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.def)
-    target_compile_options(vvl PRIVATE /bigobj)
-elseif(MINGW)
-    target_sources(vvl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.def)
-    target_compile_options(vvl PRIVATE -Wa,-mbig-obj)
-    set_target_properties(vvl PROPERTIES PREFIX "") # remove the prefix "lib" so the manifest json "library_path" matches
-elseif(WIN32)
-    # A GNU-frontend clang targeting *-windows-msvc (i.e. clang/clang++, not
-    # clang-cl) is detected as neither MSVC nor MINGW, so without this branch it
-    # falls through to the ELF --version-script case below, which the Windows
-    # linker (lld-link) rejects. Forward the MSVC-style .def through the driver.
-    target_link_options(vvl PRIVATE LINKER:/DEF:${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.def)
-elseif(APPLE)
-
-# IOS and APPLE can both be true (FYI)
-if(IOS)
-    set_target_properties(vvl PROPERTIES
-        FRAMEWORK TRUE
-        MACOSX_FRAMEWORK_BUNDLE_VERSION "${VulkanHeaders_VERSION}"
-        MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${VulkanHeaders_VERSION}"
-        MACOSX_FRAMEWORK_IDENTIFIER com.khronos.validation
-    )
-else()
-    set_target_properties(vvl PROPERTIES SUFFIX ".dylib")
-endif()
-    # Both Apple and IOS
-    target_link_options(vvl PRIVATE -exported_symbols_list ${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.exp)
-elseif(ANDROID)
-    # Need 16k pages in Android 15
-    # When we bump our NDK requirement to r28 we can remove
-    # https://developer.android.com/guide/practices/page-sizes#compile-r28
-    # https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/9703
-    # https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/9170
-    target_link_options(vvl PRIVATE "-Wl,-z,max-page-size=16384")
-
-    target_link_options(vvl PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}-android.map)
-else()
-    target_link_options(vvl PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.map)
-endif()
-
-target_compile_options(vvl PRIVATE "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4100,-Wno-unused-parameter>")
-
+target_compile_options(vvl_core PRIVATE "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4100,-Wno-unused-parameter>")
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(vvl PRIVATE
+    target_compile_options(vvl_core PRIVATE
         -Wno-sign-conversion
         -Wno-implicit-int-conversion
     )
 elseif(MSVC)
-    target_compile_options(vvl PRIVATE
+    target_compile_options(vvl_core PRIVATE
         /wd4324 # padding
         /wd4458 # hiding class member
         /wd4457 # hiding function parameter
@@ -650,15 +540,84 @@ elseif(MSVC)
         /wd4389 # signed/unsigned mismatch
     )
 endif()
+if(MSVC)
+    target_compile_options(vvl_core PRIVATE /bigobj)
+elseif(MINGW)
+    target_compile_options(vvl_core PRIVATE -Wa,-mbig-obj)
+endif()
 
-# Order matters here. VkLayer_utils should be the last link library to ensure mimalloc overrides are picked up correctly.
-# Otherwise, libraries after VkLayer_utils will not benefit from this performance improvement.
-target_link_libraries(vvl PRIVATE
-    SPIRV-Headers::SPIRV-Headers
-    SPIRV-Tools-opt
-    gpu_av_spirv
-    VkLayer_utils
-)
+# Enables the spv::*ToString() helpers in spirv.hpp
+target_compile_definitions(vvl_core PRIVATE SPV_ENABLE_UTILITY_CODE)
+
+option(USE_CUSTOM_HASH_MAP "Use a custom hashing library that is faster than std::unordered_map and std::unordered_set (default: ON)" ON)
+
+if(DEFINED USE_ROBIN_HOOD_HASHING)
+    message(DEPRECATION "USE_ROBIN_HOOD_HASHING has been deprecated. Please use USE_CUSTOM_HASH_MAP option instead.")
+    set(USE_CUSTOM_HASH_MAP ${USE_ROBIN_HOOD_HASHING})
+endif()
+
+if (USE_CUSTOM_HASH_MAP)
+    message(STATUS "Using parallel_hashmap as custom hash maps")
+    target_compile_definitions(vvl_core PUBLIC USE_CUSTOM_HASH_MAP)
+    # Prefer using a locally installed parallel-hashmap package before using the in-tree sources.
+    # This approach supports installation with package managers such as conan
+    find_package(phmap CONFIG)
+    if (TARGET phmap)
+        target_link_libraries(vvl_core PRIVATE phmap)
+    else()
+        add_subdirectory(external/parallel_hashmap)
+    endif()
+else()
+    message(STATUS "Using STL maps instead of custom hash maps")
+endif()
+
+if(APPLE)
+    # Github runners recently updated from Apple Clang 17 to 21
+    # This caused issues with the current custom hash solution
+    target_compile_options(vvl_core PUBLIC
+        -Wno-deprecated-declarations
+    )
+endif()
+
+option(DEBUG_CAPTURE_KEYBOARD "Every QueueSubmit if F1 is pressed, a DebugCapture function will be called and a custom action can be done (default: OFF)" OFF)
+if (DEBUG_CAPTURE_KEYBOARD)
+    target_compile_definitions(vvl_core PUBLIC DEBUG_CAPTURE_KEYBOARD)
+    if(WIN32)
+    else()
+        # needed for XQueryKeymap
+        find_package(X11 REQUIRED)
+        target_link_libraries(vvl_core PRIVATE ${X11_LIBRARIES})
+        target_include_directories(vvl_core PRIVATE ${X11_INCLUDE_DIR})
+
+        # needed for xcb_key_symbols_alloc
+        find_library(XCB_LIB xcb REQUIRED)
+        find_path(XCB_INCLUDE_DIR xcb/xcb.h REQUIRED)
+        find_library(XCB_KEYSYMS_LIB xcb-keysyms REQUIRED)
+        find_path(XCB_KEYSYMS_INCLUDE_DIR xcb/xcb_keysyms.h REQUIRED)
+        target_link_libraries(vvl_core PRIVATE ${XCB_LIB} ${XCB_KEYSYMS_LIB})
+        target_include_directories(vvl_core PRIVATE ${XCB_INCLUDE_DIR} ${XCB_KEYSYMS_INCLUDE_DIR})
+    endif()
+endif()
+
+option(BUILD_SELF_VVL "Setup a VVL build that will be used for self validation" FALSE)
+if (BUILD_SELF_VVL)
+    target_compile_definitions(vvl_core PUBLIC BUILD_SELF_VVL)
+endif()
+
+option(VVL_WORKAROUND_QUALCOMM "Work around Qualcomm driver bugs (default: OFF)" OFF)
+if (VVL_WORKAROUND_QUALCOMM)
+    target_compile_definitions(vvl_core PRIVATE VVL_WORKAROUND_QUALCOMM)
+endif()
+
+if (ANDROID)
+    # Required for __android_log_print. Marking as PUBLIC since the tests use __android_log_print as well.
+    target_link_libraries(vvl_core PUBLIC log)
+
+    # Required for AHardwareBuffer_describe. Marking as PUBLIC since the tests use AHardwareBuffer_describe as well.
+    # Use libnativewindow rather than libandroid, since libandroid pulls in many Android framework libraries
+    # which can fail to load in some processes.
+    target_link_libraries(vvl_core PUBLIC nativewindow)
+endif()
 
 if (VVL_ENABLE_TRACY)
     # Rely on FetchContent to get Tracy, it is simple
@@ -673,22 +632,40 @@ if (VVL_ENABLE_TRACY)
 
     FetchContent_MakeAvailable(tracy)
 
-    target_sources(vvl PRIVATE
+    target_sources(vvl_core PRIVATE
         profiling/profiling.h
         profiling/profiling.cpp
     )
-    target_link_libraries(vvl PRIVATE TracyClient)
+    target_link_libraries(vvl_core PUBLIC TracyClient)
 endif()
 
-target_include_directories(vvl SYSTEM PRIVATE external)
+# Keep mimalloc as the last vvl_core link library. Targets linking vvl_core (e.g. the tests) link mimalloc too, but only the
+# layer library replaces operator new/delete with it: mimalloc-new-delete.h is included in vvl.cpp.
+#
+# Using mimalloc on non-Windows OSes currently results in unit test instability with some
+# OS version / driver combinations. On 32-bit systems, using mimalloc cause an increase in
+# the amount of virtual address space needed, which can also cause stability problems.
+if (WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+   find_package(mimalloc CONFIG)
+   option(USE_MIMALLOC "Use mimalloc, a fast malloc/free replacement library" ${mimalloc_FOUND})
+   if (USE_MIMALLOC)
+      target_compile_definitions(vvl_core PUBLIC USE_MIMALLOC)
+      target_link_libraries(vvl_core PUBLIC mimalloc-static)
+   endif()
+endif()
 
-# Enables the spv::*ToString() helpers in spirv.hpp
-target_compile_definitions(vvl PRIVATE SPV_ENABLE_UTILITY_CODE)
+if(MSVC)
+    # Debugger visualizers for layer types, for every binary that links vvl_core (the layer and the tests)
+    target_sources(vvl_core INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/types.natvis
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/parallel_hashmap/natvis/phmap.natvis
+    )
+endif()
 
 # Found to significantly cut VVL build time
 #
 # Note: If using ccache, see the CCACHE_SLOPPINESS note in tests/CMakeLists.txt
-target_precompile_headers(vvl PRIVATE
+target_precompile_headers(vvl_core PRIVATE
     # List stable headers
     <algorithm>
     <array>
@@ -726,17 +703,86 @@ target_precompile_headers(vvl PRIVATE
     state_tracker/cmd_buffer_state.h
 )
 
+# --------------------------------------------------------------------------------------------------------------------------
+# vvl: the layer library the loader loads. It only holds the exported entry points; everything else comes from vvl_core.
+# --------------------------------------------------------------------------------------------------------------------------
+# Vulkan Layers are typically built as MODULEs, except on iOS where they are SHARED libraries
+# From the CMake docs: "A Module Library: a plugin that may not be linked by other targets, but may be dynamically loaded at runtime using dlopen-like functionality."
+# This exactly describes a Vulkan layer. In particular, it is a plugin that is dynamically loaded by the Vulkan loader at runtime and is not linked by other targets.
+# On WIN32 when installing the layers specifying libraries as MODULE avoids installing the import library (.lib) that would be generated for SHARED libraries.
+set(VK_LAYER_TYPE "MODULE")
+if (IOS)
+    # "Apples App store rules require dynamic libraries be packaged as Frameworks for iOS.
+    # This requirement is not applied for macOS, so all iOS libraries should be packaged as Frameworks moving forward to comply with Apples policy."
+    set(VK_LAYER_TYPE "SHARED")
+endif()
+
+# The validation layer itself remains small with only the exported entry points, while the core functionality is in the static library.
+# This separation allows the core functionality to be reused by unit tests and other components without requiring the full layer to be linked.
+add_library(vvl "${VK_LAYER_TYPE}")
+target_sources(vvl PRIVATE vvl.cpp)
+target_link_libraries(vvl PRIVATE vvl_core)
+set_target_properties(vvl PROPERTIES OUTPUT_NAME ${LAYER_NAME})
+
+if (VVL_ENABLE_TRACY)
+    # Starts the profiler from DllMain and replaces the global operator new/delete, so it belongs to the layer itself
+    target_sources(vvl PRIVATE profiling/profiling_layer.cpp)
+endif()
+
+if(MSVC)
+    target_sources(vvl PRIVATE ${LAYER_NAME}.json.in)
+
+    set(GPUAV_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gpuav/shaders")
+    file(GLOB_RECURSE GPUAV_SHADERS
+        "${GPUAV_SHADERS_DIR}/*.slang"
+        "${GPUAV_SHADERS_DIR}/*.vert"
+        "${GPUAV_SHADERS_DIR}/*.comp"
+        "${GPUAV_SHADERS_DIR}/*.h"
+    )
+    add_custom_target(Shaders SOURCES ${GPUAV_SHADERS})
+    source_group(TREE ${GPUAV_SHADERS_DIR} PREFIX "GPU-AV Shaders" FILES ${GPUAV_SHADERS})
+endif()
+
+# Export only the loader entry points
+if(WIN32)
+    # CMake passes a .def source to every Windows linker (MSVC, clang's GNU-style driver, MinGW) with the right flag
+    target_sources(vvl PRIVATE ${LAYER_NAME}.def)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        # Nothing links against the layer (the loader finds the exports by name), so skip the import library. Not /NOEXP:
+        # incremental relinks reuse the .exp, and without it link.exe ignores the .def file (LNK4052, an error with /WX).
+        target_link_options(vvl PRIVATE /NOIMPLIB)
+    endif()
+    if(MINGW)
+        set_target_properties(vvl PROPERTIES PREFIX "") # remove the prefix "lib" so the manifest json "library_path" matches
+    endif()
+elseif(APPLE)
+    if(IOS)
+        set_target_properties(vvl PROPERTIES
+            FRAMEWORK TRUE
+            MACOSX_FRAMEWORK_BUNDLE_VERSION "${VulkanHeaders_VERSION}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${VulkanHeaders_VERSION}"
+            MACOSX_FRAMEWORK_IDENTIFIER com.khronos.validation
+        )
+    else()
+        set_target_properties(vvl PROPERTIES SUFFIX ".dylib")
+    endif()
+    # Both Apple and IOS
+    target_link_options(vvl PRIVATE -exported_symbols_list ${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.exp)
+elseif(ANDROID)
+    # Need 16k pages in Android 15
+    # When we bump our NDK requirement to r28 we can remove
+    # https://developer.android.com/guide/practices/page-sizes#compile-r28
+    # https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/9703
+    # https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/9170
+    target_link_options(vvl PRIVATE "-Wl,-z,max-page-size=16384")
+
+    target_link_options(vvl PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}-android.map)
+else()
+    target_link_options(vvl PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${LAYER_NAME}.map)
+endif()
+
 if (ANDROID)
-    # Required for __android_log_print. Marking as PUBLIC since the tests use __android_log_print as well.
-    target_link_libraries(VkLayer_utils PUBLIC log)
-
-    # Required for AHardwareBuffer_describe. Marking as PUBLIC since the tests use AHardwareBuffer_describe as well.
-    # Use libnativewindow rather than libandroid, since libandroid pulls in many Android framework libraries
-    # which can fail to load in some processes.
-    target_link_libraries(VkLayer_utils PUBLIC nativewindow)
-
     install(TARGETS vvl DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
     return()
 endif()
 
@@ -782,7 +828,7 @@ add_custom_target(vvl_generated_setting_files
     COMMAND Python3::Interpreter "scripts/generate_settings.py"
     WORKING_DIRECTORY ${VVL_SOURCE_DIR}
 )
-add_dependencies(vvl vvl_generated_setting_files)
+add_dependencies(vvl_core vvl_generated_setting_files)
 
 # For UNIX-based systems, `library_path` should not contain a relative path (indicated by "./") before installing to system directories
 # This json isn't used for regular local development, it's used for installation

@@ -123,6 +123,16 @@ static bool RegionIntersects(const RegionType* region0, const RegionType* region
     return GetRegionIntersection(region0, region1, type, is_multiplane).has_instersection;
 }
 
+// Blit offsets can be given in either order (offsets[1] < offsets[0] mirrors that axis), so order each pair before
+// intersecting the ranges they describe
+static bool BlitRangesIntersect(int32_t src_offset0, int32_t src_offset1, int32_t dst_offset0, int32_t dst_offset1) {
+    const int64_t src_begin = std::min(src_offset0, src_offset1);
+    const int64_t dst_begin = std::min(dst_offset0, dst_offset1);
+    const uint64_t src_size = static_cast<uint64_t>(std::max(src_offset0, src_offset1) - src_begin);
+    const uint64_t dst_size = static_cast<uint64_t>(std::max(dst_offset0, dst_offset1) - dst_begin);
+    return RangesIntersect(src_begin, src_size, dst_begin, dst_size);
+}
+
 template <typename RegionType>
 static bool RegionIntersectsBlit(const RegionType* region0, const RegionType* region1, VkImageType type, bool is_multiplane) {
     bool result = false;
@@ -138,16 +148,16 @@ static bool RegionIntersectsBlit(const RegionType* region0, const RegionType* re
         result = true;
         switch (type) {
             case VK_IMAGE_TYPE_3D:
-                result &= RangesIntersect(region0->srcOffsets[0].z, region0->srcOffsets[1].z - region0->srcOffsets[0].z,
-                                          region1->dstOffsets[0].z, region1->dstOffsets[1].z - region1->dstOffsets[0].z);
+                result &= BlitRangesIntersect(region0->srcOffsets[0].z, region0->srcOffsets[1].z, region1->dstOffsets[0].z,
+                                              region1->dstOffsets[1].z);
                 [[fallthrough]];
             case VK_IMAGE_TYPE_2D:
-                result &= RangesIntersect(region0->srcOffsets[0].y, region0->srcOffsets[1].y - region0->srcOffsets[0].y,
-                                          region1->dstOffsets[0].y, region1->dstOffsets[1].y - region1->dstOffsets[0].y);
+                result &= BlitRangesIntersect(region0->srcOffsets[0].y, region0->srcOffsets[1].y, region1->dstOffsets[0].y,
+                                              region1->dstOffsets[1].y);
                 [[fallthrough]];
             case VK_IMAGE_TYPE_1D:
-                result &= RangesIntersect(region0->srcOffsets[0].x, region0->srcOffsets[1].x - region0->srcOffsets[0].x,
-                                          region1->dstOffsets[0].x, region1->dstOffsets[1].x - region1->dstOffsets[0].x);
+                result &= BlitRangesIntersect(region0->srcOffsets[0].x, region0->srcOffsets[1].x, region1->dstOffsets[0].x,
+                                              region1->dstOffsets[1].x);
                 break;
             default:
                 // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation

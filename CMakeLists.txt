@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ~~~
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.22.1...4.4)
 
 # The VERSION field is generated with the "--generated-version" flag in the generate_source.py script
 #
@@ -40,52 +40,6 @@ set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 include(GNUInstallDirs)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) # Remove when min is 3.26, see CMP0143
-
-add_compile_definitions(VK_ENABLE_BETA_EXTENSIONS)
-if(WIN32)
-    add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
-
-    # Allow usage of unsafe CRT functions and minimize what Windows.h leaks
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN)
-elseif(ANDROID)
-    add_compile_definitions(VK_USE_PLATFORM_ANDROID_KHR)
-elseif(APPLE)
-    add_compile_definitions(VK_USE_PLATFORM_METAL_EXT)
-    if (IOS)
-        add_compile_definitions(VK_USE_PLATFORM_IOS_MVK)
-    endif()
-    if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-        add_compile_definitions(VK_USE_PLATFORM_MACOS_MVK)
-    endif()
-else()
-    option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
-    option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
-    option(BUILD_WSI_XLIB_XRANDR_SUPPORT "Build X11 Xrandr WSI support" ON)
-    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
-
-    if (BUILD_WSI_XCB_SUPPORT OR BUILD_WSI_XLIB_SUPPORT OR BUILD_WSI_WAYLAND_SUPPORT)
-        find_package(PkgConfig REQUIRED QUIET)
-    endif()
-
-    if(BUILD_WSI_XCB_SUPPORT)
-        pkg_check_modules(XCB REQUIRED QUIET IMPORTED_TARGET xcb)
-        add_compile_definitions(VK_USE_PLATFORM_XCB_KHR)
-    endif()
-
-    if(BUILD_WSI_XLIB_SUPPORT)
-        pkg_check_modules(X11 REQUIRED QUIET IMPORTED_TARGET x11)
-        add_compile_definitions(VK_USE_PLATFORM_XLIB_KHR)
-        if(BUILD_WSI_XLIB_XRANDR_SUPPORT)
-            pkg_check_modules(XRANDR REQUIRED QUIET IMPORTED_TARGET xrandr)
-            add_compile_definitions(VK_USE_PLATFORM_XLIB_XRANDR_EXT)
-        endif()
-    endif()
-
-    if(BUILD_WSI_WAYLAND_SUPPORT)
-        pkg_check_modules(WAYlAND_CLIENT QUIET REQUIRED IMPORTED_TARGET wayland-client)
-        add_compile_definitions(VK_USE_PLATFORM_WAYLAND_KHR)
-    endif()
-endif()
 
 # Tracy
 option(VVL_ENABLE_TRACY "Enable profiling with Tracy" OFF)
@@ -127,28 +81,11 @@ find_package(SPIRV-Headers CONFIG QUIET)
 
 find_package(SPIRV-Tools-opt CONFIG QUIET)
 
-# Workaround AppleClang using the wrong headers when there are headers in /usr/local/include
-if (CMAKE_CXX_COMPILER_ID STREQUAL AppleClang AND TARGET Vulkan::Headers AND TARGET Vulkan::LayerSettings
-    AND TARGET SPIRV-Headers::SPIRV-Headers AND TARGET SPIRV-Tools-static AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
-    get_target_property(vulkan_headers_aliased Vulkan::Headers ALIASED_TARGET)
-    if (NOT vulkan_headers_aliased)
-        set_target_properties(Vulkan::Headers PROPERTIES SYSTEM OFF)
-    endif()
-    get_target_property(vulkan_utilities_aliased Vulkan::LayerSettings ALIASED_TARGET)
-    if (NOT vulkan_utilities_aliased)
-        set_target_properties(Vulkan::LayerSettings PROPERTIES SYSTEM OFF)
-        set_target_properties(Vulkan::SafeStruct PROPERTIES SYSTEM OFF)
-        set_target_properties(Vulkan::UtilityHeaders PROPERTIES SYSTEM OFF)
-    endif()
-    get_target_property(spirv_headers_aliased SPIRV-Headers::SPIRV-Headers ALIASED_TARGET)
-    if (NOT spirv_headers_aliased)
-        set_target_properties(SPIRV-Headers::SPIRV-Headers PROPERTIES SYSTEM OFF)
-    endif()
-    get_target_property(spirv_tools_opt_aliased SPIRV-Tools-opt  ALIASED_TARGET)
-    if (NOT spirv_tools_opt_aliased)
-        set_target_properties(SPIRV-Tools-static PROPERTIES SYSTEM OFF)
-        set_target_properties(SPIRV-Tools-opt PROPERTIES SYSTEM OFF)
-    endif()
+# AppleClang always searches /usr/local/include, where Homebrew can install older Vulkan/SPIR-V headers. Imported targets' include
+# directories are passed as -isystem, which loses to it, so the build could compile against the wrong headers (VVL's generated
+# code only matches one Vulkan-Headers version). Pass them as -I instead, which is searched first.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 
 # NOTE: Our custom code generation target isn't desirable for system package managers or add_subdirectory users.
@@ -163,11 +100,6 @@ if (VVL_CODEGEN)
             --incremental --generated-version ${VulkanHeaders_VERSION} --api ${API_TYPE}
         WORKING_DIRECTORY ${VVL_SOURCE_DIR}/layers/${API_TYPE}/generated
     )
-endif()
-
-if (ANNOTATED_SPEC_LINK)
-    message("ANNOTATED_SPEC_LINK is ${ANNOTATED_SPEC_LINK}")
-    add_compile_definitions(ANNOTATED_SPEC_LINK=${ANNOTATED_SPEC_LINK})
 endif()
 
 # The idiom for open source projects is to NOT enable warnings as errors.
@@ -210,13 +142,13 @@ if (VVL_ENABLE_UBSAN)
     endif()
 endif()
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "(GNU|Clang)")
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(
         -Wall
         -Wextra
         -Wpointer-arith
     )
-    if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         add_compile_options(
             -Wconversion
             -Wimplicit-fallthrough

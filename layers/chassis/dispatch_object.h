@@ -268,7 +268,8 @@ class HandleWrapper : public Logger {
 
     static std::atomic<uint64_t> global_unique_id;
     static vvl::concurrent_unordered_map<uint64_t, uint64_t, 4, HashedUint64> unique_id_mapping;
-    static bool wrap_handles;
+    // Per instance and device, not static: one instance disabling handle wrapping must not turn it off for the others
+    bool wrap_handles = true;
 
     // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/13329
     // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/6972

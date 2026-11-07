@@ -13,6 +13,7 @@
 #include "../framework/test_common.h"
 #include <cstdlib>
 #include <array>
+#include <string>
 #include <vector>
 
 #include "containers/small_vector.h"
@@ -441,4 +442,39 @@ TEST(UtilsCustomContainer, EnumerateConst) {
         ASSERT_TRUE(x == ref_elements[indices_i]);
         ++indices_i;
     }
+}
+
+TEST(UtilsCustomContainer, SmallVectorShrinkToFitNonTrivial) {
+    // Long strings, so each one owns heap memory and copying it into unconstructed storage would be noticed
+    const std::string a(64, 'a');
+    const std::string b(64, 'b');
+    const std::string c(64, 'c');
+
+    // From a larger heap store to a smaller heap store
+    small_vector<std::string, 2, size_t> v{a, b, c, a};
+    v.resize(3);
+    v.shrink_to_fit();
+    ASSERT_EQ(v.capacity(), 3u);
+    ASSERT_EQ(v[0], a);
+    ASSERT_EQ(v[1], b);
+    ASSERT_EQ(v[2], c);
+
+    // From the heap store back to the inline one
+    v.resize(1);
+    v.shrink_to_fit();
+    ASSERT_EQ(v.capacity(), 2u);
+    ASSERT_EQ(v[0], a);
+}
+
+TEST(UtilsCustomContainer, SmallVectorShrinkToFitAtInlineCapacity) {
+    small_vector<int, 2, size_t> v{1, 2, 3};
+    v.resize(2);
+    // Exactly fits the inline store, so shrinking must go back to it rather than keep a heap store of the same size
+    v.shrink_to_fit();
+    ASSERT_EQ(v.capacity(), 2u);
+
+    small_vector<int, 2, size_t> moved(std::move(v));
+    ASSERT_EQ(moved.size(), 2u);
+    ASSERT_EQ(moved[0], 1);
+    ASSERT_EQ(moved[1], 2);
 }

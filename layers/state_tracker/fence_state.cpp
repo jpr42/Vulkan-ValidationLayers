@@ -215,6 +215,8 @@ void vvl::Fence::SetPresentSubmissionRef(const SubmissionReference& present_subm
 }
 
 void vvl::Fence::SetPresentWaitSemaphores(vvl::span<std::shared_ptr<vvl::Semaphore>> present_wait_semaphores) {
+    // NotifyAndWait() clears these from another thread
+    auto guard = WriteLock();
     present_wait_semaphores_.clear();
     for (const auto& semaphore : present_wait_semaphores) {
         present_wait_semaphores_.emplace_back(semaphore);

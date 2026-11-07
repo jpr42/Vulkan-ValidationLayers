@@ -199,8 +199,9 @@ class range_map {
         return next_it;
     }
 
-    template <typename TouchOp>
-    ImplIterator impl_erase_range(const key_type &bounds, ImplIterator lower, const TouchOp &touch_mapped_value) {
+    // kAlwaysErase: touch_mapped_value always returns true, so nothing in bounds survives (erase_range, overwrite_range)
+    template <bool kAlwaysErase, typename TouchOp>
+    ImplIterator impl_erase_range(const key_type& bounds, ImplIterator lower, const TouchOp& touch_mapped_value) {
         // Logic assumes we are starting at a valid lower bound
         RANGE_ASSERT(!at_impl_end(lower));
         RANGE_ASSERT(lower == lower_bound_impl(bounds));
@@ -210,11 +211,12 @@ class range_map {
         const auto first_begin = current->first.begin;
         if (bounds.begin > first_begin) {
             // Preserve the portion of lower bound excluded from bounds
-            if (current->first.end <= bounds.end) {
+            if (kAlwaysErase && current->first.end <= bounds.end) {
                 // If current ends within the erased bound we can discard the upper portion of current
                 current = split_impl_keep_only_lower(current, bounds.begin);
             } else {
-                // Keep the upper portion of current for the later split below
+                // Keep the upper portion of current: it is either split again below, or handled below like any other entry,
+                // so that touch_mapped_value decides whether it is erased
                 current = split_impl(current, bounds.begin);
             }
             // Exclude the preserved portion
@@ -345,24 +347,29 @@ class range_map {
 
     iterator erase(iterator first, iterator last) { return erase(range<iterator>(first, last)); }
 
-    // Before trying to erase a range, function touch_mapped_value is called on the mapped value.
-    // touch_mapped_value is allowed to have it's parameter type to be non const reference.
-    // If it returns true, regular erase will occur.
-    // Else, range is kept.
-    template <typename TouchOp>
-    iterator erase_range_or_touch(const key_type &bounds, const TouchOp &touch_mapped_value) {
+    template <bool kAlwaysErase, typename TouchOp>
+    iterator erase_range_impl(const key_type& bounds, const TouchOp& touch_mapped_value) {
         auto lower = lower_bound_impl(bounds);
 
         if (at_impl_end(lower) || !bounds.intersects(lower->first)) {
             // There is nothing in this range lower bound is above bound
             return iterator(lower);
         }
-        auto next = impl_erase_range(bounds, lower, touch_mapped_value);
+        auto next = impl_erase_range<kAlwaysErase>(bounds, lower, touch_mapped_value);
         return iterator(next);
     }
 
+    // Before trying to erase a range, function touch_mapped_value is called on the mapped value.
+    // touch_mapped_value is allowed to have it's parameter type to be non const reference.
+    // If it returns true, regular erase will occur.
+    // Else, range is kept.
+    template <typename TouchOp>
+    iterator erase_range_or_touch(const key_type& bounds, const TouchOp& touch_mapped_value) {
+        return erase_range_impl<false>(bounds, touch_mapped_value);
+    }
+
     iterator erase_range(const key_type &bounds) {
-        return erase_range_or_touch(bounds, [](const auto &) { return true; });
+        return erase_range_impl<true>(bounds, [](const auto&) { return true; });
     }
 
     void clear() { impl_map_.clear(); }
@@ -461,7 +468,7 @@ class range_map {
         if (!at_impl_end(lower_impl)) {
             // If we're at end (and the hint is good, there's nothing to erase
             RANGE_ASSERT(lower == lower_bound(value.first));
-            insert_hint = impl_erase_range(value.first, lower_impl, [](const auto &) { return true; });
+            insert_hint = impl_erase_range<true>(value.first, lower_impl, [](const auto&) { return true; });
         }
         auto inserted = impl_insert(insert_hint, std::forward<Value>(value));
         return iterator(inserted);

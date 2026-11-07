@@ -14,36 +14,13 @@
 # limitations under the License.
 # ~~~
 
-if (ANDROID OR MINGW)
-    return()
-elseif (APPLE)
+if (ANDROID OR MINGW OR APPLE)
     return()
 endif()
-
 
 # These variables enable downstream users to customize the CMake targets
 # based on the target API variant (e.g. Vulkan SC)
 set(ICD_NAME VVL_Test_ICD)
-
-if(WIN32)
-    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DVK_USE_PLATFORM_WIN32_KHX -DWIN32_LEAN_AND_MEAN)
-elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|BSD|GNU")
-    if(BUILD_WSI_XCB_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_XCB_KHR -DVK_USE_PLATFORM_XCB_KHX)
-    endif()
-
-    if(BUILD_WSI_XLIB_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR -DVK_USE_PLATFORM_XLIB_KHX -DVK_USE_PLATFORM_XLIB_XRANDR_EXT)
-    endif()
-
-    if(BUILD_WSI_WAYLAND_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR -DVK_USE_PLATFORM_WAYLAND_KHX)
-    endif()
-elseif(VVL_MOCK_ANDROID)
-    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
-else()
-    message(FATAL_ERROR "Unsupported Platform!")
-endif()
 
 add_library(VVL_Test_ICD MODULE)
 
@@ -51,33 +28,29 @@ target_sources(VVL_Test_ICD PRIVATE
     test_icd.h
     test_icd.cpp)
 
+# Header-only: the generated test_icd_helper.h and the Vulkan headers. Nothing from the layer itself.
 target_link_libraries(VVL_Test_ICD PRIVATE
+    vvl_defines
     Vulkan::Headers
-    VkLayer_utils
+    Vulkan::UtilityHeaders
 )
 
 target_include_directories(VVL_Test_ICD PRIVATE
-    ${CMAKE_SOURCE_DIR}/layers/${API_TYPE}/generated
+    ${VVL_SOURCE_DIR}/layers/${API_TYPE}/generated
     .
 )
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU|Clang")
-    target_compile_options(VVL_Test_ICD PRIVATE
-        -Wpointer-arith
-        -Wno-unused-function
-        -Wno-unused-parameter
-        -Wno-sign-compare
-    )
+# The platform defines come from vvl_defines, except for the mock Android setup (see tests/CMakeLists.txt)
+if (VVL_MOCK_ANDROID)
+    target_compile_definitions(VVL_Test_ICD PRIVATE VK_USE_PLATFORM_ANDROID_KHR)
 endif()
 
-if(MSVC)
-    target_compile_options(VVL_Test_ICD PRIVATE /bigobj)
-    target_compile_options(VVL_Test_ICD PRIVATE /wd4100)
-    target_compile_definitions(VVL_Test_ICD PRIVATE _CRT_SECURE_NO_WARNINGS)
-    target_link_options(VVL_Test_ICD PRIVATE /DEF:${CMAKE_CURRENT_SOURCE_DIR}/${ICD_NAME}.def)
-else()
-    message(DEBUG "Test ICD Functions are exported via EXPORT")
+if (WIN32)
+    target_sources(VVL_Test_ICD PRIVATE ${ICD_NAME}.def)
 endif()
+
+# The generated test_icd_helper.h is hundreds of stub entry points that ignore their parameters
+target_compile_options(VVL_Test_ICD PRIVATE "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4100,-Wno-unused-parameter>")
 
 set_target_properties(VVL_Test_ICD PROPERTIES OUTPUT_NAME ${ICD_NAME})
 

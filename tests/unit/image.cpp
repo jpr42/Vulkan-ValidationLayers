@@ -606,6 +606,14 @@ TEST_F(NegativeImage, BlitOverlap) {
                      VK_FILTER_NEAREST);
     m_errorMonitor->VerifyFound();
 
+    // Mirroring the source in x (srcOffsets[1].x < srcOffsets[0].x) covers the same texels, so it still overlaps
+    blit_region.srcOffsets[0] = {31, 0, 0};
+    blit_region.srcOffsets[1] = {0, 31, 1};
+    m_errorMonitor->SetDesiredError("VUID-vkCmdBlitImage-pRegions-00217");
+    vk::CmdBlitImage(m_command_buffer, image_2D, VK_IMAGE_LAYOUT_GENERAL, image_2D, VK_IMAGE_LAYOUT_GENERAL, 1, &blit_region,
+                     VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
     m_command_buffer.End();
 }
 

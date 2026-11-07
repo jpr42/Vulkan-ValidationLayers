@@ -302,7 +302,8 @@ class small_vector {
             auto old_store = large_store_;
             large_store_ = nullptr;
             assert(!large_store_);
-            if (size_ < kSmallCapacity) {
+            // A large store is always bigger than the small one (see MoveLargeStore), so size_ == N goes back to small too
+            if (size_ <= kSmallCapacity) {
                 capacity_ = kSmallCapacity;
             } else {
                 large_store_ = new BackingStore[size_];
@@ -311,7 +312,8 @@ class small_vector {
             UpdateWorkingStore();
             auto dest = GetWorkingStore();
             for (size_type i = 0; i < size_; i++) {
-                dest[i] = std::move(source[i]);
+                // dest holds no constructed objects, so construct rather than assign
+                new (&dest[i]) value_type(std::move(source[i]));
                 source[i].~value_type();
             }
             delete[] old_store;

@@ -105,12 +105,18 @@ class Tracker : public Logger {
     template <typename PoisonerVkType>
     void RegisterPoisonPairs(VulkanTypedHandle poisonee, vvl::span<PoisonerVkType> poisoners, VulkanObjectType poisoner_type) {
         if (auto poisonee_state = GetObjectState(poisonee)) {
-            auto poisonee_lock = poisonee_state->WriteLock();
             for (PoisonerVkType poisoner_vk_handle : poisoners) {
                 const VulkanTypedHandle poisoner(poisoner_vk_handle, poisoner_type);
                 if (auto poisoner_state = GetObjectState(poisoner)) {
-                    auto poisoner_lock = poisoner_state->WriteLock();
-                    poisoner_state->objects_to_poison.emplace(poisonee);
+                    // Link both directions, one lock at a time (see RecordDestroyObject for why locks never nest)
+                    {
+                        auto poisoner_lock = poisoner_state->WriteLock();
+                        poisoner_state->objects_to_poison.emplace(poisonee);
+                    }
+                    {
+                        auto poisonee_lock = poisonee_state->WriteLock();
+                        poisonee_state->poisoners.emplace_back(poisoner);
+                    }
                 }
             }
         }

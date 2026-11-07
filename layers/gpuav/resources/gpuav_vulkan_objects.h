@@ -312,13 +312,13 @@ class SharedResourcesCache {
     // only the entry cached upon the first call to Get<T> will be retrieved
     template <typename T, class... ConstructorTypes>
     T &GetOrCreate(ConstructorTypes &&...args) {
-        T *t = TryGet<T>();
-        if (t) {
-            return *t;
-        }
+        // Look up and create under the same lock, otherwise two threads can both miss and both construct a T
         std::unique_lock<std::recursive_mutex> lock(mtx, std::defer_lock);
         if (thread_safe) {
             lock.lock();
+        }
+        if (T* t = TryGet<T>()) {
+            return *t;
         }
         auto entry =
             shared_validation_resources_map_.insert({typeid(T), {new T(std::forward<ConstructorTypes>(args)...), [](void *ptr) {
@@ -329,6 +329,10 @@ class SharedResourcesCache {
     }
 
     void Clear() {
+        std::unique_lock<std::recursive_mutex> lock(mtx, std::defer_lock);
+        if (thread_safe) {
+            lock.lock();
+        }
         for (auto &[key, value] : shared_validation_resources_map_) {
             auto &[object, destructor] = value;
             destructor(object);

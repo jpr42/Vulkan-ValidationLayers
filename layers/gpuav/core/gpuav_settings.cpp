@@ -160,7 +160,6 @@ void GpuAVSettings::TracyLogSettings() const {
     VVL_TracyMessageStream("  ShaderInstrumentation:");
     VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(descriptor_checks);
     VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(buffer_device_address);
-    VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(ray_query);
     VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(trace_ray);
     VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(mesh_shading);
     VVL_TRACY_PRINT_INSTRUMENTATION_SETTING(post_process_descriptor_indexing);
