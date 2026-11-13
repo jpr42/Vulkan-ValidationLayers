@@ -26,7 +26,6 @@ secondary_source = "//scripts/gn/secondary/"
 
 default_args = {
     clang_use_chrome_plugins = false
-    use_custom_libcxx = false
 }
 EOF
 

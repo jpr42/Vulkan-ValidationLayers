@@ -57,6 +57,24 @@ deps = {
       'dep_type': 'cipd',
   },
 
+  # Chromium's libc++, for C++20 <format> (the sysroot's libstdc++ is GCC 10's). Revisions match the build and
+  # buildtools pins above (buildtools/deps_revisions.gni).
+  'third_party/libc++/src': {
+    'url': Var('chromium_git') + '/external/github.com/llvm/llvm-project/libcxx.git@604bb086b1ac1105c692bb5fe0b49fc96b095777',
+    'condition': 'not build_with_chromium',
+  },
+
+  'third_party/libc++abi/src': {
+    'url': Var('chromium_git') + '/external/github.com/llvm/llvm-project/libcxxabi.git@a3c7d3e2f3e1e724b4651891b1a71257cbd88acc',
+    'condition': 'not build_with_chromium',
+  },
+
+  # Only used on Android (build/config/unwind.gni: use_custom_libunwind)
+  'third_party/libunwind/src': {
+    'url': Var('chromium_git') + '/external/github.com/llvm/llvm-project/libunwind.git@8f49d6467fd4369cb12c1dd927fde3aaa85d7dd4',
+    'condition': 'not build_with_chromium',
+  },
+
   'third_party/ninja': {
     'packages': [
       {
