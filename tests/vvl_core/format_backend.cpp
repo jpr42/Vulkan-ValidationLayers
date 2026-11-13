@@ -28,7 +28,9 @@ struct Point {
 template <>
 struct VVL_FMT_NS::formatter<Point> {
     constexpr auto parse(VVL_FMT_NS::format_parse_context& ctx) { return ctx.begin(); }
-    auto format(const Point& point, VVL_FMT_NS::format_context& ctx) const {
+    // Generic over the context: libc++ checks formattability with its own output iterator, not format_context's
+    template <typename FormatContext>
+    auto format(const Point& point, FormatContext& ctx) const {
         return VVL_FMT_NS::format_to(ctx.out(), "({}, {})", point.x, point.y);
     }
 };
