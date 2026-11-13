@@ -639,11 +639,27 @@ source_set("vulkan_layer_utils") {
     ":vulkan_memory_allocator_config",
   ]
   public_deps = [
+    ":vvl_fmt",
     "$vulkan_headers_dir:vulkan_headers",
     "$vulkan_utility_libraries_dir:vulkan_layer_settings",
   ]
 
   configs -= vulkan_undefine_configs
+  if (!is_fuchsia) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+}
+
+# fmtlib, the formatting backend of validation messages, built from its sources like the other dependencies
+config("vvl_fmt_config") {
+  include_dirs = [ "$vvl_fmt_dir/include" ]
+  defines = [ "VVL_FORMAT_BACKEND_FMT" ]
+}
+
+source_set("vvl_fmt") {
+  sources = [ "$vvl_fmt_dir/src/format.cc" ]
+  public_configs = [ ":vvl_fmt_config" ]
   if (!is_fuchsia) {
     configs -= [ "//build/config/compiler:chromium_code" ]
     configs += [ "//build/config/compiler:no_chromium_code" ]

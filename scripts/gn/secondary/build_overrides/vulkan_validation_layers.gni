@@ -19,6 +19,7 @@ vvl_spirv_tools_dir = "//external/SPIRV-Tools"
 vvl_spirv_headers_dir = "//external/SPIRV-Headers"
 vvl_glslang_dir = "//external/glslang/"
 robin_hood_headers_dir = "//external/robin-hood-hashing/src/include"
+vvl_fmt_dir = "//external/fmt"
 
 # Subdirectories for generated files
 vulkan_data_subdir = ""
