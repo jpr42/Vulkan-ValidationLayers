@@ -102,6 +102,19 @@ void DebugReport::RemoveDebugUtilsCallback(uint64_t callback) {
 }
 
 namespace {
+// Handle() resolves through the same VkHandleInfo traits as FormatHandle(). On 32-bit every non-dispatchable handle is a
+// uint64_t, so both must fall back to the generic non-dispatchable type name. Checked in the layer so that 32-bit builds
+// without tests compile it.
+template <typename T>
+constexpr VkObjectType HandleObjectType(HandleRef (DebugReport::*)(T) const) {
+    return VkHandleInfo<T>::kVkObjectType;
+}
+#ifdef TYPESAFE_NONDISPATCHABLE_HANDLES
+static_assert(HandleObjectType(&DebugReport::Handle<VkBuffer>) == VK_OBJECT_TYPE_BUFFER);
+#else
+static_assert(HandleObjectType(&DebugReport::Handle<VkBuffer>) == VK_OBJECT_TYPE_UNKNOWN);
+#endif
+
 // Per-thread buffers reused across messages. Never freed: thread_local destructors bring destruction-order and library
 // unloading problems (see thread_safety_validation.cpp), so each thread that ever logged leaks one set.
 struct FormatBuffers {
