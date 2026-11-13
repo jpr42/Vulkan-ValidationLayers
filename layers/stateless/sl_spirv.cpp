@@ -158,11 +158,11 @@ bool SpirvValidator::ValidateShaderClock(const spirv::Module& module_state, cons
         // if scope isn't Subgroup or Device, spirv-val will catch
         if ((scope_type == spv::ScopeSubgroup) && (enabled_features.shaderSubgroupClock == VK_FALSE)) {
             skip |= LogError("VUID-RuntimeSpirv-shaderSubgroupClock-06267", module_state.handle(), loc,
-                             "SPIR-V uses OpReadClockKHR with a Subgroup scope but shaderSubgroupClock was not enabled.\n%s\n",
+                             "SPIR-V uses OpReadClockKHR with a Subgroup scope but shaderSubgroupClock was not enabled.\n{}\n",
                              module_state.DescribeInstruction(insn).c_str());
         } else if ((scope_type == spv::ScopeDevice) && (enabled_features.shaderDeviceClock == VK_FALSE)) {
             skip |= LogError("VUID-RuntimeSpirv-shaderDeviceClock-06268", module_state.handle(), loc,
-                             "SPIR-V uses OpReadClockKHR with a Device scope but shaderDeviceClock was not enabled.\n%s\n",
+                             "SPIR-V uses OpReadClockKHR with a Device scope but shaderDeviceClock was not enabled.\n{}\n",
                              module_state.DescribeInstruction(insn).c_str());
         }
     }
@@ -227,8 +227,8 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
         if (atomic.type == spv::OpTypeFloat && (atomic.vector_size == 2 || atomic.vector_size == 4)) {
             if (!valid_16_float_vector) {
                 skip |= LogError("VUID-RuntimeSpirv-shaderFloat16VectorAtomics-09581", module_state.handle(), loc,
-                                 "SPIR-V is using 16-bit float vector atomics operations with %s storage class, but "
-                                 "shaderFloat16VectorAtomics was not enabled.\n%s\n",
+                                 "SPIR-V is using 16-bit float vector atomics operations with {} storage class, but "
+                                 "shaderFloat16VectorAtomics was not enabled.\n{}\n",
                                  spv::StorageClassToString(static_cast<spv::StorageClass>(atomic.storage_class)),
                                  module_state.DescribeInstruction(atomic_def).c_str());
             }
@@ -237,20 +237,20 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
             if (((atomic.storage_class == spv::StorageClassStorageBuffer) || (atomic.storage_class == spv::StorageClassUniform)) &&
                 (enabled_features.shaderBufferInt64Atomics == VK_FALSE)) {
                 skip |= LogError("VUID-RuntimeSpirv-None-06278", module_state.handle(), loc,
-                                 "SPIR-V is using 64-bit int atomics operations with %s storage class, but "
-                                 "shaderBufferInt64Atomics was not enabled.\n%s\n",
+                                 "SPIR-V is using 64-bit int atomics operations with {} storage class, but "
+                                 "shaderBufferInt64Atomics was not enabled.\n{}\n",
                                  spv::StorageClassToString(static_cast<spv::StorageClass>(atomic.storage_class)),
                                  module_state.DescribeInstruction(atomic_def).c_str());
             } else if ((atomic.storage_class == spv::StorageClassWorkgroup) &&
                        (enabled_features.shaderSharedInt64Atomics == VK_FALSE)) {
                 skip |= LogError("VUID-RuntimeSpirv-None-06279", module_state.handle(), loc,
                                  "SPIR-V is using 64-bit int atomics operations with Workgroup storage class, but "
-                                 "shaderSharedInt64Atomics was not enabled.\n%s\n",
+                                 "shaderSharedInt64Atomics was not enabled.\n{}\n",
                                  module_state.DescribeInstruction(atomic_def).c_str());
             } else if ((atomic.storage_class == spv::StorageClassImage) && (valid_image_64_int == false)) {
                 skip |= LogError("VUID-RuntimeSpirv-None-06288", module_state.handle(), loc,
                                  "SPIR-V is using 64-bit int atomics operations with Image storage class, but "
-                                 "shaderImageInt64Atomics was not enabled.\n%s\n",
+                                 "shaderImageInt64Atomics was not enabled.\n{}\n",
                                  module_state.DescribeInstruction(atomic_def).c_str());
             }
         } else if (atomic.type == spv::OpTypeFloat) {
@@ -259,40 +259,40 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
                 if (valid_storage_buffer_float == false) {
                     skip |= LogError("VUID-RuntimeSpirv-None-06284", module_state.handle(), loc,
                                      "SPIR-V is using float atomics operations with StorageBuffer storage class, but none of "
-                                     "the required features were enabled.\n%s\n",
+                                     "the required features were enabled.\n{}\n",
                                      module_state.DescribeInstruction(atomic_def).c_str());
                 } else if (opcode == spv::OpAtomicFAddEXT) {
                     if ((atomic.bit_width == 16) && (enabled_features.shaderBufferFloat16AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for add operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat16AtomicAdd was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat16AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderBufferFloat32AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for add operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat32AtomicAdd was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat32AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderBufferFloat64AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for add operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat64AtomicAdd was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat64AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 } else if (opcode == spv::OpAtomicFMinEXT || opcode == spv::OpAtomicFMaxEXT) {
                     if ((atomic.bit_width == 16) && (enabled_features.shaderBufferFloat16AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for min/max operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat16AtomicMinMax was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat16AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderBufferFloat32AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for min/max operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat32AtomicMinMax was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat32AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderBufferFloat64AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for min/max operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat64AtomicMinMax was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat64AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 } else {
@@ -300,17 +300,17 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
                     if ((atomic.bit_width == 16) && (enabled_features.shaderBufferFloat16Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for load/store/exchange operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat16Atomics was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat16Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderBufferFloat32Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for load/store/exchange operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat32Atomics was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat32Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderBufferFloat64Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for load/store/exchange operations with "
-                                         "StorageBuffer storage class, but shaderBufferFloat64Atomics was not enabled.\n%s\n",
+                                         "StorageBuffer storage class, but shaderBufferFloat64Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 }
@@ -318,40 +318,40 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
                 if (valid_workgroup_float == false) {
                     skip |= LogError("VUID-RuntimeSpirv-None-06285", module_state.handle(), loc,
                                      "SPIR-V is using float atomics operations with Workgroup storage class, but none of the "
-                                     "required features were enabled.\n%s\n",
+                                     "required features were enabled.\n{}\n",
                                      module_state.DescribeInstruction(atomic_def).c_str());
                 } else if (opcode == spv::OpAtomicFAddEXT) {
                     if ((atomic.bit_width == 16) && (enabled_features.shaderSharedFloat16AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for add operations with Workgroup "
-                                         "storage class, but shaderSharedFloat16AtomicAdd was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat16AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderSharedFloat32AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for add operations with Workgroup "
-                                         "storage class, but shaderSharedFloat32AtomicAdd was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat32AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderSharedFloat64AtomicAdd == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for add operations with Workgroup "
-                                         "storage class, but shaderSharedFloat64AtomicAdd was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat64AtomicAdd was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 } else if (opcode == spv::OpAtomicFMinEXT || opcode == spv::OpAtomicFMaxEXT) {
                     if ((atomic.bit_width == 16) && (enabled_features.shaderSharedFloat16AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for min/max operations with "
-                                         "Workgroup storage class, but shaderSharedFloat16AtomicMinMax was not enabled.\n%s\n",
+                                         "Workgroup storage class, but shaderSharedFloat16AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderSharedFloat32AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for min/max operations with "
-                                         "Workgroup storage class, but shaderSharedFloat32AtomicMinMax was not enabled.\n%s\n",
+                                         "Workgroup storage class, but shaderSharedFloat32AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderSharedFloat64AtomicMinMax == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for min/max operations with "
-                                         "Workgroup storage class, but shaderSharedFloat64AtomicMinMax was not enabled.\n%s\n",
+                                         "Workgroup storage class, but shaderSharedFloat64AtomicMinMax was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 } else {
@@ -359,39 +359,39 @@ bool SpirvValidator::ValidateAtomicsTypes(const spirv::Module& module_state, con
                     if ((atomic.bit_width == 16) && (enabled_features.shaderSharedFloat16Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
                                          "SPIR-V is using 16-bit float atomics for load/store/exchange operations with Workgroup "
-                                         "storage class, but shaderSharedFloat16Atomics was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat16Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 32) && (enabled_features.shaderSharedFloat32Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
                                          "SPIR-V is using 32-bit float atomics for load/store/exchange operations with Workgroup "
-                                         "storage class, but shaderSharedFloat32Atomics was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat32Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     } else if ((atomic.bit_width == 64) && (enabled_features.shaderSharedFloat64Atomics == VK_FALSE)) {
                         skip |= LogError("VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
                                          "SPIR-V is using 64-bit float atomics for load/store/exchange operations with Workgroup "
-                                         "storage class, but shaderSharedFloat64Atomics was not enabled.\n%s\n",
+                                         "storage class, but shaderSharedFloat64Atomics was not enabled.\n{}\n",
                                          module_state.DescribeInstruction(atomic_def).c_str());
                     }
                 }
             } else if ((atomic.storage_class == spv::StorageClassImage) && (valid_image_float == false)) {
                 skip |= LogError("VUID-RuntimeSpirv-None-06286", module_state.handle(), loc,
                                  "SPIR-V is using float atomics operations with Image storage class, but none of the required "
-                                 "features were enabled.\n%s\n",
+                                 "features were enabled.\n{}\n",
                                  module_state.DescribeInstruction(atomic_def).c_str());
             } else if ((atomic.bit_width == 16) && (valid_16_float == false)) {
                 skip |= LogError(
                     "VUID-RuntimeSpirv-None-06337", module_state.handle(), loc,
-                    "SPIR-V is using 16-bit float atomics operations but none of the required features were enabled.\n%s\n",
+                    "SPIR-V is using 16-bit float atomics operations but none of the required features were enabled.\n{}\n",
                     module_state.DescribeInstruction(atomic_def).c_str());
             } else if ((atomic.bit_width == 32) && (valid_32_float == false)) {
                 skip |= LogError(
                     "VUID-RuntimeSpirv-None-06338", module_state.handle(), loc,
-                    "SPIR-V is using 32-bit float atomics operations but none of the required features were enabled.\n%s\n",
+                    "SPIR-V is using 32-bit float atomics operations but none of the required features were enabled.\n{}\n",
                     module_state.DescribeInstruction(atomic_def).c_str());
             } else if ((atomic.bit_width == 64) && (valid_64_float == false)) {
                 skip |= LogError(
                     "VUID-RuntimeSpirv-None-06339", module_state.handle(), loc,
-                    "SPIR-V is using 64-bit float atomics operations but none of the required features were enabled.\n%s\n",
+                    "SPIR-V is using 64-bit float atomics operations but none of the required features were enabled.\n{}\n",
                     module_state.DescribeInstruction(atomic_def).c_str());
             }
         }
@@ -409,16 +409,16 @@ bool SpirvValidator::ValidateFma(const spirv::Module& module_state, const spirv:
         const uint32_t bit_width = module_state.GetBaseTypeInstruction(type_insn)->GetBitWidth();
         if (bit_width == 16 && !enabled_features.shaderFmaFloat16) {
             skip |= LogError("VUID-RuntimeSpirv-shaderFmaFloat16-10977", module_state.handle(), loc,
-                             "SPIR-V uses OpFmaKHR with 16-bit floats but shaderFmaFloat16 was not enabled.\n%s\n",
+                             "SPIR-V uses OpFmaKHR with 16-bit floats but shaderFmaFloat16 was not enabled.\n{}\n",
                              module_state.DescribeInstruction(*fma_inst).c_str());
         } else if (bit_width == 32 && !enabled_features.shaderFmaFloat32) {
             skip |= LogError("VUID-RuntimeSpirv-shaderFmaFloat32-10978", module_state.handle(), loc,
                              "SPIR-V uses OpFmaKHR with 32-bit floats but shaderFmaFloat32 was not enabled. (shaderFmaFloat32 is "
-                             "required to be supported if VK_KHR_shader_fma is supported)\n%s\n",
+                             "required to be supported if VK_KHR_shader_fma is supported)\n{}\n",
                              module_state.DescribeInstruction(*fma_inst).c_str());
         } else if (bit_width == 64 && !enabled_features.shaderFmaFloat64) {
             skip |= LogError("VUID-RuntimeSpirv-shaderFmaFloat64-10979", module_state.handle(), loc,
-                             "SPIR-V uses OpFmaKHR with 64-bit floats but shaderFmaFloat64 was not enabled.\n%s\n",
+                             "SPIR-V uses OpFmaKHR with 64-bit floats but shaderFmaFloat64 was not enabled.\n{}\n",
                              module_state.DescribeInstruction(*fma_inst).c_str());
         }
     }
@@ -439,8 +439,8 @@ bool SpirvValidator::ValidateVariables(const spirv::Module& module_state, const 
                 const bool has_initializer = insn->Length() > (untyped ? 5u : 4u);
                 if (has_initializer && !enabled_features.shaderZeroInitializeWorkgroupMemory) {
                     skip |= LogError("VUID-RuntimeSpirv-shaderZeroInitializeWorkgroupMemory-06372", module_state.handle(), loc,
-                                     "SPIR-V contains an %s with Workgroup Storage Class with an Initializer operand, but "
-                                     "shaderZeroInitializeWorkgroupMemory was not enabled.\n%s\n",
+                                     "SPIR-V contains an {} with Workgroup Storage Class with an Initializer operand, but "
+                                     "shaderZeroInitializeWorkgroupMemory was not enabled.\n{}\n",
                                      spv::OpToString(static_cast<spv::Op>(opcode)), insn->Describe().c_str());
                 }
             }
@@ -567,34 +567,34 @@ bool SpirvValidator::Validate8And16BitStorage(const spirv::Module& module_state,
              storage_class == spv::StorageClassPhysicalStorageBuffer)) {
             skip |=
                 LogError("VUID-RuntimeSpirv-storageBuffer8BitAccess-06328", module_state.handle(), loc,
-                         "SPIR-V contains an 8-bit %s with %s Storage Class, but storageBuffer8BitAccess was not enabled.\n%s\n",
+                         "SPIR-V contains an 8-bit {} with {} Storage Class, but storageBuffer8BitAccess was not enabled.\n{}\n",
                          untyped_access ? "access" : "OpVariable",
                          spv::StorageClassToString(static_cast<spv::StorageClass>(storage_class)), insn.Describe().c_str());
         }
         if (!enabled_features.uniformAndStorageBuffer8BitAccess && storage_class == spv::StorageClassUniform) {
             skip |= LogError("VUID-RuntimeSpirv-uniformAndStorageBuffer8BitAccess-06329", module_state.handle(), loc,
-                             "SPIR-V contains an 8-bit %s with Uniform Storage Class, but uniformAndStorageBuffer8BitAccess was "
-                             "enabled.\n%s\n",
+                             "SPIR-V contains an 8-bit {} with Uniform Storage Class, but uniformAndStorageBuffer8BitAccess was "
+                             "enabled.\n{}\n",
                              untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
         if (!enabled_features.storagePushConstant8 && storage_class == spv::StorageClassPushConstant) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-storagePushConstant8-06330", module_state.handle(), loc,
-                "SPIR-V contains an 8-bit %s with PushConstant Storage Class, but storagePushConstant8 was not enabled.\n%s\n",
+                "SPIR-V contains an 8-bit {} with PushConstant Storage Class, but storagePushConstant8 was not enabled.\n{}\n",
                 untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
         if (!enabled_features.workgroupMemoryExplicitLayout8BitAccess && storage_class == spv::StorageClassWorkgroup) {
             skip |=
                 LogError("VUID-RuntimeSpirv-workgroupMemoryExplicitLayout8BitAccess-10756", module_state.handle(), loc,
-                         "SPIR-V contains an 8-bit %s with Workgroup Storage Class, but workgroupMemoryExplicitLayout8BitAccess "
-                         "was not enabled.\n%s\n",
+                         "SPIR-V contains an 8-bit {} with Workgroup Storage Class, but workgroupMemoryExplicitLayout8BitAccess "
+                         "was not enabled.\n{}\n",
                          untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
 
         if (storage_class == spv::StorageClassInput || storage_class == spv::StorageClassOutput) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-None-10980", module_state.handle(), loc,
-                "SPIR-V contains an 8-bit %s with %s Storage Class, but 8-bit Input/Output are not allowed in Vulkan.\n%s\n",
+                "SPIR-V contains an 8-bit {} with {} Storage Class, but 8-bit Input/Output are not allowed in Vulkan.\n{}\n",
                 untyped_access ? "access" : "OpVariable", spv::StorageClassToString(static_cast<spv::StorageClass>(storage_class)),
                 insn.Describe().c_str());
         }
@@ -606,33 +606,33 @@ bool SpirvValidator::Validate8And16BitStorage(const spirv::Module& module_state,
              storage_class == spv::StorageClassPhysicalStorageBuffer)) {
             skip |=
                 LogError("VUID-RuntimeSpirv-storageBuffer16BitAccess-11161", module_state.handle(), loc,
-                         "SPIR-V contains a 16-bit %s with %s StorageClass, but storageBuffer16BitAccess was not enabled.\n%s\n",
+                         "SPIR-V contains a 16-bit {} with {} StorageClass, but storageBuffer16BitAccess was not enabled.\n{}\n",
                          untyped_access ? "access" : "OpVariable",
                          spv::StorageClassToString(static_cast<spv::StorageClass>(storage_class)), insn.Describe().c_str());
         }
         if (!enabled_features.uniformAndStorageBuffer16BitAccess && storage_class == spv::StorageClassUniform) {
             skip |= LogError("VUID-RuntimeSpirv-uniformAndStorageBuffer16BitAccess-06332", module_state.handle(), loc,
-                             "SPIR-V contains a 16-bit %s with Uniform Storage Class, but uniformAndStorageBuffer16BitAccess was "
-                             "not enabled.\n%s\n",
+                             "SPIR-V contains a 16-bit {} with Uniform Storage Class, but uniformAndStorageBuffer16BitAccess was "
+                             "not enabled.\n{}\n",
                              untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
         if (!enabled_features.storagePushConstant16 && storage_class == spv::StorageClassPushConstant) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-storagePushConstant16-06333", module_state.handle(), loc,
-                "SPIR-V contains a 16-bit %s with PushConstant storage class, but storagePushConstant16 was not enabled.\n%s\n",
+                "SPIR-V contains a 16-bit {} with PushConstant storage class, but storagePushConstant16 was not enabled.\n{}\n",
                 untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
         if (!enabled_features.storageInputOutput16 &&
             (storage_class == spv::StorageClassInput || storage_class == spv::StorageClassOutput)) {
             skip |= LogError("VUID-RuntimeSpirv-storageInputOutput16-11162", module_state.handle(), loc,
-                             "SPIR-V contains a 16-bit %s with %s Storage Class, but storageInputOutput16 was not enabled.\n%s\n",
+                             "SPIR-V contains a 16-bit {} with {} Storage Class, but storageInputOutput16 was not enabled.\n{}\n",
                              untyped_access ? "access" : "OpVariable",
                              spv::StorageClassToString(static_cast<spv::StorageClass>(storage_class)), insn.Describe().c_str());
         }
         if (!enabled_features.workgroupMemoryExplicitLayout16BitAccess && storage_class == spv::StorageClassWorkgroup) {
             skip |= LogError("VUID-RuntimeSpirv-workgroupMemoryExplicitLayout16BitAccess-10757", module_state.handle(), loc,
-                             "SPIR-V contains a 16-bit %s with Workgroup Storage Class, but "
-                             "workgroupMemoryExplicitLayout16BitAccess was not enabled.\n%s\n",
+                             "SPIR-V contains a 16-bit {} with Workgroup Storage Class, but "
+                             "workgroupMemoryExplicitLayout16BitAccess was not enabled.\n{}\n",
                              untyped_access ? "access" : "OpVariable", insn.Describe().c_str());
         }
     }
@@ -676,7 +676,7 @@ bool SpirvValidator::ValidateShaderStorageImageFormatsVariables(const spirv::Mod
         if (!enabled_features.shaderStorageImageReadWithoutFormat && !decorations.Has(spirv::DecorationSet::nonreadable_bit)) {
             skip |=
                 LogError("VUID-RuntimeSpirv-apiVersion-07955", module_state.handle(), loc,
-                         "SPIR-V variable\n%s\nhas an Image\n%s\nwith Unknown "
+                         "SPIR-V variable\n{}\nhas an Image\n{}\nwith Unknown "
                          "format and is not decorated with NonReadable, but shaderStorageImageReadWithoutFormat is not supported.",
                          module_state.FindDef(var_id)->Describe().c_str(), type_def->Describe().c_str());
         }
@@ -684,7 +684,7 @@ bool SpirvValidator::ValidateShaderStorageImageFormatsVariables(const spirv::Mod
         if (!enabled_features.shaderStorageImageWriteWithoutFormat && !decorations.Has(spirv::DecorationSet::nonwritable_bit)) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-apiVersion-07954", module_state.handle(), loc,
-                "SPIR-V variable\n%s\nhas an Image\n%s\nwith "
+                "SPIR-V variable\n{}\nhas an Image\n{}\nwith "
                 "Unknown format and is not decorated with NonWritable, but shaderStorageImageWriteWithoutFormat is not supported.",
                 module_state.FindDef(var_id)->Describe().c_str(), type_def->Describe().c_str());
         }
@@ -710,8 +710,9 @@ bool SpirvValidator::ValidateTransformFeedbackDecorations(const spirv::Module& m
             uint32_t stride = op_decorate->Word(3);
             if (stride > phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackBufferDataStride) {
                 skip |= LogError("VUID-RuntimeSpirv-XfbStride-06313", module_state.handle(), loc,
-                                 "SPIR-V uses transform feedback with xfb_stride (%" PRIu32
-                                 ") greater than maxTransformFeedbackBufferDataStride (%" PRIu32 ").",
+                                 "SPIR-V uses transform feedback with xfb_stride ({}"
+                                 ") greater than maxTransformFeedbackBufferDataStride ({}"
+                                 ").",
                                  stride, phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackBufferDataStride);
             }
         }
@@ -720,8 +721,9 @@ bool SpirvValidator::ValidateTransformFeedbackDecorations(const spirv::Module& m
             uint32_t stream = op_decorate->Word(3);
             if (stream >= phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams) {
                 skip |= LogError("VUID-RuntimeSpirv-Stream-06312", module_state.handle(), loc,
-                                 "SPIR-V uses transform feedback with stream (%" PRIu32
-                                 ") not less than maxTransformFeedbackStreams (%" PRIu32 ").",
+                                 "SPIR-V uses transform feedback with stream ({}"
+                                 ") not less than maxTransformFeedbackStreams ({}"
+                                 ").",
                                  stream, phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams);
             }
         }
@@ -745,9 +747,11 @@ bool SpirvValidator::ValidateTransformFeedbackDecorations(const spirv::Module& m
                 if (buffer_data_size > phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackBufferDataSize) {
                     skip |= LogError(
                         "VUID-RuntimeSpirv-Offset-06308", module_state.handle(), loc,
-                        "SPIR-V uses transform feedback with xfb_offset (%" PRIu32 ") + size of variable (%" PRIu32
+                        "SPIR-V uses transform feedback with xfb_offset ({}"
+                        ") + size of variable ({}"
                         ") greater than VkPhysicalDeviceTransformFeedbackPropertiesEXT::maxTransformFeedbackBufferDataSize "
-                        "(%" PRIu32 ").",
+                        "({}"
+                        ").",
                         offset, size, phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackBufferDataSize);
                 }
 
@@ -785,12 +789,14 @@ bool SpirvValidator::ValidateTransformFeedbackDecorations(const spirv::Module& m
 
     for (const auto& stream : stream_data_size) {
         if (stream.second > phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreamDataSize) {
-            skip |= LogError(
-                "VUID-RuntimeSpirv-XfbBuffer-06309", module_state.handle(), loc,
-                "SPIR-V uses transform feedback with stream (%" PRIu32 ") having the sum of buffer data sizes (%" PRIu32
-                ") greater than VkPhysicalDeviceTransformFeedbackPropertiesEXT::maxTransformFeedbackStreamDataSize "
-                "(%" PRIu32 ").",
-                stream.first, stream.second, phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreamDataSize);
+            skip |= LogError("VUID-RuntimeSpirv-XfbBuffer-06309", module_state.handle(), loc,
+                             "SPIR-V uses transform feedback with stream ({}"
+                             ") having the sum of buffer data sizes ({}"
+                             ") greater than VkPhysicalDeviceTransformFeedbackPropertiesEXT::maxTransformFeedbackStreamDataSize "
+                             "({}"
+                             ").",
+                             stream.first, stream.second,
+                             phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreamDataSize);
         }
     }
 
@@ -814,8 +820,9 @@ bool SpirvValidator::ValidateTransformFeedbackEmitStreams(const spirv::Module& m
             uint32_t stream = module_state.GetConstantValueById(insn->Word(1));
             if (stream >= phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams) {
                 skip |= LogError("VUID-RuntimeSpirv-OpEmitStreamVertex-06310", module_state.handle(), loc,
-                                 "shader %s uses transform feedback stream\n%s\nwith index %" PRIu32
-                                 ", which is not less than maxTransformFeedbackStreams (%" PRIu32 ").",
+                                 "shader {} uses transform feedback stream\n{}\nwith index {}"
+                                 ", which is not less than maxTransformFeedbackStreams ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), insn->Describe().c_str(), stream,
                                  phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams);
             }
@@ -827,7 +834,7 @@ bool SpirvValidator::ValidateTransformFeedbackEmitStreams(const spirv::Module& m
     if (emitted_streams_size > 1 && !output_points &&
         phys_dev_ext_props.transform_feedback_props.transformFeedbackStreamsLinesTriangles == VK_FALSE) {
         skip |= LogError("VUID-RuntimeSpirv-transformFeedbackStreamsLinesTriangles-06311", module_state.handle(), loc,
-                         "shader %s emits to %" PRIu32
+                         "shader {} emits to {}"
                          " vertex streams and transformFeedbackStreamsLinesTriangles "
                          "is VK_FALSE, but execution mode is not OutputPoints.",
                          entrypoint.Describe().c_str(), emitted_streams_size);
@@ -919,16 +926,18 @@ bool SpirvValidator::ValidateTexelOffsetLimits(const spirv::Module& module_state
                         // min/maxTexelGatherOffset
                         if (use_signed && (signed_offset < phys_dev_props.limits.minTexelGatherOffset)) {
                             skip |= LogError("VUID-RuntimeSpirv-OpImage-06376", module_state.handle(), loc,
-                                             "SPIR-V uses %s with offset (%" PRId32
-                                             ") less than VkPhysicalDeviceLimits::minTexelGatherOffset (%" PRId32 ").\n%s\n",
+                                             "SPIR-V uses {} with offset ({}"
+                                             ") less than VkPhysicalDeviceLimits::minTexelGatherOffset ({}"
+                                             ").\n{}\n",
                                              spv::OpToString(static_cast<spv::Op>(insn.Opcode())), signed_offset,
                                              phys_dev_props.limits.minTexelGatherOffset,
                                              module_state.DescribeInstruction(insn).c_str());
                         } else if ((offset > phys_dev_props.limits.maxTexelGatherOffset) &&
                                    (!use_signed || (use_signed && signed_offset > 0))) {
                             skip |= LogError("VUID-RuntimeSpirv-OpImage-06377", module_state.handle(), loc,
-                                             "SPIR-V uses %s with offset (%" PRIu32
-                                             ") greater than VkPhysicalDeviceLimits::maxTexelGatherOffset (%" PRIu32 ").\n%s\n",
+                                             "SPIR-V uses {} with offset ({}"
+                                             ") greater than VkPhysicalDeviceLimits::maxTexelGatherOffset ({}"
+                                             ").\n{}\n",
                                              spv::OpToString(static_cast<spv::Op>(insn.Opcode())), offset,
                                              phys_dev_props.limits.maxTexelGatherOffset,
                                              module_state.DescribeInstruction(insn).c_str());
@@ -938,15 +947,17 @@ bool SpirvValidator::ValidateTexelOffsetLimits(const spirv::Module& module_state
                         // TODO - maintenance8 added ability to use Offset, but will need validation on GPU side
                         if (use_signed && (signed_offset < phys_dev_props.limits.minTexelOffset)) {
                             skip |= LogError("VUID-RuntimeSpirv-OpImageSample-06435", module_state.handle(), loc,
-                                             "SPIR-V uses %s with offset (%" PRId32
-                                             ") less than VkPhysicalDeviceLimits::minTexelOffset (%" PRId32 ").\n%s\n",
+                                             "SPIR-V uses {} with offset ({}"
+                                             ") less than VkPhysicalDeviceLimits::minTexelOffset ({}"
+                                             ").\n{}\n",
                                              spv::OpToString(static_cast<spv::Op>(insn.Opcode())), signed_offset,
                                              phys_dev_props.limits.minTexelOffset, module_state.DescribeInstruction(insn).c_str());
                         } else if ((offset > phys_dev_props.limits.maxTexelOffset) &&
                                    (!use_signed || (use_signed && signed_offset > 0))) {
                             skip |= LogError("VUID-RuntimeSpirv-OpImageSample-06436", module_state.handle(), loc,
-                                             "SPIR-V uses %s with offset (%" PRIu32
-                                             ") greater than VkPhysicalDeviceLimits::maxTexelOffset (%" PRIu32 ").\n%s\n",
+                                             "SPIR-V uses {} with offset ({}"
+                                             ") greater than VkPhysicalDeviceLimits::maxTexelOffset ({}"
+                                             ").\n{}\n",
                                              spv::OpToString(static_cast<spv::Op>(insn.Opcode())), offset,
                                              phys_dev_props.limits.maxTexelOffset, module_state.DescribeInstruction(insn).c_str());
                         }
@@ -975,11 +986,11 @@ bool SpirvValidator::ValidateMemoryScope(const spirv::Module& module_state, cons
                 scope_type == spv::Scope::ScopeDevice) {
                 skip |=
                     LogError("VUID-RuntimeSpirv-vulkanMemoryModel-06265", module_state.handle(), loc,
-                             "SPIR-V uses Device memory scope, but the vulkanMemoryModelDeviceScope feature was not enabled.\n%s\n",
+                             "SPIR-V uses Device memory scope, but the vulkanMemoryModelDeviceScope feature was not enabled.\n{}\n",
                              module_state.DescribeInstruction(insn).c_str());
             } else if (!enabled_features.vulkanMemoryModel && scope_type == spv::Scope::ScopeQueueFamily) {
                 skip |= LogError("VUID-RuntimeSpirv-vulkanMemoryModel-06266", module_state.handle(), loc,
-                                 "SPIR-V uses QueueFamily memory scope, but the vulkanMemoryModel feature was not enabled.\n%s\n",
+                                 "SPIR-V uses QueueFamily memory scope, but the vulkanMemoryModel feature was not enabled.\n{}\n",
                                  module_state.DescribeInstruction(insn).c_str());
             }
         }
@@ -993,7 +1004,7 @@ bool SpirvValidator::ValidateSubgroupRotateClustered(const spirv::Module& module
     bool skip = false;
     if (!enabled_features.shaderSubgroupRotateClustered && insn.Opcode() == spv::OpGroupNonUniformRotateKHR && insn.Length() == 7) {
         skip |= LogError("VUID-RuntimeSpirv-shaderSubgroupRotateClustered-09566", module_state.handle(), loc,
-                         "SPIR-V uses ClusterSize operand, but the shaderSubgroupRotateClustered feature was not enabled.\n%s\n",
+                         "SPIR-V uses ClusterSize operand, but the shaderSubgroupRotateClustered feature was not enabled.\n{}\n",
                          module_state.DescribeInstruction(insn).c_str());
     }
     return skip;
@@ -1011,7 +1022,7 @@ bool SpirvValidator::ValidateUntypedPointerFeature(const spirv::Module& module_s
                                                                          : "VUID-VkShaderModuleCreateInfo-pCode-08740";
         skip |= LogError(
             vuid, module_state.handle(), loc,
-            "%s was used but the VkPhysicalDeviceShaderUntypedPointersFeaturesKHR::shaderUntypedPointers feature was not enabled. "
+            "{} was used but the VkPhysicalDeviceShaderUntypedPointersFeaturesKHR::shaderUntypedPointers feature was not enabled. "
             "\nThis is a special situation, where even though the Capability DescriptorHeapEXT was declared, which implicity "
             "declared Capability UntypedPointersKHR, both the shaderUntypedPointers and descriptorHeap feature are needed.",
             spv::OpToString(static_cast<spv::Op>(insn.Opcode())));
@@ -1035,7 +1046,7 @@ bool SpirvValidator::ValidateShaderStageGroupNonUniform(const spirv::Module& mod
             if ((stage != VK_SHADER_STAGE_FRAGMENT_BIT) && (stage != VK_SHADER_STAGE_COMPUTE_BIT)) {
                 if (!phys_dev_props_core11.subgroupQuadOperationsInAllStages) {
                     skip |= LogError("VUID-RuntimeSpirv-None-06342", module_state.handle(), loc,
-                                     "Can't use %s for %s because subgroupQuadOperationsInAllStages is false so this can only be "
+                                     "Can't use {} for {} because subgroupQuadOperationsInAllStages is false so this can only be "
                                      "used in the Compute or Fragment shader stage.",
                                      spv::OpToString(static_cast<spv::Op>(insn.Opcode())), entrypoint.Describe().c_str());
                 }
@@ -1057,9 +1068,9 @@ bool SpirvValidator::ValidateShaderStageGroupNonUniform(const spirv::Module& mod
             const VkSubgroupFeatureFlags supported_stages = phys_dev_props_core11.subgroupSupportedStages;
             if ((supported_stages & stage) == 0) {
                 skip |= LogError("VUID-RuntimeSpirv-None-06343", module_state.handle(), loc,
-                                 "%s is used in %s which is not supported in subgroupSupportedStages (%s).",
+                                 "{} is used in {} which is not supported in subgroupSupportedStages ({}).",
                                  spv::OpToString(static_cast<spv::Op>(insn.Opcode())), entrypoint.Describe().c_str(),
-                                 string_VkShaderStageFlags(supported_stages).c_str());
+                                 vvl::Flags::ShaderStageFlags(supported_stages));
             }
         }
 
@@ -1079,8 +1090,8 @@ bool SpirvValidator::ValidateShaderStageGroupNonUniform(const spirv::Module& mod
                 const bool is_int = type->Opcode() == spv::OpTypeInt;
                 if ((is_float && width == 16) || (is_int && (width == 8 || width == 16 || width == 64))) {
                     skip |= LogError("VUID-RuntimeSpirv-None-06275", module_state.handle(), loc,
-                                     "%s is using a %" PRIu32
-                                     "-bit %s %s in %s but "
+                                     "{} is using a {}"
+                                     "-bit {} {} in {} but "
                                      "VkPhysicalDeviceShaderSubgroupExtendedTypesFeatures::shaderSubgroupExtendedTypes was not "
                                      "enabled.",
                                      spv::OpToString(static_cast<spv::Op>(insn.Opcode())), width, is_float ? "float" : "int",
@@ -1142,9 +1153,10 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
         case VK_SHADER_STAGE_VERTEX_BIT:
             if (total_output_components >= limits.maxVertexOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s output interface variable (%s) along with %" PRIu32
+                                 "shader {} output interface variable ({}) along with {}"
                                  " built-in components, "
-                                 "exceeds component limit maxVertexOutputComponents (%" PRIu32 ").",
+                                 "exceeds component limit maxVertexOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_output_slot.Describe().c_str(),
                                  entrypoint.built_in_output_components, limits.maxVertexOutputComponents);
             }
@@ -1156,24 +1168,27 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
             if (max_input_slot.slot >= limits.maxTessellationControlPerVertexInputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s input interface variable (%s) "
-                                 "exceeds component limit maxTessellationControlPerVertexInputComponents (%" PRIu32 ").",
+                                 "shader {} input interface variable ({}) "
+                                 "exceeds component limit maxTessellationControlPerVertexInputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_input_slot.Describe().c_str(),
                                  limits.maxTessellationControlPerVertexInputComponents);
             }
             if (const auto* slot = GetMaxTessellationSlot(entrypoint, spv::StorageClassOutput, false);
                 slot && slot->slot >= limits.maxTessellationControlPerVertexOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s output interface variable (%s) "
-                                 "exceeds component limit maxTessellationControlPerVertexOutputComponents (%" PRIu32 ").",
+                                 "shader {} output interface variable ({}) "
+                                 "exceeds component limit maxTessellationControlPerVertexOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), slot->Describe().c_str(),
                                  limits.maxTessellationControlPerVertexOutputComponents);
             }
             if (const auto* slot = GetMaxTessellationSlot(entrypoint, spv::StorageClassOutput, true);
                 slot && slot->slot >= limits.maxTessellationControlPerPatchOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s per-patch output interface variable (%s) "
-                                 "exceeds component limit maxTessellationControlPerPatchOutputComponents (%" PRIu32 ").",
+                                 "shader {} per-patch output interface variable ({}) "
+                                 "exceeds component limit maxTessellationControlPerPatchOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), slot->Describe().c_str(),
                                  limits.maxTessellationControlPerPatchOutputComponents);
             }
@@ -1183,8 +1198,9 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
             if (const auto* slot = GetMaxTessellationSlot(entrypoint, spv::StorageClassInput, false);
                 slot && slot->slot >= limits.maxTessellationEvaluationInputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s input interface variable (%s) "
-                                 "exceeds component limit maxTessellationEvaluationInputComponents (%" PRIu32 ").",
+                                 "shader {} input interface variable ({}) "
+                                 "exceeds component limit maxTessellationEvaluationInputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), slot->Describe().c_str(),
                                  limits.maxTessellationEvaluationInputComponents);
             }
@@ -1192,15 +1208,17 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
             if (const auto* slot = GetMaxTessellationSlot(entrypoint, spv::StorageClassInput, true);
                 slot && slot->slot >= limits.maxTessellationControlPerPatchOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s per-patch input interface variable (%s) "
-                                 "exceeds component limit maxTessellationControlPerPatchOutputComponents (%" PRIu32 ").",
+                                 "shader {} per-patch input interface variable ({}) "
+                                 "exceeds component limit maxTessellationControlPerPatchOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), slot->Describe().c_str(),
                                  limits.maxTessellationControlPerPatchOutputComponents);
             }
             if (max_output_slot.slot >= limits.maxTessellationEvaluationOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s output interface variable (%s) "
-                                 "exceeds component limit maxTessellationEvaluationOutputComponents (%" PRIu32 ").",
+                                 "shader {} output interface variable ({}) "
+                                 "exceeds component limit maxTessellationEvaluationOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_output_slot.Describe().c_str(),
                                  limits.maxTessellationEvaluationOutputComponents);
             }
@@ -1208,13 +1226,13 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
             if (IsExtEnabled(extensions.vk_khr_portability_subset)) {
                 if (is_iso_lines && (VK_FALSE == enabled_features.tessellationIsolines)) {
                     skip |= LogError("VUID-RuntimeSpirv-tessellationShader-06326", module_state.handle(), loc,
-                                     "(portability error) shader %s"
+                                     "(portability error) shader {}"
                                      " is using abstract patch type IsoLines, but this is not supported on this platform.",
                                      entrypoint.Describe().c_str());
                 }
                 if (is_point_mode && (VK_FALSE == enabled_features.tessellationPointMode)) {
                     skip |= LogError("VUID-RuntimeSpirv-tessellationShader-06327", module_state.handle(), loc,
-                                     "(portability error) shader %s"
+                                     "(portability error) shader {}"
                                      " is using abstract patch type PointMode, but this is not supported on this platform.",
                                      entrypoint.Describe().c_str());
                 }
@@ -1224,17 +1242,19 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
         case VK_SHADER_STAGE_GEOMETRY_BIT:
             if (total_input_components >= limits.maxGeometryInputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s input interface variable (%s) along with %" PRIu32
+                                 "shader {} input interface variable ({}) along with {}"
                                  " built-in components, "
-                                 "exceeds component limit maxGeometryInputComponents (%" PRIu32 ").",
+                                 "exceeds component limit maxGeometryInputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_input_slot.Describe().c_str(),
                                  entrypoint.built_in_input_components, limits.maxGeometryInputComponents);
             }
             if (total_output_components >= limits.maxGeometryOutputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s output interface variable (%s) along with %" PRIu32
+                                 "shader {} output interface variable ({}) along with {}"
                                  " built-in components, "
-                                 "exceeds component limit maxGeometryOutputComponents (%" PRIu32 ").",
+                                 "exceeds component limit maxGeometryOutputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_output_slot.Describe().c_str(),
                                  entrypoint.built_in_output_components, limits.maxGeometryOutputComponents);
             }
@@ -1243,9 +1263,10 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
         case VK_SHADER_STAGE_FRAGMENT_BIT:
             if (total_input_components >= limits.maxFragmentInputComponents) {
                 skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                                 "shader %s input interface variable (%s) along with %" PRIu32
+                                 "shader {} input interface variable ({}) along with {}"
                                  " built-in components, "
-                                 "exceeds component limit maxFragmentInputComponents (%" PRIu32 ").",
+                                 "exceeds component limit maxFragmentInputComponents ({}"
+                                 ").",
                                  entrypoint.Describe().c_str(), max_input_slot.Describe().c_str(),
                                  entrypoint.built_in_input_components, limits.maxFragmentInputComponents);
             }
@@ -1253,12 +1274,12 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
             // Fragment output doesn't have built ins
             // 1 Location == 1 color attachment
             if (max_output_slot.Location() >= limits.maxFragmentOutputAttachments) {
-                skip |=
-                    LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
-                             "shader %s output interface variable at Location %" PRIu32
-                             " "
-                             "exceeds the limit maxFragmentOutputAttachments (%" PRIu32 ") (note: Location are zero index based).",
-                             entrypoint.Describe().c_str(), max_output_slot.Location(), limits.maxFragmentOutputAttachments);
+                skip |= LogError("VUID-RuntimeSpirv-Location-06272", module_state.handle(), loc,
+                                 "shader {} output interface variable at Location {}"
+                                 " "
+                                 "exceeds the limit maxFragmentOutputAttachments ({}"
+                                 ") (note: Location are zero index based).",
+                                 entrypoint.Describe().c_str(), max_output_slot.Location(), limits.maxFragmentOutputAttachments);
             }
             break;
 
@@ -1276,31 +1297,39 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
             if (entrypoint.execution_model == spv::ExecutionModelMeshNV) {
                 if (num_vertices > phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputVertices) {
                     skip |= LogError("VUID-RuntimeSpirv-MeshNV-07113", module_state.handle(), loc,
-                                     "shader %s output vertices count exceeds the "
-                                     "maxMeshOutputVertices of %" PRIu32 " by %" PRIu32 ".",
+                                     "shader {} output vertices count exceeds the "
+                                     "maxMeshOutputVertices of {}"
+                                     " by {}"
+                                     ".",
                                      entrypoint.Describe().c_str(), phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputVertices,
                                      num_vertices - phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputVertices);
                 }
                 if (num_primitives > phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputPrimitives) {
                     skip |= LogError("VUID-RuntimeSpirv-MeshNV-07114", module_state.handle(), loc,
-                                     "shader %s output primitives count exceeds the "
-                                     "maxMeshOutputPrimitives of %" PRIu32 " by %" PRIu32 ".",
+                                     "shader {} output primitives count exceeds the "
+                                     "maxMeshOutputPrimitives of {}"
+                                     " by {}"
+                                     ".",
                                      entrypoint.Describe().c_str(), phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputPrimitives,
                                      num_primitives - phys_dev_ext_props.mesh_shader_props_nv.maxMeshOutputPrimitives);
                 }
             } else if (entrypoint.execution_model == spv::ExecutionModelMeshEXT) {
                 if (num_vertices > phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputVertices) {
                     skip |= LogError("VUID-RuntimeSpirv-MeshEXT-07115", module_state.handle(), loc,
-                                     "shader %s output vertices count exceeds the "
-                                     "maxMeshOutputVertices of %" PRIu32 " by %" PRIu32 ".",
+                                     "shader {} output vertices count exceeds the "
+                                     "maxMeshOutputVertices of {}"
+                                     " by {}"
+                                     ".",
                                      entrypoint.Describe().c_str(), phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputVertices,
                                      num_vertices - phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputVertices);
                 }
                 if (num_primitives > phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputPrimitives) {
                     skip |=
                         LogError("VUID-RuntimeSpirv-MeshEXT-07116", module_state.handle(), loc,
-                                 "shader %s output primitives count exceeds the "
-                                 "maxMeshOutputPrimitives of %" PRIu32 " by %" PRIu32 ".",
+                                 "shader {} output primitives count exceeds the "
+                                 "maxMeshOutputPrimitives of {}"
+                                 " by {}"
+                                 ".",
                                  entrypoint.Describe().c_str(), phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputPrimitives,
                                  num_primitives - phys_dev_ext_props.mesh_shader_props_ext.maxMeshOutputPrimitives);
                 }
@@ -1340,9 +1369,10 @@ bool SpirvValidator::ValidateShaderStageInputOutputLimits(const spirv::Module& m
         const uint32_t total_output = (uint32_t)(color_attachments.size() + storage_buffers.size() + storage_images.size());
         if (total_output > limits.maxFragmentCombinedOutputResources) {
             skip |= LogError("VUID-RuntimeSpirv-Location-06428", module_state.handle(), loc,
-                             "shader %s output contains %zu storage buffer bindings, %zu storage image bindings, and "
-                             "%zu color attachments which together is %" PRIu32
-                             " which exceeds the limit maxFragmentCombinedOutputResources (%" PRIu32 ").",
+                             "shader {} output contains {} storage buffer bindings, {} storage image bindings, and "
+                             "{} color attachments which together is {}"
+                             " which exceeds the limit maxFragmentCombinedOutputResources ({}"
+                             ").",
                              entrypoint.Describe().c_str(), storage_buffers.size(), storage_images.size(), color_attachments.size(),
                              total_output, limits.maxFragmentCombinedOutputResources);
         }
@@ -1357,7 +1387,7 @@ bool SpirvValidator::ValidateShaderStageInterfaceVariables(const spirv::Module& 
     if (entrypoint.stage == VK_SHADER_STAGE_MESH_BIT_EXT && !enabled_features.primitiveFragmentShadingRateMeshShader &&
         entrypoint.HasBuiltIn(spv::BuiltInPrimitiveShadingRateKHR)) {
         skip |= LogError("VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-12275", module_state.handle(), loc,
-                         "shader %s declared PrimitiveShadingRateKHR, but the primitiveFragmentShadingRateMeshShader "
+                         "shader {} declared PrimitiveShadingRateKHR, but the primitiveFragmentShadingRateMeshShader "
                          "feature was not enabled.",
                          entrypoint.Describe().c_str());
     }
@@ -1377,17 +1407,17 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
     if (entrypoint.execution_mode.Has(spirv::ExecutionModeSet::signed_zero_inf_nan_preserve_width_16) &&
         !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat16) {
         skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat16-06293", module_state.handle(), loc,
-                         "shader %s requires SignedZeroInfNanPreserve for bit width 16 but it is not enabled on the device.",
+                         "shader {} requires SignedZeroInfNanPreserve for bit width 16 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (entrypoint.execution_mode.Has(spirv::ExecutionModeSet::signed_zero_inf_nan_preserve_width_32) &&
                !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat32) {
         skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat32-06294", module_state.handle(), loc,
-                         "shader %s requires SignedZeroInfNanPreserve for bit width 32 but it is not enabled on the device.",
+                         "shader {} requires SignedZeroInfNanPreserve for bit width 32 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (entrypoint.execution_mode.Has(spirv::ExecutionModeSet::signed_zero_inf_nan_preserve_width_64) &&
                !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat64) {
         skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat64-06295", module_state.handle(), loc,
-                         "shader %s requires SignedZeroInfNanPreserve for bit width 64 but it is not enabled on the device.",
+                         "shader {} requires SignedZeroInfNanPreserve for bit width 64 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     }
 
@@ -1396,15 +1426,15 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
     const bool has_denorm_preserve_width_64 = entrypoint.execution_mode.Has(spirv::ExecutionModeSet::denorm_preserve_width_64);
     if (has_denorm_preserve_width_16 && !phys_dev_props_core12.shaderDenormPreserveFloat16) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormPreserveFloat16-06296", module_state.handle(), loc,
-                         "shader %s requires DenormPreserve for bit width 16 but it is not enabled on the device.",
+                         "shader {} requires DenormPreserve for bit width 16 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_denorm_preserve_width_32 && !phys_dev_props_core12.shaderDenormPreserveFloat32) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormPreserveFloat32-06297", module_state.handle(), loc,
-                         "shader %s requires DenormPreserve for bit width 32 but it is not enabled on the device.",
+                         "shader {} requires DenormPreserve for bit width 32 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_denorm_preserve_width_64 && !phys_dev_props_core12.shaderDenormPreserveFloat64) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormPreserveFloat64-06298", module_state.handle(), loc,
-                         "shader %s requires DenormPreserve for bit width 64 but it is not enabled on the device.",
+                         "shader {} requires DenormPreserve for bit width 64 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     }
 
@@ -1416,15 +1446,15 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
         entrypoint.execution_mode.Has(spirv::ExecutionModeSet::denorm_flush_to_zero_width_64);
     if (has_denorm_flush_to_zero_width_16 && !phys_dev_props_core12.shaderDenormFlushToZeroFloat16) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormFlushToZeroFloat16-06299", module_state.handle(), loc,
-                         "shader %s requires DenormFlushToZero for bit width 16 but it is not enabled on the device.",
+                         "shader {} requires DenormFlushToZero for bit width 16 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_denorm_flush_to_zero_width_32 && !phys_dev_props_core12.shaderDenormFlushToZeroFloat32) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormFlushToZeroFloat32-06300", module_state.handle(), loc,
-                         "shader %s requires DenormFlushToZero for bit width 32 but it is not enabled on the device.",
+                         "shader {} requires DenormFlushToZero for bit width 32 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_denorm_flush_to_zero_width_64 && !phys_dev_props_core12.shaderDenormFlushToZeroFloat64) {
         skip |= LogError("VUID-RuntimeSpirv-shaderDenormFlushToZeroFloat64-06301", module_state.handle(), loc,
-                         "shader %s requires DenormFlushToZero for bit width 64 but it is not enabled on the device.",
+                         "shader {} requires DenormFlushToZero for bit width 64 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     }
 
@@ -1433,15 +1463,15 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
     const bool has_rounding_mode_rte_width_64 = entrypoint.execution_mode.Has(spirv::ExecutionModeSet::rounding_mode_rte_width_64);
     if (has_rounding_mode_rte_width_16 && !phys_dev_props_core12.shaderRoundingModeRTEFloat16) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTEFloat16-06302", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTE for bit width 16 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTE for bit width 16 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_rounding_mode_rte_width_32 && !phys_dev_props_core12.shaderRoundingModeRTEFloat32) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTEFloat32-06303", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTE for bit width 32 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTE for bit width 32 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_rounding_mode_rte_width_64 && !phys_dev_props_core12.shaderRoundingModeRTEFloat64) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTEFloat64-06304", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTE for bit width 64 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTE for bit width 64 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     }
 
@@ -1450,15 +1480,15 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
     const bool has_rounding_mode_rtz_width_64 = entrypoint.execution_mode.Has(spirv::ExecutionModeSet::rounding_mode_rtz_width_64);
     if (has_rounding_mode_rtz_width_16 && !phys_dev_props_core12.shaderRoundingModeRTZFloat16) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTZFloat16-06305", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTZ for bit width 16 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTZ for bit width 16 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_rounding_mode_rtz_width_32 && !phys_dev_props_core12.shaderRoundingModeRTZFloat32) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTZFloat32-06306", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTZ for bit width 32 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTZ for bit width 32 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     } else if (has_rounding_mode_rtz_width_64 && !phys_dev_props_core12.shaderRoundingModeRTZFloat64) {
         skip |= LogError("VUID-RuntimeSpirv-shaderRoundingModeRTZFloat64-06307", module_state.handle(), loc,
-                         "shader %s requires RoundingModeRTZ for bit width 64 but it is not enabled on the device.",
+                         "shader {} requires RoundingModeRTZ for bit width 64 but it is not enabled on the device.",
                          entrypoint.Describe().c_str());
     }
 
@@ -1491,17 +1521,20 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
             if (bit_width == 16 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat16) {
                 skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat16-09559", module_state.handle(), loc,
                                  "shaderSignedZeroInfNanPreserveFloat16 is false, but FPFastMathDefault is setting 16-bit floats "
-                                 "with modes 0x%" PRIx32 " in %s.",
+                                 "with modes 0x{:x}"
+                                 " in {}.",
                                  fast_math_mode->GetConstantValue(), entrypoint.Describe().c_str());
             } else if (bit_width == 32 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat32) {
                 skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat32-09561", module_state.handle(), loc,
                                  "shaderSignedZeroInfNanPreserveFloat32 is false, but FPFastMathDefault is setting 32-bit floats "
-                                 "with modes 0x%" PRIx32 " in %s.",
+                                 "with modes 0x{:x}"
+                                 " in {}.",
                                  fast_math_mode->GetConstantValue(), entrypoint.Describe().c_str());
             } else if (bit_width == 64 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat64) {
                 skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat64-09563", module_state.handle(), loc,
                                  "shaderSignedZeroInfNanPreserveFloat64 is false, but FPFastMathDefault is setting 64-bit floats "
-                                 "with modes 0x%" PRIx32 " in %s.",
+                                 "with modes 0x{:x}"
+                                 " in {}.",
                                  fast_math_mode->GetConstantValue(), entrypoint.Describe().c_str());
             }
         }
@@ -1542,18 +1575,18 @@ bool SpirvValidator::ValidateShaderFloatControl(const spirv::Module& module_stat
 
         if (float_16 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat16) {
             skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat16-09560", module_state.handle(), loc,
-                             "shaderSignedZeroInfNanPreserveFloat16 is false, FPFastMathMode has modes 0x%" PRIx32
-                             " but the target instruction is using 16-bit floats in %s.\n%s\n",
+                             "shaderSignedZeroInfNanPreserveFloat16 is false, FPFastMathMode has modes 0x{:x}"
+                             " but the target instruction is using 16-bit floats in {}.\n{}\n",
                              modes, entrypoint.Describe().c_str(), module_state.DescribeInstruction(*target_insn).c_str());
         } else if (float_32 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat32) {
             skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat32-09562", module_state.handle(), loc,
-                             "shaderSignedZeroInfNanPreserveFloat32 is false, FPFastMathMode has modes 0x%" PRIx32
-                             " but the target instruction is using 32-bit floats in %s.\n%s\n",
+                             "shaderSignedZeroInfNanPreserveFloat32 is false, FPFastMathMode has modes 0x{:x}"
+                             " but the target instruction is using 32-bit floats in {}.\n{}\n",
                              modes, entrypoint.Describe().c_str(), module_state.DescribeInstruction(*target_insn).c_str());
         } else if (float_64 && !phys_dev_props_core12.shaderSignedZeroInfNanPreserveFloat64) {
             skip |= LogError("VUID-RuntimeSpirv-shaderSignedZeroInfNanPreserveFloat64-09564", module_state.handle(), loc,
-                             "shaderSignedZeroInfNanPreserveFloat64 is false, FPFastMathMode has modes 0x%" PRIx32
-                             " but the target instruction is using 64-bit floats in %s.\n%s\n",
+                             "shaderSignedZeroInfNanPreserveFloat64 is false, FPFastMathMode has modes 0x{:x}"
+                             " but the target instruction is using 64-bit floats in {}.\n{}\n",
                              modes, entrypoint.Describe().c_str(), module_state.DescribeInstruction(*target_insn).c_str());
         }
     }
@@ -1570,13 +1603,13 @@ bool SpirvValidator::ValidateExecutionModes(const spirv::Module& module_state, c
         // Special case to print error by extension and feature bit
         if (!enabled_features.maintenance4) {
             skip |= LogError("VUID-RuntimeSpirv-LocalSizeId-06434", module_state.handle(), loc,
-                             "shader %s OpExecutionMode LocalSizeId is used but maintenance4 feature was not enabled.",
+                             "shader {} OpExecutionMode LocalSizeId is used but maintenance4 feature was not enabled.",
                              entrypoint.Describe().c_str());
         }
         if (!IsExtEnabled(extensions.vk_khr_maintenance4)) {
             skip |=
                 LogError("VUID-RuntimeSpirv-LocalSizeId-06434", module_state.handle(), loc,
-                         "shader %s OpExecutionMode LocalSizeId is used but VK_KHR_maintenance4 extension is not enabled and used "
+                         "shader {} OpExecutionMode LocalSizeId is used but VK_KHR_maintenance4 extension is not enabled and used "
                          "Vulkan api version is 1.2 or less.",
                          entrypoint.Describe().c_str());
         }
@@ -1596,7 +1629,7 @@ bool SpirvValidator::ValidateExecutionModes(const spirv::Module& module_state, c
             } else {
                 msg << "the shader must not use any invocation repack instructions";
             }
-            skip |= LogError("VUID-RuntimeSpirv-SubgroupUniformControlFlowKHR-06379", module_state.handle(), loc, "%s",
+            skip |= LogError("VUID-RuntimeSpirv-SubgroupUniformControlFlowKHR-06379", module_state.handle(), loc, "{}",
                              msg.str().c_str());
         }
     }
@@ -1605,11 +1638,11 @@ bool SpirvValidator::ValidateExecutionModes(const spirv::Module& module_state, c
         !phys_dev_ext_props.compute_shader_derivatives_props.meshAndTaskShaderDerivatives) {
         if (entrypoint.execution_mode.Has(spirv::ExecutionModeSet::derivative_group_linear)) {
             skip |= LogError("VUID-RuntimeSpirv-meshAndTaskShaderDerivatives-10153", module_state.handle(), loc,
-                             "shader %s uses DerivativeGroupLinearKHR, but meshAndTaskShaderDerivatives is not supported.",
+                             "shader {} uses DerivativeGroupLinearKHR, but meshAndTaskShaderDerivatives is not supported.",
                              entrypoint.Describe().c_str());
         } else if (entrypoint.execution_mode.Has(spirv::ExecutionModeSet::derivative_group_quads)) {
             skip |= LogError("VUID-RuntimeSpirv-meshAndTaskShaderDerivatives-10153", module_state.handle(), loc,
-                             "shader %s uses DerivativeGroupQuadsKHR, but meshAndTaskShaderDerivatives is not supported.",
+                             "shader {} uses DerivativeGroupQuadsKHR, but meshAndTaskShaderDerivatives is not supported.",
                              entrypoint.Describe().c_str());
         }
     }
@@ -1629,7 +1662,7 @@ bool SpirvValidator::ValidateConservativeRasterization(const spirv::Module& modu
     if (stateless_data.has_built_in_fully_covered &&
         entrypoint.execution_mode.Has(spirv::ExecutionModeSet::post_depth_coverage_bit)) {
         skip |= LogError("VUID-FullyCoveredEXT-conservativeRasterizationPostDepthCoverage-04235", module_state.handle(), loc,
-                         "shader %s has a\nOpExecutionMode EarlyFragmentTests\nOpDecorate BuiltIn "
+                         "shader {} has a\nOpExecutionMode EarlyFragmentTests\nOpDecorate BuiltIn "
                          "FullyCoveredEXT\nbut conservativeRasterizationPostDepthCoverage was not enabled.",
                          entrypoint.Describe().c_str());
     }
@@ -1648,16 +1681,16 @@ bool SpirvValidator::ValidateShaderTensor(const spirv::Module& module_state, con
 
     if (module_state.HasCapability(spv::CapabilityGraphARM)) {
         skip |= LogError("VUID-RuntimeSpirv-GraphARM-09922", module_state.handle(), loc,
-                         "%s, stage %s, includes 'OpCapability GraphARM'.", FormatHandle(module_state.handle()).c_str(),
+                         "{}, stage {}, includes 'OpCapability GraphARM'.", Handle(module_state.handle()),
                          string_VkShaderStageFlagBits(entrypoint.stage));
     }
 
     for (auto& instruction : stateless_data.tensor_inst) {
         if ((entrypoint.stage & phys_dev_ext_props.tensor_properties.shaderTensorSupportedStages) == 0) {
             skip |= LogError("VUID-RuntimeSpirv-shaderTensorSupportedStages-09901", module_state.handle(), loc,
-                             "'%s' is a tensor instruction but not supported in %s; supported stages are %s.",
+                             "'{}' is a tensor instruction but not supported in {}; supported stages are {}.",
                              instruction->Describe().c_str(), string_VkShaderStageFlagBits(entrypoint.stage),
-                             string_VkShaderStageFlags(phys_dev_ext_props.tensor_properties.shaderTensorSupportedStages).c_str());
+                             vvl::Flags::ShaderStageFlags(phys_dev_ext_props.tensor_properties.shaderTensorSupportedStages));
         }
 
         if (instruction->Opcode() == spv::OpTypeTensorARM) {
@@ -1665,10 +1698,10 @@ bool SpirvValidator::ValidateShaderTensor(const spirv::Module& module_state, con
             auto nWords = instruction->Length();
             if (nWords > 4) {
                 skip |= LogError("VUID-RuntimeSpirv-OpTypeTensorARM-09902", module_state.handle(), loc,
-                                 "'%s' defines a tensor with a shape.", instruction->Describe().c_str());
+                                 "'{}' defines a tensor with a shape.", instruction->Describe().c_str());
             } else if (nWords < 4) {
                 skip |= LogError("VUID-RuntimeSpirv-OpTypeTensorARM-09907", module_state.handle(), loc,
-                                 "'%s' defines a tensor with no rank.", instruction->Describe().c_str());
+                                 "'{}' defines a tensor with no rank.", instruction->Describe().c_str());
             }
         }
 
@@ -1685,13 +1718,17 @@ bool SpirvValidator::ValidateShaderTensor(const spirv::Module& module_state, con
             uint32_t array_elements = copy_object_type_bytes / element_bytes;
             if (array_elements > phys_dev_ext_props.tensor_properties.maxTensorShaderAccessArrayLength) {
                 skip |= LogError("VUID-RuntimeSpirv-maxTensorShaderAccessArrayLength-09903", module_state.handle(), loc,
-                                 "'%s' accesses %" PRIu32 " elements, more than maxTensorShaderAccessArrayLength (%" PRIu32 ").",
+                                 "'{}' accesses {}"
+                                 " elements, more than maxTensorShaderAccessArrayLength ({}"
+                                 ").",
                                  instruction->Describe().c_str(), array_elements,
                                  phys_dev_ext_props.tensor_properties.maxTensorShaderAccessArrayLength);
             }
             if (copy_object_type_bytes > phys_dev_ext_props.tensor_properties.maxTensorShaderAccessSize) {
                 skip |= LogError("VUID-RuntimeSpirv-maxTensorShaderAccessSize-09904", module_state.handle(), loc,
-                                 "'%s' accesses %" PRIu32 " bytes, more than maxTensorShaderAccessSize (%" PRIu32 ").",
+                                 "'{}' accesses {}"
+                                 " bytes, more than maxTensorShaderAccessSize ({}"
+                                 ").",
                                  instruction->Describe().c_str(), copy_object_type_bytes,
                                  phys_dev_ext_props.tensor_properties.maxTensorShaderAccessSize);
             }
@@ -1708,7 +1745,7 @@ bool SpirvValidator::ValidateTileShadingCapability(const spirv::Module& module_s
 
     if (!enabled_features.tileShading && entrypoint.stage == VK_SHADER_STAGE_COMPUTE_BIT && has_tile_shading_capability) {
         skip |= LogError("VUID-RuntimeSpirv-TileShadingQCOM-10698", module_state.handle(), loc,
-                         "shader %s declares OpCapability TileShadingQCOM, but "
+                         "shader {} declares OpCapability TileShadingQCOM, but "
                          "VkPhysicalDeviceTileShadingFeaturesQCOM::tileShading was not enabled.",
                          entrypoint.Describe().c_str());
     }
@@ -1716,7 +1753,7 @@ bool SpirvValidator::ValidateTileShadingCapability(const spirv::Module& module_s
     if (!enabled_features.tileShadingFragmentStage && entrypoint.stage == VK_SHADER_STAGE_FRAGMENT_BIT &&
         has_tile_shading_capability) {
         skip |= LogError("VUID-RuntimeSpirv-TileShadingQCOM-10699", module_state.handle(), loc,
-                         "shader %s declares OpCapability TileShadingQCOM, but "
+                         "shader {} declares OpCapability TileShadingQCOM, but "
                          "VkPhysicalDeviceTileShadingFeaturesQCOM::tileShadingFragmentStage was not enabled.",
                          entrypoint.Describe().c_str());
     }
@@ -1725,18 +1762,18 @@ bool SpirvValidator::ValidateTileShadingCapability(const spirv::Module& module_s
         entrypoint.execution_mode.Has(spirv::ExecutionModeSet::tile_shading_rate_bit)) {
         if (entrypoint.execution_mode.local_size.x > phys_dev_ext_props.tile_shading_props.maxTileShadingRate.width) {
             skip |= LogError("VUID-RuntimeSpirv-x-10702", module_state.handle(), loc,
-                             "shader %s has OpExecutionMode TileShadingRateQCOM with x = %" PRIu32
-                             ", but exceeds VkPhysicalDeviceTileShadingPropertiesQCOM::maxTileShadingRate.width (%" PRIu32 ").",
-                             entrypoint.Describe().c_str(),
-                             entrypoint.execution_mode.local_size.x,
+                             "shader {} has OpExecutionMode TileShadingRateQCOM with x = {}"
+                             ", but exceeds VkPhysicalDeviceTileShadingPropertiesQCOM::maxTileShadingRate.width ({}"
+                             ").",
+                             entrypoint.Describe().c_str(), entrypoint.execution_mode.local_size.x,
                              phys_dev_ext_props.tile_shading_props.maxTileShadingRate.width);
         }
         if (entrypoint.execution_mode.local_size.y > phys_dev_ext_props.tile_shading_props.maxTileShadingRate.height) {
             skip |= LogError("VUID-RuntimeSpirv-y-10703", module_state.handle(), loc,
-                             "shader %s has OpExecutionMode TileShadingRateQCOM with y = %" PRIu32
-                             ", but exceeds VkPhysicalDeviceTileShadingPropertiesQCOM::maxTileShadingRate.height (%" PRIu32 ").",
-                             entrypoint.Describe().c_str(),
-                             entrypoint.execution_mode.local_size.y,
+                             "shader {} has OpExecutionMode TileShadingRateQCOM with y = {}"
+                             ", but exceeds VkPhysicalDeviceTileShadingPropertiesQCOM::maxTileShadingRate.height ({}"
+                             ").",
+                             entrypoint.Describe().c_str(), entrypoint.execution_mode.local_size.y,
                              phys_dev_ext_props.tile_shading_props.maxTileShadingRate.height);
         }
     }
@@ -1756,8 +1793,8 @@ bool SpirvValidator::ValidateTileShadingAtomicAccess(const spirv::Module& module
             const uint32_t image_id = (opcode == spv::OpImageTexelPointer) ? instruction->Word(3) : instruction->Word(4);
             if (IsTileAttachmentImagePointer(module_state, image_id)) {
                 skip |= LogError("VUID-RuntimeSpirv-OpImage-10706", module_state.handle(), loc,
-                                 "SPIR-V is using an image pointer with TileAttachmentQCOM storage class consumed by %s, "
-                                 "but tileShadingAtomicOps was not enabled.\n%s\n",
+                                 "SPIR-V is using an image pointer with TileAttachmentQCOM storage class consumed by {}, "
+                                 "but tileShadingAtomicOps was not enabled.\n{}\n",
                                  opcode == spv::OpImageTexelPointer ? "OpImageTexelPointer" : "OpUntypedImageTexelPointerEXT",
                                  module_state.DescribeInstruction(*instruction).c_str());
             }
@@ -1814,9 +1851,9 @@ bool SpirvValidator::ValidateShaderMultipleWaitQueues(const spirv::Module& modul
         if (max_wait_queues != 0 &&
             max_wait_queues > phys_dev_ext_props.shader_multiple_wait_queues_props.maxShaderWaitQueues) {
             skip |= LogError("VUID-RuntimeSpirv-maxShaderWaitQueues-12426", module_state.handle(), loc,
-                             "SPIR-V uses MultipleWaitQueuesQCOM with literal operand %" PRIu32
-                             ", but exceeds VkPhysicalDeviceShaderMultipleWaitQueuesPropertiesQCOM::maxShaderWaitQueues (%" PRIu32
-                             ").\n%s\n",
+                             "SPIR-V uses MultipleWaitQueuesQCOM with literal operand {}"
+                             ", but exceeds VkPhysicalDeviceShaderMultipleWaitQueuesPropertiesQCOM::maxShaderWaitQueues ({}"
+                             ").\n{}\n",
                              max_wait_queues, phys_dev_ext_props.shader_multiple_wait_queues_props.maxShaderWaitQueues,
                              module_state.DescribeInstruction(*instruction).c_str());
         }

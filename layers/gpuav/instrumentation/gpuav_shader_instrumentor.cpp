@@ -1352,8 +1352,7 @@ bool GpuShaderInstrumentor::IsPipelineSelectedForInstrumentation(const void* pip
                 pipeline_debug_name = debug->pObjectName;
             }
         } else if (pipeline != VK_NULL_HANDLE) {
-            std::unique_lock<std::mutex> lock(debug_report->debug_output_mutex);
-            pipeline_debug_name = debug_report->GetUtilsObjectNameNoLock(HandleToUint64(pipeline));
+            pipeline_debug_name = debug_report->GetUtilsObjectName(HandleToUint64(pipeline));
         }
         if (!pipeline_debug_name.empty()) {
             should_instrument_pipeline = gpuav_settings.MatchesAnyShaderSelectionRegex(pipeline_debug_name);
@@ -1365,8 +1364,8 @@ bool GpuShaderInstrumentor::IsPipelineSelectedForInstrumentation(const void* pip
         }
     }
     if (should_instrument_pipeline) {
-        LogInfo("GPU-AV::Selective shader instrumentation", LogObjectList(), loc, "(%s) will be instrumented for validation.",
-                FormatHandle(pipeline).c_str());
+        LogInfo("GPU-AV::Selective shader instrumentation", LogObjectList(), loc, "({}) will be instrumented for validation.",
+                Handle(pipeline));
     }
     return should_instrument_pipeline;
 }
@@ -1385,16 +1384,12 @@ bool GpuShaderInstrumentor::IsShaderSelectedForInstrumentation(const vku::safe_V
         } else if (selected_instrumented_shaders.find(modified_shader) != selected_instrumented_shaders.end()) {
             should_instrument_shader = true;
         } else {
-            std::string shader_debug_name;
-            {
-                std::unique_lock<std::mutex> lock(debug_report->debug_output_mutex);
-                shader_debug_name = debug_report->GetUtilsObjectNameNoLock(HandleToUint64(modified_shader));
-            }
+            const std::string shader_debug_name = debug_report->GetUtilsObjectName(HandleToUint64(modified_shader));
             should_instrument_shader = gpuav_settings.MatchesAnyShaderSelectionRegex(shader_debug_name);
         }
         if (should_instrument_shader) {
-            LogInfo("GPU-AV::Selective shader instrumentation", LogObjectList(), loc, "(%s) will be instrumented for validation.",
-                    FormatHandle(modified_shader).c_str());
+            LogInfo("GPU-AV::Selective shader instrumentation", LogObjectList(), loc, "({}) will be instrumented for validation.",
+                    Handle(modified_shader));
         }
     }
     return should_instrument_shader;
@@ -2080,7 +2075,7 @@ void GpuShaderInstrumentor::InternalError(LogObjectList objlist, const Location&
     const char* layer_name = gpuav_settings.debug_printf_only ? "DebugPrintf" : "GPU-AV";
     const char* vuid = gpuav_settings.debug_printf_only ? "UNASSIGNED-DEBUG-PRINTF" : "UNASSIGNED-GPU-Assisted-Validation";
 
-    LogError(vuid, objlist, loc, "Internal Error, %s is being disabled. Details:\n%s", layer_name, error_message.c_str());
+    LogError(vuid, objlist, loc, "Internal Error, {} is being disabled. Details:\n{}", layer_name, error_message.c_str());
 
     // Once we encounter an internal issue disconnect everything.
     // This prevents need to check "if (aborted)" (which is awful when we easily forget to check somewhere and the user gets spammed
@@ -2092,25 +2087,22 @@ void GpuShaderInstrumentor::InternalError(LogObjectList objlist, const Location&
 // We want to always warn the user when adjusting settings/limits/features/etc on them
 void GpuShaderInstrumentor::AdjustmentWarning(LogObjectList objlist, const Location& loc,
                                               const char* const specific_message) const {
-    LogWarning("WARNING-Setting-Limit-Adjusted", objlist, loc, "Warning that validation is adjusting settings:\n%s",
+    LogWarning("WARNING-Setting-Limit-Adjusted", objlist, loc, "Warning that validation is adjusting settings:\n{}",
                specific_message);
 }
 
 void GpuShaderInstrumentor::InternalWarning(LogObjectList objlist, const Location& loc, const char* const specific_message) const {
     const char* vuid = gpuav_settings.debug_printf_only ? "WARNING-DEBUG-PRINTF" : "WARNING-GPU-Assisted-Validation";
-    LogWarning(vuid, objlist, loc, "Internal Warning: %s", specific_message);
+    LogWarning(vuid, objlist, loc, "Internal Warning: {}", specific_message);
 }
 
 void GpuShaderInstrumentor::InternalInfo(LogObjectList objlist, const Location& loc, const char* const specific_message) const {
     const char* vuid = gpuav_settings.debug_printf_only ? "INFO-DEBUG-PRINTF" : "INFO-GPU-Assisted-Validation";
-    LogInfo(vuid, objlist, loc, "Internal Info: %s", specific_message);
+    LogInfo(vuid, objlist, loc, "Internal Info: {}", specific_message);
 }
 
-// The lock (debug_output_mutex) is held by the caller,
-// because the latter has code paths that make multiple calls of this function,
-// and all such calls have to access the same debug reporting state to ensure consistency of output information.
-static std::string LookupDebugUtilsNameNoLock(const DebugReport* debug_report, const uint64_t object) {
-    auto object_label = debug_report->GetUtilsObjectNameNoLock(object);
+static std::string LookupDebugUtilsName(const DebugReport* debug_report, const uint64_t object) {
+    auto object_label = debug_report->GetUtilsObjectName(object);
     if (object_label != "") {
         object_label = "(" + object_label + ")";
     }
@@ -2214,14 +2206,11 @@ std::string GpuShaderInstrumentor::GenerateDebugInfoMessage(VkCommandBuffer comm
 
     ss << std::hex << std::showbase;
     if (instrumented_shader->shader_module == VK_NULL_HANDLE && instrumented_shader->shader_object == VK_NULL_HANDLE) {
-        std::unique_lock<std::mutex> lock(debug_report->debug_output_mutex);
         ss << "[Internal Error] - Unable to locate shader/pipeline handles used in command buffer "
-           << LookupDebugUtilsNameNoLock(debug_report, HandleToUint64(commandBuffer)) << "(" << HandleToUint64(commandBuffer)
-           << ")\n";
+           << LookupDebugUtilsName(debug_report, HandleToUint64(commandBuffer)) << "(" << HandleToUint64(commandBuffer) << ")\n";
         assert(false);
     } else {
-        std::unique_lock<std::mutex> lock(debug_report->debug_output_mutex);
-        ss << "Command buffer " << LookupDebugUtilsNameNoLock(debug_report, HandleToUint64(commandBuffer)) << "("
+        ss << "Command buffer " << LookupDebugUtilsName(debug_report, HandleToUint64(commandBuffer)) << "("
            << HandleToUint64(commandBuffer) << ")\n";
         ss << std::dec << std::noshowbase;
         ss << '\t';  // helps to show that the index is expressed with respect to the command buffer
@@ -2248,7 +2237,7 @@ std::string GpuShaderInstrumentor::GenerateDebugInfoMessage(VkCommandBuffer comm
 
         const uint32_t unique_shader_id = error_record[glsl::kHeader_ShaderIdErrorOffset] & glsl::kShaderIdMask;
         if (instrumented_shader->shader_module == VK_NULL_HANDLE) {
-            ss << "Shader Object " << LookupDebugUtilsNameNoLock(debug_report, HandleToUint64(instrumented_shader->shader_object))
+            ss << "Shader Object " << LookupDebugUtilsName(debug_report, HandleToUint64(instrumented_shader->shader_object))
                << "(0x" << HandleToUint64(instrumented_shader->shader_object) << ") (internal ID " << std::dec << unique_shader_id
                << ")\n";
         } else {
@@ -2256,10 +2245,9 @@ std::string GpuShaderInstrumentor::GenerateDebugInfoMessage(VkCommandBuffer comm
                 ss << "Shader Module was passed in via VkPipelineShaderStageCreateInfo::pNext (internal ID " << std::dec
                    << unique_shader_id << ")\n";
             } else {
-                ss << "Shader Module "
-                   << LookupDebugUtilsNameNoLock(debug_report, HandleToUint64(instrumented_shader->shader_module)) << "(0x"
-                   << HandleToUint64(instrumented_shader->shader_module) << ") (internal ID " << std::dec << unique_shader_id
-                   << ")\n";
+                ss << "Shader Module " << LookupDebugUtilsName(debug_report, HandleToUint64(instrumented_shader->shader_module))
+                   << "(0x" << HandleToUint64(instrumented_shader->shader_module) << ") (internal ID " << std::dec
+                   << unique_shader_id << ")\n";
             }
         }
     }

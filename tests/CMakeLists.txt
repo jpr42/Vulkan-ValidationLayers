@@ -337,6 +337,13 @@ set(TEST_SOURCES
     unit/ray_tracing_spheres_positive.cpp
     vvl_utils/small_vector.cpp
     vvl_utils/pnext_chain_extraction.cpp
+    vvl_core/allocation_counter.cpp
+    vvl_core/allocation_counter.h
+    vvl_core/flags_format.cpp
+    vvl_core/format_backend.cpp
+    vvl_core/logging.cpp
+    vvl_core/logging_benchmark.cpp
+    vvl_core/logging_threading.cpp
 )
 vvl_add_test_sources(vk_layer_validation_tests ${TEST_SOURCES})
 

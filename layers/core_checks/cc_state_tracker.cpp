@@ -353,12 +353,12 @@ void CommandBufferSubState::RecordCopyBufferCommon(vvl::Buffer& src_buffer_state
                     const char* vuid = is_2 ? "VUID-VkCopyBufferInfo2-pRegions-00117" : "VUID-vkCmdCopyBuffer-pRegions-00117";
                     skip |= validator.LogError(
                         vuid, objlist, loc_with_dbg_region,
-                        "Copy source buffer range %s (from buffer %s) and destination buffer range %s (from buffer %s) are "
-                        "bound to the same memory (%s), "
-                        "and end up overlapping on memory range %s.",
-                        vvl::string_range(src_ranges_it->second).c_str(), validator.FormatHandle(src_buffer_state.Handle()).c_str(),
-                        vvl::string_range(dst_ranges_it->second).c_str(), validator.FormatHandle(dst_buffer_state.Handle()).c_str(),
-                        validator.FormatHandle(vk_memory).c_str(), vvl::string_range(memory_range_overlap).c_str());
+                        "Copy source buffer range {} (from buffer {}) and destination buffer range {} (from buffer {}) are "
+                        "bound to the same memory ({}), "
+                        "and end up overlapping on memory range {}.",
+                        vvl::string_range(src_ranges_it->second).c_str(), validator.Handle(src_buffer_state.Handle()),
+                        vvl::string_range(dst_ranges_it->second).c_str(), validator.Handle(dst_buffer_state.Handle()),
+                        validator.Handle(vk_memory), vvl::string_range(memory_range_overlap).c_str());
                 }
 
                 if (src_ranges_it->first < dst_ranges_it->first) {
@@ -838,12 +838,12 @@ void CommandBufferSubState::RecordEndQuery(const QueryObject& query_obj, const L
             ASSERT_AND_RETURN_SKIP(query_pool_state);
             if (query_pool_state->has_perf_scope_command_buffer && cb_state_arg.command_count != query_obj.end_command_index) {
                 const LogObjectList objlist(cb_state_arg.Handle(), query_pool_state->Handle());
-                skip |= validator.LogError(
-                    "VUID-vkCmdEndQuery-queryPool-03227", objlist, loc,
-                    "Query pool %s was created with a counter of scope "
-                    "VK_PERFORMANCE_COUNTER_SCOPE_COMMAND_BUFFER_KHR but the end of the query is not the last "
-                    "command in the command buffer %s.",
-                    validator.FormatHandle(query_obj.pool).c_str(), validator.FormatHandle(cb_state_arg).c_str());
+                skip |=
+                    validator.LogError("VUID-vkCmdEndQuery-queryPool-03227", objlist, loc,
+                                       "Query pool {} was created with a counter of scope "
+                                       "VK_PERFORMANCE_COUNTER_SCOPE_COMMAND_BUFFER_KHR but the end of the query is not the last "
+                                       "command in the command buffer {}.",
+                                       validator.Handle(query_obj.pool), validator.Handle(cb_state_arg));
             }
         }
 
@@ -898,7 +898,8 @@ void CommandBufferSubState::RecordResetQueryPool(VkQueryPool queryPool, uint32_t
                     if (state == QUERYSTATE_ENDED) {
                         const LogObjectList objlist(cb_state_arg.Handle(), queryPool);
                         skip |= state_data.LogError("VUID-vkCmdResetQueryPool-firstQuery-02862", objlist, loc,
-                                                    "Query index %" PRIu32 " was begun and reset in the same command buffer.",
+                                                    "Query index {}"
+                                                    " was begun and reset in the same command buffer.",
                                                     firstQuery + i);
                         break;
                     }
@@ -927,8 +928,9 @@ void CommandBufferSubState::RecordCopyQueryPoolResults(vvl::QueryPool& pool_stat
                 if (result_type != QUERYRESULT_SOME_DATA && result_type != QUERYRESULT_UNKNOWN) {
                     const LogObjectList objlist(cb_state_arg.Handle(), pool_state.Handle());
                     skip |= validator.LogError("VUID-vkCmdCopyQueryPoolResults-None-08752", objlist, loc,
-                                               "Requesting a copy from query to buffer on %s query %" PRIu32 ": %s",
-                                               validator.FormatHandle(pool_state.Handle()).c_str(), first_query + i,
+                                               "Requesting a copy from query to buffer on {} query {}"
+                                               ": {}",
+                                               validator.Handle(pool_state.Handle()), first_query + i,
                                                string_QueryResultType(result_type));
                 }
             }
@@ -955,8 +957,9 @@ void CommandBufferSubState::RecordCopyQueryPoolResultsToMemory(vvl::QueryPool& p
                 if (result_type != QUERYRESULT_SOME_DATA && result_type != QUERYRESULT_UNKNOWN) {
                     const LogObjectList objlist(cb_state_arg.Handle(), pool_state.Handle());
                     skip |= validator.LogError("VUID-vkCmdCopyQueryPoolResultsToMemoryKHR-None-13084", objlist, loc,
-                                               "Requesting a copy from query to memory on %s query %" PRIu32 ": %s",
-                                               validator.FormatHandle(pool_state.Handle()).c_str(), first_query + i,
+                                               "Requesting a copy from query to memory on {} query {}"
+                                               ": {}",
+                                               validator.Handle(pool_state.Handle()), first_query + i,
                                                string_QueryResultType(result_type));
                 }
             }
@@ -1015,15 +1018,17 @@ void CommandBufferSubState::RecordBeginVideoCoding(vvl::VideoSession& vs_state, 
                 for (const auto& slot : expected_slots) {
                     if (!dev_state.IsSlotActive(slot.index)) {
                         skip |= validator.LogError("VUID-vkCmdBeginVideoCodingKHR-slotIndex-07239", vs_state->Handle(), loc,
-                                                   "DPB slot index %" PRIu32 " is not active in %s.", slot.index,
-                                                   validator.FormatHandle(*vs_state).c_str());
+                                                   "DPB slot index {}"
+                                                   " is not active in {}.",
+                                                   static_cast<unsigned int>(slot.index), validator.Handle(*vs_state));
                     } else if (slot.resource && !dev_state.IsSlotPicture(slot.index, slot.resource)) {
                         skip |= validator.LogError("VUID-vkCmdBeginVideoCodingKHR-pPictureResource-07265", vs_state->Handle(), loc,
-                                                   "DPB slot index %" PRIu32
-                                                   " of %s is not currently associated with the specified "
-                                                   "video picture resource: %s, layer %" PRIu32 ", offset (%s), extent (%s).",
-                                                   slot.index, validator.FormatHandle(*vs_state).c_str(),
-                                                   validator.FormatHandle(slot.resource.image_state->Handle()).c_str(),
+                                                   "DPB slot index {}"
+                                                   " of {} is not currently associated with the specified "
+                                                   "video picture resource: {}, layer {}"
+                                                   ", offset ({}), extent ({}).",
+                                                   static_cast<unsigned int>(slot.index), validator.Handle(*vs_state),
+                                                   validator.Handle(slot.resource.image_state->Handle()),
                                                    slot.resource.range.baseArrayLayer,
                                                    string_VkOffset2D(slot.resource.coded_offset).c_str(),
                                                    string_VkExtent2D(slot.resource.coded_extent).c_str());
@@ -1052,8 +1057,8 @@ void CommandBufferSubState::EnqueueVerifyVideoSessionInitialized(vvl::VideoSessi
         [this, loc, vuid](const vvl::VideoSession* vs_state, vvl::VideoSessionDeviceState& dev_state, bool do_validate) {
             bool skip = false;
             if (!dev_state.IsInitialized()) {
-                skip |= validator.LogError(vuid, vs_state->Handle(), loc, "Bound video session %s is uninitialized.",
-                                           validator.FormatHandle(*vs_state).c_str());
+                skip |= validator.LogError(vuid, vs_state->Handle(), loc, "Bound video session {} is uninitialized.",
+                                           validator.Handle(*vs_state));
             }
             return skip;
         });
@@ -1105,11 +1110,12 @@ void CommandBufferSubState::RecordDecodeVideo(vvl::VideoSession& vs_state, const
                 const auto log_picture_kind_error = [&](const vvl::VideoReferenceSlot& slot, const char* vuid,
                                                         const char* picture_kind) -> bool {
                     return validator.LogError(vuid, vs_state->Handle(), loc,
-                                              "DPB slot index %" PRIu32
-                                              " of %s does not currently contain a %s with the specified "
-                                              "video picture resource: %s, layer %" PRIu32 ", offset (%s), extent (%s).",
-                                              slot.index, validator.FormatHandle(*vs_state).c_str(), picture_kind,
-                                              validator.FormatHandle(slot.resource.image_state->Handle()).c_str(),
+                                              "DPB slot index {}"
+                                              " of {} does not currently contain a {} with the specified "
+                                              "video picture resource: {}, layer {}"
+                                              ", offset ({}), extent ({}).",
+                                              static_cast<unsigned int>(slot.index), validator.Handle(*vs_state), picture_kind,
+                                              validator.Handle(slot.resource.image_state->Handle()),
                                               slot.resource.range.baseArrayLayer,
                                               string_VkOffset2D(slot.resource.coded_offset).c_str(),
                                               string_VkExtent2D(slot.resource.coded_extent).c_str());
@@ -1158,11 +1164,12 @@ void CommandBufferSubState::RecordEncodeVideo(vvl::VideoSession& vs_state, const
                     if (vsp_state->GetEncodeQualityLevel() != dev_state.GetEncodeQualityLevel()) {
                         const LogObjectList objlist(vs_state->Handle(), vsp_state->Handle());
                         skip |= validator.LogError("VUID-vkCmdEncodeVideoKHR-None-08318", objlist, loc,
-                                                   "The currently configured encode quality level (%" PRIu32
-                                                   ") for %s "
-                                                   "does not match the encode quality level (%" PRIu32 ") %s was created with.",
-                                                   dev_state.GetEncodeQualityLevel(), validator.FormatHandle(*vs_state).c_str(),
-                                                   vsp_state->GetEncodeQualityLevel(), validator.FormatHandle(*vsp_state).c_str());
+                                                   "The currently configured encode quality level ({}"
+                                                   ") for {} "
+                                                   "does not match the encode quality level ({}"
+                                                   ") {} was created with.",
+                                                   dev_state.GetEncodeQualityLevel(), validator.Handle(*vs_state),
+                                                   vsp_state->GetEncodeQualityLevel(), validator.Handle(*vsp_state));
                     }
                     return skip;
                 });

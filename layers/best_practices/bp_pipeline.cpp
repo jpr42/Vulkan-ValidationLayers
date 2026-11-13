@@ -69,8 +69,8 @@ bool BestPractices::ValidateMultisampledBlendingArm(const vvl::Pipeline& pipelin
         if (att != VK_ATTACHMENT_UNUSED && blend_att.blendEnable && blend_att.colorWriteMask) {
             if (!FormatHasFullThroughputBlendingArm(rp_state->create_info.pAttachments[att].format)) {
                 skip |= LogPerformanceWarning("BestPractices-Arm-vkCreatePipelines-multisampled-blending", device, create_info_loc,
-                                              "%s Pipeline is multisampled and "
-                                              "color attachment %" PRIu32
+                                              "{} Pipeline is multisampled and "
+                                              "color attachment {}"
                                               " makes use "
                                               "of a format which cannot be blended at full throughput when using MSAA.",
                                               VendorSpecificTag(kBPVendorArm), j);
@@ -124,13 +124,14 @@ bool BestPractices::ValidateSampleShadingFragmentShadingRate(const VkGraphicsPip
     }
 
     if (sample_shading_reason) {
-        skip |= LogWarning("BestPractices-vkCreateGraphicsPipelines-SampleShadingFragmentShadingRate", device,
-                           create_info_loc.pNext(Struct::VkPipelineFragmentShadingRateStateCreateInfoKHR),
-                           "has fragmentSize (%s) and combinerOps (%s, %s), but %s. Sample shading is enabled, so the "
-                           "implementation will set the fragment shading rate to {1,1} and the requested shading rate is ignored.",
-                           string_VkExtent2D(fsr_state->fragmentSize).c_str(),
-                           string_VkFragmentShadingRateCombinerOpKHR(fsr_state->combinerOps[0]),
-                           string_VkFragmentShadingRateCombinerOpKHR(fsr_state->combinerOps[1]), sample_shading_reason);
+        skip |=
+            LogWarning("BestPractices-vkCreateGraphicsPipelines-SampleShadingFragmentShadingRate", device,
+                       create_info_loc.pNext(Struct::VkPipelineFragmentShadingRateStateCreateInfoKHR),
+                       "has fragmentSize ({}) and combinerOps ({}, {}), but {}. Sample shading is enabled, so the "
+                       "implementation will set the fragment shading rate to {{1,1}} and the requested shading rate is ignored.",
+                       string_VkExtent2D(fsr_state->fragmentSize).c_str(),
+                       string_VkFragmentShadingRateCombinerOpKHR(fsr_state->combinerOps[0]),
+                       string_VkFragmentShadingRateCombinerOpKHR(fsr_state->combinerOps[1]), sample_shading_reason);
     }
     return skip;
 }
@@ -150,7 +151,8 @@ bool BestPractices::ValidateCreateGraphicsPipeline(const VkGraphicsPipelineCreat
         if (count > kMaxInstancedVertexBuffers) {
             skip |= LogPerformanceWarning("BestPractices-vkCreateGraphicsPipelines-too-many-instanced-vertex-buffers", device,
                                           create_info_loc,
-                                          "The pipeline is using %" PRIu32 " instanced vertex buffers (current limit: %" PRIu32
+                                          "The pipeline is using {}"
+                                          " instanced vertex buffers (current limit: {}"
                                           "), but this can be inefficient on the "
                                           "GPU. If using instanced vertex attributes prefer interleaving them in a single buffer.",
                                           count, kMaxInstancedVertexBuffers);
@@ -163,7 +165,7 @@ bool BestPractices::ValidateCreateGraphicsPipeline(const VkGraphicsPipelineCreat
         raster_state->depthBiasSlopeFactor == 0.0f && VendorCheckEnabled(kBPVendorArm)) {
         skip |=
             LogPerformanceWarning("BestPractices-Arm-vkCreatePipelines-depthbias-zero", device, create_info_loc,
-                                  "%s This vkCreateGraphicsPipelines call is created with depthBiasEnable set to true "
+                                  "{} This vkCreateGraphicsPipelines call is created with depthBiasEnable set to true "
                                   "and both depthBiasConstantFactor and depthBiasSlopeFactor are set to 0. This can cause reduced "
                                   "efficiency during rasterization. Consider disabling depthBias or increasing either "
                                   "depthBiasConstantFactor or depthBiasSlopeFactor.",
@@ -202,13 +204,13 @@ bool BestPractices::ValidateCreateGraphicsPipeline(const VkGraphicsPipelineCreat
         if (ia_state && ia_state->primitiveRestartEnable) {
             skip |= LogPerformanceWarning("BestPractices-AMD-CreatePipelines-AvoidPrimitiveRestart", device,
                                           create_info_loc.dot(Field::pInputAssemblyState).dot(Field::primitiveRestartEnable),
-                                          "%s Use of primitive restart is not recommended", VendorSpecificTag(kBPVendorAMD));
+                                          "{} Use of primitive restart is not recommended", VendorSpecificTag(kBPVendorAMD));
         }
 
         // TODO: this might be too aggressive of a check
         if (create_info.pDynamicState && create_info.pDynamicState->dynamicStateCount > kDynamicStatesWarningLimitAMD) {
             skip |= LogPerformanceWarning("BestPractices-AMD-CreatePipelines-MinimizeNumDynamicStates", device, create_info_loc,
-                                          "%s Dynamic States usage incurs a performance cost. Ensure that they are truly needed",
+                                          "{} Dynamic States usage incurs a performance cost. Ensure that they are truly needed",
                                           VendorSpecificTag(kBPVendorAMD));
         }
     }
@@ -237,7 +239,7 @@ bool BestPractices::PreCallValidateCreateGraphicsPipelines(VkDevice device, VkPi
     if ((createInfoCount > 1) && (!pipelineCache)) {
         skip |=
             LogPerformanceWarning("BestPractices-vkCreateGraphicsPipelines-multiple-pipelines-no-cache", device, error_obj.location,
-                                  "creating multiple pipelines (createInfoCount is %" PRIu32
+                                  "creating multiple pipelines (createInfoCount is {}"
                                   ") but is not using a "
                                   "pipeline cache, which may help with performance",
                                   createInfoCount);
@@ -253,7 +255,7 @@ bool BestPractices::PreCallValidateCreateGraphicsPipelines(VkDevice device, VkPi
         auto prev_pipeline = pipeline_cache_.load();
         if (pipelineCache && prev_pipeline && pipelineCache != prev_pipeline) {
             skip |= LogPerformanceWarning("BestPractices-vkCreatePipelines-multiple-pipelines-caches", device, error_obj.location,
-                                          "%s A second pipeline cache is in use. "
+                                          "{} A second pipeline cache is in use. "
                                           "Consider using only one pipeline cache to improve cache hit rate.",
                                           VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str());
         }
@@ -262,7 +264,8 @@ bool BestPractices::PreCallValidateCreateGraphicsPipelines(VkDevice device, VkPi
         const uint32_t pso_count = num_pso_.load();
         if (pso_count > kMaxRecommendedNumberOfPSOAMD) {
             skip |= LogPerformanceWarning("BestPractices-AMD-CreatePipelines-TooManyPipelines", device, error_obj.location,
-                                          "%s Too many pipelines created (%" PRIu32 " but max recommended is %" PRIu32
+                                          "{} Too many pipelines created ({}"
+                                          " but max recommended is {}"
                                           "), consider consolidation",
                                           VendorSpecificTag(kBPVendorAMD), pso_count, kMaxRecommendedNumberOfPSOAMD);
         }
@@ -293,7 +296,7 @@ bool BestPractices::PreCallValidateCreateComputePipelines(VkDevice device, VkPip
     if ((createInfoCount > 1) && (!pipelineCache)) {
         skip |=
             LogPerformanceWarning("BestPractices-vkCreateComputePipelines-multiple-pipelines-no-cache", device, error_obj.location,
-                                  "creating multiple pipelines (createInfoCount is %" PRIu32
+                                  "creating multiple pipelines (createInfoCount is {}"
                                   ") but is not using a pipeline cache, which may help with performance",
                                   createInfoCount);
     }
@@ -302,7 +305,7 @@ bool BestPractices::PreCallValidateCreateComputePipelines(VkDevice device, VkPip
         auto prev_pipeline = pipeline_cache_.load();
         if (pipelineCache && prev_pipeline && pipelineCache != prev_pipeline) {
             skip |= LogPerformanceWarning("BestPractices-vkCreateComputePipelines-multiple-cache", device, error_obj.location,
-                                          "%s A second pipeline cache is in use. Consider using only one pipeline cache to "
+                                          "{} A second pipeline cache is in use. Consider using only one pipeline cache to "
                                           "improve cache hit rate",
                                           VendorSpecificTag(kBPVendorAMD));
         }
@@ -336,9 +339,10 @@ bool BestPractices::ValidateComputeShaderArm(const spirv::Module& module_state, 
     if (thread_count > kMaxEfficientWorkGroupThreadCountArm) {
         skip |= LogPerformanceWarning(
             "BestPractices-Arm-vkCreateComputePipelines-compute-work-group-size", device, loc,
-            "%s compute shader with work group dimensions (%s) (%" PRIu64
+            "{} compute shader with work group dimensions ({}) ({}"
             " threads total), has more threads than advised in a single work group. It is advised to use work "
-            "groups with less than %" PRIu32 " threads, especially when using barrier() or shared memory.",
+            "groups with less than {}"
+            " threads, especially when using barrier() or shared memory.",
             VendorSpecificTag(kBPVendorArm), local_size.ToString().c_str(), thread_count, kMaxEfficientWorkGroupThreadCountArm);
     }
 
@@ -346,8 +350,8 @@ bool BestPractices::ValidateComputeShaderArm(const spirv::Module& module_state, 
         ((local_size.y > 1) && (local_size.y & (kThreadGroupDispatchCountAlignmentArm - 1))) ||
         ((local_size.z > 1) && (local_size.z & (kThreadGroupDispatchCountAlignmentArm - 1)))) {
         skip |= LogPerformanceWarning("BestPractices-Arm-vkCreateComputePipelines-compute-thread-group-alignment", device, loc,
-                                      "%s compute shader with work group dimensions (%s) is not aligned to %" PRIu32
-                                      " threads. On Arm Mali architectures, not aligning work group sizes to %" PRIu32
+                                      "{} compute shader with work group dimensions ({}) is not aligned to {}"
+                                      " threads. On Arm Mali architectures, not aligning work group sizes to {}"
                                       " may leave threads idle on the shader core.",
                                       VendorSpecificTag(kBPVendorArm), local_size.ToString().c_str(),
                                       kThreadGroupDispatchCountAlignmentArm, kThreadGroupDispatchCountAlignmentArm);
@@ -365,7 +369,7 @@ bool BestPractices::ValidateComputeShaderArm(const spirv::Module& module_state, 
         for (const auto& variable : entrypoint.resource_interface_variables) {
             if (variable.IsImage() && variable.info.image_dim != spv::Dim1D && variable.info.image_dim != spv::DimBuffer) {
                 LogPerformanceWarning("BestPractices-Arm-vkCreateComputePipelines-compute-spatial-locality", device, loc,
-                                      "%s compute shader has work group dimensions (%s), which "
+                                      "{} compute shader has work group dimensions ({}), which "
                                       "suggests a 1D dispatch, but the shader is accessing 2D or 3D images. The shader may be "
                                       "exhibiting poor spatial locality with respect to one or more shader resources.",
                                       VendorSpecificTag(kBPVendorArm), local_size.ToString().c_str());
@@ -390,7 +394,7 @@ bool BestPractices::ValidateComputeShaderAmd(const spirv::Module& module_state, 
 
     if (!IsIntegerMultipleOf(thread_count, 64)) {
         skip |= LogPerformanceWarning("BestPractices-AMD-LocalWorkgroup-Multiple64", device, loc,
-                                      "%s compute shader with work group dimensions (%s), workgroup size (%" PRIu64
+                                      "{} compute shader with work group dimensions ({}), workgroup size ({}"
                                       ") is not a multiple of 64. Make the workgroup size a multiple of 64 to obtain best "
                                       "performance across all AMD GPU generations.",
                                       VendorSpecificTag(kBPVendorAMD), local_size.ToString().c_str(), thread_count);
@@ -430,7 +434,7 @@ bool BestPractices::PreCallValidateCreatePipelineLayout(VkDevice device, const V
 
         if (pipeline_size > kPipelineLayoutSizeWarningLimitAMD) {
             skip |= LogPerformanceWarning("BestPractices-AMD-CreatePipelinesLayout-KeepLayoutSmall", device, error_obj.location,
-                                          "%s pipeline layout size is too large. Prefer smaller pipeline layouts. "
+                                          "{} pipeline layout size is too large. Prefer smaller pipeline layouts. "
                                           "Descriptor sets cost 1 DWORD each. "
                                           "Dynamic buffers cost 2 DWORDs each when robust buffer access is OFF. "
                                           "Dynamic buffers cost 4 DWORDs each when robust buffer access is ON. "
@@ -494,15 +498,15 @@ bool BestPractices::PreCallValidateCreatePipelineLayout(VkDevice device, const V
         if (has_separate_sampler) {
             skip |= LogPerformanceWarning(
                 "BestPractices-NVIDIA-CreatePipelineLayout-SeparateSampler", device, error_obj.location,
-                "%s Consider using combined image samplers instead of separate samplers for marginally better performance.",
+                "{} Consider using combined image samplers instead of separate samplers for marginally better performance.",
                 VendorSpecificTag(kBPVendorNVIDIA));
         }
 
         if (fast_space_usage > kPipelineLayoutFastDescriptorSpaceNVIDIA) {
             skip |= LogPerformanceWarning(
                 "BestPractices-NVIDIA-CreatePipelineLayout-LargePipelineLayout", device, error_obj.location,
-                "%s Pipeline layout size is too large, prefer using pipeline-specific descriptor set layouts. "
-                "Aim for consuming less than %" PRIu32
+                "{} Pipeline layout size is too large, prefer using pipeline-specific descriptor set layouts. "
+                "Aim for consuming less than {}"
                 " bytes to allow fast reads for all non-bindless descriptors. "
                 "Samplers, textures, texel buffers, and combined image samplers consume 4 bytes each. "
                 "Uniform buffers and acceleration structures consume 8 bytes. "
@@ -526,16 +530,16 @@ bool BestPractices::PreCallValidateCmdBindPipeline(VkCommandBuffer commandBuffer
             if (sub_state.bound_graphics_pipelines.count(pipeline) != 0) {
                 skip |= LogPerformanceWarning(
                     "BestPractices-Pipeline-SortAndBind", commandBuffer, error_obj.location,
-                    "%s Pipeline %s was bound twice in the command buffer. "
+                    "{} Pipeline {} was bound twice in the command buffer. "
                     "Keep pipeline state changes to a minimum, for example, by sorting draw calls by pipeline.",
-                    VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), FormatHandle(pipeline).c_str());
+                    VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), Handle(pipeline));
             }
         }
         if (VendorCheckEnabled(kBPVendorNVIDIA)) {
             const auto& tgm = sub_state.nv.tess_geometry_mesh;
             if (tgm.num_switches >= kNumBindPipelineTessGeometryMeshSwitchesThresholdNVIDIA && !tgm.threshold_signaled) {
                 LogPerformanceWarning("BestPractices-NVIDIA-BindPipeline-SwitchTessGeometryMesh", commandBuffer, error_obj.location,
-                                      "%s Avoid switching between pipelines with and without tessellation, geometry, task, "
+                                      "{} Avoid switching between pipelines with and without tessellation, geometry, task, "
                                       "and/or mesh shaders. Group draw calls using these shader stages together.",
                                       VendorSpecificTag(kBPVendorNVIDIA));
                 // Do not set 'skip' so the number of switches gets properly counted after the message.
@@ -594,11 +598,13 @@ bool BestPractices::ValidateShaderStage(const ShaderStageState& stage_state, con
         const uint32_t preferred_size = is_task ? phys_dev_ext_props.mesh_shader_props_ext.maxPreferredTaskWorkGroupInvocations
                                                 : phys_dev_ext_props.mesh_shader_props_ext.maxPreferredMeshWorkGroupInvocations;
         if (invocations > preferred_size) {
-            skip |= LogPerformanceWarning(
-                "BestPractices-Mesh-MaxPreferredWorkGroupInvocations", module_state.handle(), loc,
-                "shader %s has a total invocation size of %" PRIu64 " (%s) is more than %s (%" PRIu32 ").",
-                entrypoint.Describe().c_str(), invocations, local_size.ToString().c_str(),
-                is_task ? "maxPreferredTaskWorkGroupInvocations" : "maxPreferredMeshWorkGroupInvocations", preferred_size);
+            skip |= LogPerformanceWarning("BestPractices-Mesh-MaxPreferredWorkGroupInvocations", module_state.handle(), loc,
+                                          "shader {} has a total invocation size of {}"
+                                          " ({}) is more than {} ({}"
+                                          ").",
+                                          entrypoint.Describe().c_str(), invocations, local_size.ToString().c_str(),
+                                          is_task ? "maxPreferredTaskWorkGroupInvocations" : "maxPreferredMeshWorkGroupInvocations",
+                                          preferred_size);
         }
     }
 

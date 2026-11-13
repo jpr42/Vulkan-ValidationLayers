@@ -29,8 +29,8 @@ bool bp_state::Instance::ValidateSpecialUseExtensions(const Location& loc, vvl::
     // We don't report "devtools" or "debugging" because if the user is using the validation layers, they likely want these
     // extensions and giving a warning/info about it is just noise.
     if (!special_uses.empty()) {
-        const char* const format =
-            "Attempting to enable extension %s, but this extension is intended to support %s "
+        constexpr const char* format =
+            "Attempting to enable extension {}, but this extension is intended to support {} "
             "and it is strongly recommended that it be otherwise avoided.";
         const char* vuid = "BestPractices-specialuse-extension";
         if (special_uses.find("cadsupport") != std::string::npos) {
@@ -60,7 +60,7 @@ bool bp_state::Instance::PreCallValidateCreateInstance(const VkInstanceCreateInf
         vvl::Extension extension = GetExtension(pCreateInfo->ppEnabledExtensionNames[i]);
         if (IsDeviceExtension(extension)) {
             skip |= LogWarning("BestPractices-vkCreateInstance-extension-mismatch", instance, error_obj.location,
-                               "Attempting to enable Device Extension %s at CreateInstance time.", String(extension));
+                               "Attempting to enable Device Extension {} at CreateInstance time.", String(extension));
         }
         skip |= ValidateSpecialUseExtensions(error_obj.location, extension);
     }
@@ -84,7 +84,7 @@ bool bp_state::Instance::PreCallValidateCreateDevice(VkPhysicalDevice physicalDe
         std::string dev_api_name = StringAPIVersion(device_api_version);
 
         LogInfo("BestPractices-vkCreateDevice-API-version-mismatch", instance, error_obj.location,
-                "API Version of current instance, %s is greater than API Version on device, %s", inst_api_name.c_str(),
+                "API Version of current instance, {} is greater than API Version on device, {}", inst_api_name.c_str(),
                 dev_api_name.c_str());
     }
 
@@ -108,7 +108,7 @@ bool bp_state::Instance::PreCallValidateCreateDevice(VkPhysicalDevice physicalDe
         vvl::Extension extension = GetExtension(extension_name);
         if (IsInstanceExtension(extension)) {
             skip |= LogWarning("BestPractices-vkCreateDevice-extension-mismatch", instance, error_obj.location,
-                               "Attempting to enable Instance Extension %s at CreateDevice time.", String(extension));
+                               "Attempting to enable Instance Extension {} at CreateDevice time.", String(extension));
         }
 
         skip |= ValidateSpecialUseExtensions(error_obj.location, extension);
@@ -130,7 +130,7 @@ bool bp_state::Instance::PreCallValidateCreateDevice(VkPhysicalDevice physicalDe
             pCreateInfo->pEnabledFeatures->robustBufferAccess) {
             skip |= LogPerformanceWarning(
                 "BestPractices-vkCreateDevice-RobustBufferAccess", instance, error_obj.location,
-                "%s: called with enabled robustBufferAccess. Use robustBufferAccess as a debugging tool during "
+                "{}: called with enabled robustBufferAccess. Use robustBufferAccess as a debugging tool during "
                 "development. Enabling it causes loss in performance for accesses to uniform buffers and shader storage "
                 "buffers. Disable robustBufferAccess in release builds. Only leave it enabled if the application use-case "
                 "requires the additional level of reliability due to the use of unverified user-supplied draw parameters.",
@@ -144,7 +144,7 @@ bool bp_state::Instance::PreCallValidateCreateDevice(VkPhysicalDevice physicalDe
             extension_names.end()) {
         skip |=
             LogPerformanceWarning("BestPractices-NVIDIA-CreateDevice-PageableDeviceLocalMemory", instance, error_obj.location,
-                                  "%s called without pageable device local memory. "
+                                  "{} called without pageable device local memory. "
                                   "Use pageableDeviceLocalMemory from VK_EXT_pageable_device_local_memory when it is available.",
                                   VendorSpecificTag(kBPVendorNVIDIA));
     }
@@ -159,11 +159,11 @@ bool bp_state::Instance::ValidateCommonGetPhysicalDeviceQueueFamilyProperties(co
     bool skip = false;
     if (bp_pd_state.queue_family_known_count != requested_queue_family_property_count) {
         skip |= LogWarning("BestPractices-GetPhysicalDeviceQueueFamilyProperties-CountMismatch", bp_pd_state.Handle(), loc,
-                           "is called with non-NULL pQueueFamilyProperties and pQueueFamilyPropertyCount value %" PRIu32
-                           ", but the largest previously returned pQueueFamilyPropertyCount for this physicalDevice is %" PRIu32
-                           ". It is recommended to instead receive all the properties by calling %s with "
+                           "is called with non-NULL pQueueFamilyProperties and pQueueFamilyPropertyCount value {}"
+                           ", but the largest previously returned pQueueFamilyPropertyCount for this physicalDevice is {}"
+                           ". It is recommended to instead receive all the properties by calling {} with "
                            "pQueueFamilyPropertyCount that was "
-                           "previously obtained by calling %s with NULL pQueueFamilyProperties.",
+                           "previously obtained by calling {} with NULL pQueueFamilyProperties.",
                            requested_queue_family_property_count, bp_pd_state.queue_family_known_count, loc.StringFunc(),
                            loc.StringFunc());
     }
@@ -245,9 +245,9 @@ struct EventValidator {
                     const LogObjectList objlist(cb.VkHandle(), event);
                     skip |= bp.LogWarning(
                         "BestPractices-Event-SignalSignaledEvent", objlist, cb_loc,
-                        "%s sets event %s which is already in the signaled state (set by previously submitted command buffers or "
+                        "{} sets event {} which is already in the signaled state (set by previously submitted command buffers or "
                         "from the host). If this is not the desired behavior, the event must be reset before it is set again.",
-                        bp.FormatHandle(cb.Handle()).c_str(), bp.FormatHandle(event).c_str());
+                        bp.Handle(cb.Handle()), bp.Handle(event));
                 }
             }
             signaling_state[event] = info.signaled;
@@ -327,18 +327,18 @@ bool BestPractices::PreCallValidateQueueBindSparse(VkQueue queue, uint32_t bindI
                     // For now just warning if sparse image binding occurs without calling to get reqs first
                     skip |= LogWarning("BestPractices-vkQueueBindSparse-image-requirements2", image_state->Handle(),
                                        bind_info_loc.dot(Field::pImageBinds, i),
-                                       "Binding sparse memory to %s without first calling "
+                                       "Binding sparse memory to {} without first calling "
                                        "vkGetImageSparseMemoryRequirements[2KHR]() to retrieve requirements.",
-                                       FormatHandle(image_state->Handle()).c_str());
+                                       Handle(image_state->Handle()));
                 }
             }
             if (!image_sub_state.memory_requirements_checked[0]) {
                 // For now just warning if sparse image binding occurs without calling to get reqs first
                 skip |= LogWarning("BestPractices-vkQueueBindSparse-image-requirements", image_state->Handle(),
                                    bind_info_loc.dot(Field::pImageBinds, i),
-                                   "Binding sparse memory to %s without first calling "
+                                   "Binding sparse memory to {} without first calling "
                                    "vkGetImageMemoryRequirements() to retrieve requirements.",
-                                   FormatHandle(image_state->Handle()).c_str());
+                                   Handle(image_state->Handle()));
             }
         }
         for (uint32_t i = 0; i < bind_info.imageOpaqueBindCount; ++i) {
@@ -354,18 +354,18 @@ bool BestPractices::PreCallValidateQueueBindSparse(VkQueue queue, uint32_t bindI
                     // For now just warning if sparse image binding occurs without calling to get reqs first
                     skip |= LogWarning("BestPractices-vkQueueBindSparse-image-opaque-requirements2", image_state->Handle(),
                                        bind_info_loc.dot(Field::pImageOpaqueBinds, i),
-                                       "Binding opaque sparse memory to %s without first calling "
+                                       "Binding opaque sparse memory to {} without first calling "
                                        "vkGetImageSparseMemoryRequirements[2KHR]() to retrieve requirements.",
-                                       FormatHandle(image_state->Handle()).c_str());
+                                       Handle(image_state->Handle()));
                 }
             }
             if (!image_sub_state.memory_requirements_checked[0]) {
                 // For now just warning if sparse image binding occurs without calling to get reqs first
                 skip |= LogWarning("BestPractices-vkQueueBindSparse-image-opaque-requirements", image_state->Handle(),
                                    bind_info_loc.dot(Field::pImageOpaqueBinds, i),
-                                   "Binding opaque sparse memory to %s without first calling "
+                                   "Binding opaque sparse memory to {} without first calling "
                                    "vkGetImageMemoryRequirements() to retrieve requirements.",
-                                   FormatHandle(image_state->Handle()).c_str());
+                                   Handle(image_state->Handle()));
             }
             for (uint32_t j = 0; j < image_opaque_bind.bindCount; ++j) {
                 if (image_opaque_bind.pBinds[j].flags & VK_SPARSE_MEMORY_BIND_METADATA_BIT) {
@@ -379,9 +379,9 @@ bool BestPractices::PreCallValidateQueueBindSparse(VkQueue queue, uint32_t bindI
                 // Warn if sparse image binding metadata required for image with sparse binding, but metadata not bound
                 skip |= LogWarning("BestPractices-vkQueueBindSparse-image-metadata-requirements", sparse_image_state->base.Handle(),
                                    bind_info_loc,
-                                   "Binding sparse memory to %s which requires a metadata aspect but no "
+                                   "Binding sparse memory to {} which requires a metadata aspect but no "
                                    "binding with VK_SPARSE_MEMORY_BIND_METADATA_BIT set was made.",
-                                   FormatHandle(sparse_image_state->base.Handle()).c_str());
+                                   Handle(sparse_image_state->base.Handle()));
             }
         }
     }
@@ -390,9 +390,9 @@ bool BestPractices::PreCallValidateQueueBindSparse(VkQueue queue, uint32_t bindI
         auto queue_state = Get<vvl::Queue>(queue);
         if (queue_state && queue_state->GetQueueFlags() != (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT)) {
             skip |= LogPerformanceWarning("BestPractices-NVIDIA-QueueBindSparse-NotAsync", queue, error_obj.location,
-                                          "issued on queue %s. All binds should happen on an asynchronous copy "
+                                          "issued on queue {}. All binds should happen on an asynchronous copy "
                                           "queue to hide the OS scheduling and submit costs.",
-                                          FormatHandle(queue).c_str());
+                                          Handle(queue));
         }
     }
 

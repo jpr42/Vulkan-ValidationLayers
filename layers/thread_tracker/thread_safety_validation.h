@@ -198,7 +198,7 @@ class Counter {
             return iter->second;
         } else {
             logger->LogError("UNASSIGNED-Threading-Info", object, loc,
-                             "Couldn't find %s Object 0x%" PRIxLEAST64
+                             "Couldn't find {} Object 0x{:x}"
                              ". This should not happen and may indicate a bug in the application.",
                              string_VulkanObjectType(object_type), (uint64_t)(object));
             return nullptr;
@@ -241,7 +241,7 @@ class Counter {
                   "might be modified during the call.";
         }
 
-        logger->LogError(vuid, object, loc, "%s", ss.str().c_str());
+        logger->LogError(vuid, object, loc, "{}", ss.str().c_str());
     }
 
   private:

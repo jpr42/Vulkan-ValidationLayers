@@ -18,15 +18,18 @@
 #include "error_location.h"
 #include "generated/error_location_helper.h"
 #include <algorithm>
+#include <iterator>
 
-void Location::AppendFields(std::ostream& out) const {
+#include "error_message/format_backend.h"
+
+void Location::VisitFields(EmitPiece emit, void* context) const {
     if (prev) {
         // When apply a .dot(sub_index) we duplicate the field item
         // Instead of dealing with partial non-const Location, just do the check here
         const Location& prev_loc = (prev->field == field && prev->index == vvl::kNoIndex32 && prev->prev) ? *prev->prev : *prev;
 
         // Work back and print for Location first
-        prev_loc.AppendFields(out);
+        prev_loc.VisitFields(emit, context);
 
         // check if need connector from last item
         const bool prev_loc_struct_not_empty = prev_loc.structure != vvl::Struct::Empty;
@@ -36,41 +39,56 @@ void Location::AppendFields(std::ostream& out) const {
                                                 // |isPNext| case to handle pCreateInfo[0].pNext<>
                                                 (field != vvl::Field::Empty || isPNext);
         if (prev_loc_struct_not_empty || prev_loc_has_unindexed_field || loc_is_array_element_field) {
-            out << ((prev_loc.index == vvl::kNoIndex32 && IsFieldPointer(prev_loc.field)) ? "->" : ".");
+            emit(context, (prev_loc.index == vvl::kNoIndex32 && IsFieldPointer(prev_loc.field)) ? "->" : ".");
         }
     }
     if (isPNext && structure != vvl::Struct::Empty) {
-        out << "pNext<" << vvl::String(structure) << (field != vvl::Field::Empty ? ">." : ">");
+        emit(context, "pNext<");
+        emit(context, vvl::String(structure));
+        emit(context, field != vvl::Field::Empty ? ">." : ">");
     }
 
-    out << vvl::String(field);
+    emit(context, vvl::String(field));
     if (index != vvl::kNoIndex32) {
-        out << "[" << index << "]";
+        static_assert(sizeof(index) <= 4, "\"[4294967295]\" must fit in digits");
+        char digits[16];
+        const auto result = VVL_FMT_NS::format_to_n(digits, sizeof(digits), "[{}]", index);
+        emit(context, std::string_view(digits, result.out - digits));
     }
+}
+
+void Location::AppendFields(std::string& out) const {
+    VisitFields([](void* context, std::string_view piece) { static_cast<std::string*>(context)->append(piece); }, &out);
 }
 
 std::string Location::Fields() const {
-    std::ostringstream out;
+    std::string out;
     AppendFields(out);
-    return out.str();
+    return out;
+}
+
+void Location::AppendMessage(std::string& out) const {
+    if (frame_id != vvl::kNoIndex64) {
+        VVL_FMT_NS::format_to(std::back_inserter(out), "[ VkFrameBoundaryEXT::frameID {} ] ", frame_id);
+    }
+    if (debug_region && !debug_region->empty()) {
+        out += "[ Debug region: ";
+        out += *debug_region;
+        out += " ] ";
+    }
+    out += StringFunc();
+    out += "(): ";
+    AppendFields(out);
+    // Remove space in the end when no fields are added
+    if (out.back() == ' ') {
+        out.pop_back();
+    }
 }
 
 std::string Location::Message() const {
-    std::ostringstream out;
-    if (frame_id != vvl::kNoIndex64) {
-        out << "[ VkFrameBoundaryEXT::frameID " << frame_id << " ] ";
-    }
-    if (debug_region && !debug_region->empty()) {
-        out << "[ Debug region: " << *debug_region << " ] ";
-    }
-    out << StringFunc() << "(): ";
-    AppendFields(out);
-    std::string message = out.str();
-    // Remove space in the end when no fields are added
-    if (message.back() == ' ') {
-        message.pop_back();
-    }
-    return message;
+    std::string out;
+    AppendMessage(out);
+    return out;
 }
 
 std::string PrintPNextChain(vvl::Struct in_struct, const void* in_pNext) {

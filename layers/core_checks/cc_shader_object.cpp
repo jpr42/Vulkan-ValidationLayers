@@ -71,7 +71,7 @@ bool CoreChecks::ValidateCreateShadersLinkingEXT(uint32_t createInfoCount, const
             create_info.stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
             if (enabled_features.tessellationShader == VK_FALSE) {
                 skip |= LogError("VUID-VkShaderCreateInfoEXT-stage-08419", device, create_info_loc.dot(Field::stage),
-                                 "is %s, but the tessellationShader feature was not enabled.",
+                                 "is {}, but the tessellationShader feature was not enabled.",
                                  string_VkShaderStageFlagBits(create_info.stage));
             }
         } else if (create_info.stage == VK_SHADER_STAGE_GEOMETRY_BIT) {
@@ -95,17 +95,16 @@ bool CoreChecks::ValidateCreateShadersLinkingEXT(uint32_t createInfoCount, const
             const auto nextStage = FindNextStage(createInfoCount, pCreateInfos, create_info.stage);
             if (nextStage != 0 && create_info.nextStage != nextStage) {
                 skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08409", device, create_info_loc.dot(Field::flags),
-                                 "is %s, but nextStage (%s) does not equal the "
-                                 "logically next stage (%s) which also has the VK_SHADER_CREATE_LINK_STAGE_BIT_EXT bit.",
-                                 string_VkShaderCreateFlagsEXT(create_info.flags).c_str(),
-                                 string_VkShaderStageFlags(create_info.nextStage).c_str(),
-                                 string_VkShaderStageFlags(nextStage).c_str());
+                                 "is {}, but nextStage ({}) does not equal the "
+                                 "logically next stage ({}) which also has the VK_SHADER_CREATE_LINK_STAGE_BIT_EXT bit.",
+                                 vvl::Flags::ShaderCreateFlagsEXT(create_info.flags),
+                                 vvl::Flags::ShaderStageFlags(create_info.nextStage), vvl::Flags::ShaderStageFlags(nextStage));
             }
             for (uint32_t j = i; j < createInfoCount; ++j) {
                 if (i != j && create_info.stage == pCreateInfos[j].stage) {
                     skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08410", device, create_info_loc,
-                                     "and pCreateInfos[%" PRIu32
-                                     "] both contain VK_SHADER_CREATE_LINK_STAGE_BIT_EXT and have the stage %s.",
+                                     "and pCreateInfos[{}"
+                                     "] both contain VK_SHADER_CREATE_LINK_STAGE_BIT_EXT and have the stage {}.",
                                      j, string_VkShaderStageFlagBits(create_info.stage));
                 }
             }
@@ -140,8 +139,8 @@ bool CoreChecks::ValidateCreateShadersLinkingEXT(uint32_t createInfoCount, const
             (create_info.nextStage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT ||
              create_info.nextStage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08428", device, create_info_loc.dot(Field::nextStage),
-                             "is %s, but tessellationShader feature was not enabled.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is {}, but tessellationShader feature was not enabled.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if (enabled_features.geometryShader == VK_FALSE && create_info.nextStage == VK_SHADER_STAGE_GEOMETRY_BIT) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08429", device, create_info_loc.dot(Field::nextStage),
@@ -150,68 +149,69 @@ bool CoreChecks::ValidateCreateShadersLinkingEXT(uint32_t createInfoCount, const
         if (create_info.stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT &&
             (create_info.nextStage & ~VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08430", device, create_info_loc.dot(Field::stage),
-                             "is VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, but nextStage is %s.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, but nextStage is {}.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if (create_info.stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT &&
             (create_info.nextStage & ~(VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)) > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08431", device, create_info_loc.dot(Field::stage),
-                             "is VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, but nextStage is %s.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, but nextStage is {}.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if (create_info.stage == VK_SHADER_STAGE_GEOMETRY_BIT && (create_info.nextStage & ~VK_SHADER_STAGE_FRAGMENT_BIT) > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08433", device, create_info_loc.dot(Field::stage),
-                             "is VK_SHADER_STAGE_GEOMETRY_BIT, but nextStage is %s.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is VK_SHADER_STAGE_GEOMETRY_BIT, but nextStage is {}.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if ((create_info.stage == VK_SHADER_STAGE_FRAGMENT_BIT || create_info.stage == VK_SHADER_STAGE_COMPUTE_BIT) &&
             create_info.nextStage > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08434", device, create_info_loc.dot(Field::stage),
-                             "is %s, but nextStage is %s.", string_VkShaderStageFlagBits(create_info.stage),
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is {}, but nextStage is {}.", string_VkShaderStageFlagBits(create_info.stage),
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if (create_info.stage == VK_SHADER_STAGE_TASK_BIT_EXT && (create_info.nextStage & ~VK_SHADER_STAGE_MESH_BIT_EXT) > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08435", device, create_info_loc.dot(Field::stage),
-                             "is VK_SHADER_STAGE_TASK_BIT_EXT, but nextStage is %s.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is VK_SHADER_STAGE_TASK_BIT_EXT, but nextStage is {}.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
         if (create_info.stage == VK_SHADER_STAGE_MESH_BIT_EXT && (create_info.nextStage & ~VK_SHADER_STAGE_FRAGMENT_BIT) > 0) {
             skip |= LogError("VUID-VkShaderCreateInfoEXT-nextStage-08436", device, create_info_loc.dot(Field::stage),
-                             "is VK_SHADER_STAGE_MESH_BIT_EXT, but nextStage is %s.",
-                             string_VkShaderStageFlags(create_info.nextStage).c_str());
+                             "is VK_SHADER_STAGE_MESH_BIT_EXT, but nextStage is {}.",
+                             vvl::Flags::ShaderStageFlags(create_info.nextStage));
         }
     }
 
     if (linked_stage != invalid && non_linked_graphics_stage != invalid) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08402", device,
                          loc.dot(Field::pCreateInfos, linked_stage).dot(Field::flags),
-                         "contains VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but pCreateInfos[%" PRIu32
-                         "].stage is %s and does not have VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
+                         "contains VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but pCreateInfos[{}"
+                         "].stage is {} and does not have VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
                          non_linked_graphics_stage, string_VkShaderStageFlagBits(pCreateInfos[non_linked_graphics_stage].stage));
     }
     if (linked_stage != invalid && non_linked_task_mesh_stage != invalid) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08403", device,
                          loc.dot(Field::pCreateInfos, linked_stage).dot(Field::flags),
-                         "contains VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but pCreateInfos[%" PRIu32
-                         "] stage is %s and does not have VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
+                         "contains VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but pCreateInfos[{}"
+                         "] stage is {} and does not have VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
                          non_linked_task_mesh_stage, string_VkShaderStageFlagBits(pCreateInfos[non_linked_task_mesh_stage].stage));
     }
     if (linked_task_mesh_stage != invalid && linked_vert_tess_tesc_geom_stage != invalid) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08404", device,
                          loc.dot(Field::pCreateInfos, linked_vert_tess_tesc_geom_stage).dot(Field::stage),
-                         "is %s and pCreateInfos[%" PRIu32 "].stage is %s, but both contain VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
+                         "is {} and pCreateInfos[{}"
+                         "].stage is {}, but both contain VK_SHADER_CREATE_LINK_STAGE_BIT_EXT.",
                          string_VkShaderStageFlagBits(pCreateInfos[linked_vert_tess_tesc_geom_stage].stage), linked_task_mesh_stage,
                          string_VkShaderStageFlagBits(pCreateInfos[linked_task_mesh_stage].stage));
     }
     if (linked_task_stage != invalid && linked_mesh_no_task_stage != invalid) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08405", device, loc.dot(Field::pCreateInfos, linked_task_stage),
-                         "is a linked task shader, but pCreateInfos[%" PRIu32
+                         "is a linked task shader, but pCreateInfos[{}"
                          "] is a linked mesh shader with VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT flag.",
                          linked_mesh_no_task_stage);
     }
     if (linked_spirv_index != invalid && linked_binary_index != invalid) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08411", device, loc.dot(Field::pCreateInfos, linked_spirv_index),
-                         "is a linked shader with codeType VK_SHADER_CODE_TYPE_SPIRV_EXT, but pCreateInfos[%" PRIu32
+                         "is a linked shader with codeType VK_SHADER_CODE_TYPE_SPIRV_EXT, but pCreateInfos[{}"
                          "] is a linked shader with codeType VK_SHADER_CODE_TYPE_BINARY_EXT.",
                          linked_binary_index);
     }
@@ -242,8 +242,8 @@ bool CoreChecks::ValidateCreateShadersTessellation(const vvl::TessellationExecut
     if (tesc.subdivision != spirv::kInvalidValue && tese.subdivision != spirv::kInvalidValue &&
         tesc.subdivision != tese.subdivision) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08867", device, loc,
-                         "The subdivision specified in tessellation control shader (%s) does not match the subdivision in "
-                         "tessellation evaluation shader (%s).",
+                         "The subdivision specified in tessellation control shader ({}) does not match the subdivision in "
+                         "tessellation evaluation shader ({}).",
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tesc.subdivision)),
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tese.subdivision)));
     }
@@ -253,8 +253,8 @@ bool CoreChecks::ValidateCreateShadersTessellation(const vvl::TessellationExecut
     } else if (tesc.orientation != spirv::kInvalidValue && tese.orientation != spirv::kInvalidValue &&
                tesc.orientation != tese.orientation) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08868", device, loc,
-                         "The orientation specified in tessellation control shader (%s) does not match the orientation in "
-                         "tessellation evaluation shader (%s).",
+                         "The orientation specified in tessellation control shader ({}) does not match the orientation in "
+                         "tessellation evaluation shader ({}).",
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tesc.orientation)),
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tese.orientation)));
     }
@@ -263,16 +263,17 @@ bool CoreChecks::ValidateCreateShadersTessellation(const vvl::TessellationExecut
                          "The spacing of segments is not specified in either of the tessellation shaders.");
     } else if (tesc.spacing != spirv::kInvalidValue && tese.spacing != spirv::kInvalidValue && tesc.spacing != tese.spacing) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08870", device, loc,
-                         "The spacing specified in tessellation control shader (%s) does not match the spacing in "
-                         "tessellation evaluation shader (%s).",
+                         "The spacing specified in tessellation control shader ({}) does not match the spacing in "
+                         "tessellation evaluation shader ({}).",
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tesc.spacing)),
                          spv::ExecutionModeToString(static_cast<spv::ExecutionMode>(tese.spacing)));
     }
     if (tesc.patch_size != spirv::kInvalidValue && tese.patch_size != spirv::kInvalidValue && tesc.patch_size != tese.patch_size) {
         skip |= LogError("VUID-vkCreateShadersEXT-pCreateInfos-08871", device, loc,
-                         "The OutputVertices (patch size) specified in tessellation control shader (%" PRIu32
+                         "The OutputVertices (patch size) specified in tessellation control shader ({}"
                          ") does not match the OutputVertices (patch size) in "
-                         "tessellation evaluation shader (%" PRIu32 ").",
+                         "tessellation evaluation shader ({}"
+                         ").",
                          tesc.patch_size, tese.patch_size);
     }
 
@@ -355,8 +356,9 @@ bool CoreChecks::ValidateCreateShadersSpirvEXT(uint32_t createInfoCount, const V
                 } else if (execution_mode.output_vertices == 0u ||
                            execution_mode.output_vertices > phys_dev_props.limits.maxTessellationPatchSize) {
                     skip |= LogError("VUID-VkShaderCreateInfoEXT-pCode-08453", device, create_info_loc.dot(Field::pCode),
-                                     "is using OutputVertices (patch size) %" PRIu32
-                                     ", which is not between 1 and maxTessellationPatchSize (%" PRIu32 ").",
+                                     "is using OutputVertices (patch size) {}"
+                                     ", which is not between 1 and maxTessellationPatchSize ({}"
+                                     ").",
                                      execution_mode.output_vertices, phys_dev_props.limits.maxTessellationPatchSize);
                 }
             }
@@ -405,9 +407,8 @@ bool CoreChecks::PreCallValidateCreateShadersEXT(VkDevice device, uint32_t creat
     if ((physical_device_state->supported_queues & queue_flag) == 0) {
         // Used instead of calling ValidateDeviceQueueSupport()
         const char* vuid = has_compute ? "VUID-vkCreateShadersEXT-stage-09670" : "VUID-vkCreateShadersEXT-stage-09671";
-        skip |=
-            LogError(vuid, device, error_obj.location, "device only supports (%s) but requires %s.",
-                     string_VkQueueFlags(physical_device_state->supported_queues).c_str(), string_VkQueueFlags(queue_flag).c_str());
+        skip |= LogError(vuid, device, error_obj.location, "device only supports ({}) but requires {}.",
+                         vvl::Flags::QueueFlags(physical_device_state->supported_queues), vvl::Flags::QueueFlags(queue_flag));
     }
 
     return skip;
@@ -453,7 +454,9 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
         for (uint32_t j = i; j < stageCount; ++j) {
             if (i != j && stage == pStages[j]) {
                 skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08463", commandBuffer, stage_loc,
-                                 "and pStages[%" PRIu32 "] are both %s.", j, string_VkShaderStageFlagBits(stage));
+                                 "and pStages[{}"
+                                 "] are both {}.",
+                                 j, string_VkShaderStageFlagBits(stage));
             }
         }
 
@@ -468,9 +471,9 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
                 const LogObjectList objlist(commandBuffer, cb_state->command_pool.Handle());
                 skip |= LogError(
                     "VUID-vkCmdBindShadersEXT-pShaders-08476", objlist, stage_loc,
-                    "is VK_SHADER_STAGE_COMPUTE_BIT, but %s was allocated from %s that does not support compute operations (%s).",
-                    FormatHandle(commandBuffer).c_str(), FormatHandle(cb_state->command_pool.Handle()).c_str(),
-                    string_VkQueueFlags(cb_state->command_pool.queue_flags).c_str());
+                    "is VK_SHADER_STAGE_COMPUTE_BIT, but {} was allocated from {} that does not support compute operations ({}).",
+                    Handle(commandBuffer), Handle(cb_state->command_pool.Handle()),
+                    vvl::Flags::QueueFlags(cb_state->command_pool.queue_flags));
             }
         }
         if ((stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT |
@@ -478,38 +481,38 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
             0) {
             if ((cb_state->command_pool.queue_flags & VK_QUEUE_GRAPHICS_BIT) == 0) {
                 const LogObjectList objlist(commandBuffer, cb_state->command_pool.Handle());
-                skip |= LogError("VUID-vkCmdBindShadersEXT-pShaders-08477", objlist, stage_loc,
-                                 "is %s, but %s was allocated from %s that does not support graphics operations (%s).",
-                                 string_VkShaderStageFlagBits(stage), FormatHandle(commandBuffer).c_str(),
-                                 FormatHandle(cb_state->command_pool.Handle()).c_str(),
-                                 string_VkQueueFlags(cb_state->command_pool.queue_flags).c_str());
+                skip |=
+                    LogError("VUID-vkCmdBindShadersEXT-pShaders-08477", objlist, stage_loc,
+                             "is {}, but {} was allocated from {} that does not support graphics operations ({}).",
+                             string_VkShaderStageFlagBits(stage), Handle(commandBuffer), Handle(cb_state->command_pool.Handle()),
+                             vvl::Flags::QueueFlags(cb_state->command_pool.queue_flags));
             }
         }
         if ((stage & (VK_SHADER_STAGE_MESH_BIT_EXT | VK_SHADER_STAGE_TASK_BIT_EXT)) > 0) {
             if ((cb_state->command_pool.queue_flags & VK_QUEUE_GRAPHICS_BIT) == 0) {
                 const LogObjectList objlist(commandBuffer, cb_state->command_pool.Handle());
-                skip |= LogError("VUID-vkCmdBindShadersEXT-pShaders-08478", objlist, stage_loc,
-                                 "is %s, but %s was allocated from %s that does not support graphics operations (%s).",
-                                 string_VkShaderStageFlagBits(stage), FormatHandle(commandBuffer).c_str(),
-                                 FormatHandle(cb_state->command_pool.Handle()).c_str(),
-                                 string_VkQueueFlags(cb_state->command_pool.queue_flags).c_str());
+                skip |=
+                    LogError("VUID-vkCmdBindShadersEXT-pShaders-08478", objlist, stage_loc,
+                             "is {}, but {} was allocated from {} that does not support graphics operations ({}).",
+                             string_VkShaderStageFlagBits(stage), Handle(commandBuffer), Handle(cb_state->command_pool.Handle()),
+                             vvl::Flags::QueueFlags(cb_state->command_pool.queue_flags));
             }
         }
         if (stage == VK_SHADER_STAGE_ALL_GRAPHICS || stage == VK_SHADER_STAGE_ALL) {
             // Use string_VkShaderStageFlags to print special flag names
-            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08464", commandBuffer, stage_loc, "is %s.",
-                             string_VkShaderStageFlags(stage).c_str());
+            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08464", commandBuffer, stage_loc, "is {}.",
+                             vvl::Flags::ShaderStageFlags(stage));
         }
         if (stage & kShaderStageAllRayTracing) {
-            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08465", commandBuffer, stage_loc, "is %s.",
+            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08465", commandBuffer, stage_loc, "is {}.",
                              string_VkShaderStageFlagBits(stage));
         }
         if (stage == VK_SHADER_STAGE_SUBPASS_SHADING_BIT_HUAWEI) {
-            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08467", commandBuffer, stage_loc, "is %s.",
+            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08467", commandBuffer, stage_loc, "is {}.",
                              string_VkShaderStageFlagBits(stage));
         }
         if (stage == VK_SHADER_STAGE_CLUSTER_CULLING_BIT_HUAWEI) {
-            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08468", commandBuffer, stage_loc, "is %s.",
+            skip |= LogError("VUID-vkCmdBindShadersEXT-pStages-08468", commandBuffer, stage_loc, "is {}.",
                              string_VkShaderStageFlagBits(stage));
         }
         if (shader != VK_NULL_HANDLE) {
@@ -517,7 +520,8 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
             if (shader_state && shader_state->GetStage() != stage) {
                 const LogObjectList objlist(commandBuffer, shader);
                 skip |= LogError("VUID-vkCmdBindShadersEXT-pShaders-08469", objlist, stage_loc,
-                                 "is %s, but pShaders[%" PRIu32 "] was created with shader stage %s.",
+                                 "is {}, but pShaders[{}"
+                                 "] was created with shader stage {}.",
                                  string_VkShaderStageFlagBits(stage), i, string_VkShaderStageFlagBits(shader_state->GetStage()));
             }
         }
@@ -528,8 +532,10 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
         const auto task_state = Get<vvl::ShaderObject>(pShaders[task_stage_index]);
         const LogObjectList objlist(commandBuffer, vertex_state->Handle(), task_state->Handle());
         skip |= LogError("VUID-vkCmdBindShadersEXT-pShaders-08470", objlist, error_obj.location,
-                         "pStages[%" PRIu32 "] is VK_SHADER_STAGE_VERTEX_BIT and pStages[%" PRIu32
-                         "] is VK_SHADER_STAGE_TASK_BIT_EXT, but neither of pShaders[%" PRIu32 "] and pShaders[%" PRIu32
+                         "pStages[{}"
+                         "] is VK_SHADER_STAGE_VERTEX_BIT and pStages[{}"
+                         "] is VK_SHADER_STAGE_TASK_BIT_EXT, but neither of pShaders[{}"
+                         "] and pShaders[{}"
                          "] are VK_NULL_HANDLE.",
                          vertex_stage_index, task_stage_index, vertex_stage_index, task_stage_index);
     }
@@ -538,8 +544,10 @@ bool CoreChecks::PreCallValidateCmdBindShadersEXT(VkCommandBuffer commandBuffer,
         const auto mesh_state = Get<vvl::ShaderObject>(pShaders[mesh_stage_index]);
         const LogObjectList objlist(commandBuffer, vertex_state->Handle(), mesh_state->Handle());
         skip |= LogError("VUID-vkCmdBindShadersEXT-pShaders-08471", objlist, error_obj.location,
-                         "pStages[%" PRIu32 "] is VK_SHADER_STAGE_VERTEX_BIT and pStages[%" PRIu32
-                         "] is VK_SHADER_STAGE_MESH_BIT_EXT, but neither of pShaders[%" PRIu32 "] and pShaders[%" PRIu32
+                         "pStages[{}"
+                         "] is VK_SHADER_STAGE_VERTEX_BIT and pStages[{}"
+                         "] is VK_SHADER_STAGE_MESH_BIT_EXT, but neither of pShaders[{}"
+                         "] and pShaders[{}"
                          "] are VK_NULL_HANDLE.",
                          vertex_stage_index, mesh_stage_index, vertex_stage_index, mesh_stage_index);
     }
@@ -579,15 +587,14 @@ bool CoreChecks::ValidateDrawShaderObjectNextStage(const LastBound& last_bound_s
                 (previous_state->create_info_ext.nextStage & stage) == 0) {
                 const auto state = last_bound_state.GetShaderObjectStateIfValid(shader_object_stage);
                 const LogObjectList objlist(last_bound_state.cb_state.Handle(), previous_state->Handle(), state->Handle());
-                skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::NEXT_STAGE_10745), objlist, loc,
-                                 "The combination of graphic shader objects bound is invalid, because "
-                                 "shader stages %s (%s) and %s (%s) are bound with no other stages between them.\nThe %s shader "
-                                 "was created with nextStage of %s but needs to be %s.",
-                                 string_VkShaderStageFlagBits(previous_stage), FormatHandle(previous_state->Handle()).c_str(),
-                                 string_VkShaderStageFlagBits(stage), FormatHandle(state->Handle()).c_str(),
-                                 string_VkShaderStageFlagBits(previous_stage),
-                                 string_VkShaderStageFlags(previous_state->create_info_ext.nextStage).c_str(),
-                                 string_VkShaderStageFlagBits(stage));
+                skip |= LogError(
+                    CreateActionVuid(loc.function, vvl::ActionVUID::NEXT_STAGE_10745), objlist, loc,
+                    "The combination of graphic shader objects bound is invalid, because "
+                    "shader stages {} ({}) and {} ({}) are bound with no other stages between them.\nThe {} shader "
+                    "was created with nextStage of {} but needs to be {}.",
+                    string_VkShaderStageFlagBits(previous_stage), Handle(previous_state->Handle()),
+                    string_VkShaderStageFlagBits(stage), Handle(state->Handle()), string_VkShaderStageFlagBits(previous_stage),
+                    vvl::Flags::ShaderStageFlags(previous_state->create_info_ext.nextStage), string_VkShaderStageFlagBits(stage));
                 return skip;  // only report on a single error
             }
         }
@@ -605,7 +612,7 @@ bool CoreChecks::ValidateDrawShaderObjectBoundShader(const LastBound& last_bound
         skip |= LogError(
             CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_SHADER_08684), cb_state.Handle(), loc,
             "There is no graphics pipeline bound and vkCmdBindShadersEXT() was not called with stage "
-            "VK_SHADER_STAGE_VERTEX_BIT%s.",
+            "VK_SHADER_STAGE_VERTEX_BIT{}.",
             tried_mesh ? " (Even if you are using a mesh shader, a VK_NULL_HANDLE must be bound to the vertex stage)" : "");
     }
     if (enabled_features.tessellationShader &&
@@ -680,13 +687,13 @@ bool CoreChecks::ValidateDrawShaderObjectFlags(const LastBound& last_bound_state
                                             shader_with_independent_sets->VkHandle());
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_13364), objlist, loc,
-                    "Shader object bound at stage %s has both VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR and "
-                    "VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT but the VkPipelineLayout (bound with %s) was created without "
-                    "VK_PIPELINE_LAYOUT_CREATE_NO_TASK_SHADER_BIT_KHR.\nVkShaderEXT create flags: %s\nVkPipelineLayout "
-                    "create flags: %s",
+                    "Shader object bound at stage {} has both VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR and "
+                    "VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT but the VkPipelineLayout (bound with {}) was created without "
+                    "VK_PIPELINE_LAYOUT_CREATE_NO_TASK_SHADER_BIT_KHR.\nVkShaderEXT create flags: {}\nVkPipelineLayout "
+                    "create flags: {}",
                     string_VkShaderStageFlagBits(shader->GetStage()), vvl::String(last_bound_state.GetDescriptorModeFunc()),
-                    string_VkShaderCreateFlagsEXT(shader->safe_create_info_ext.flags).c_str(),
-                    string_VkPipelineLayoutCreateFlags(last_bound_state.desc_set_pipeline_layout->create_flags).c_str());
+                    vvl::Flags::ShaderCreateFlagsEXT(shader->safe_create_info_ext.flags),
+                    vvl::Flags::PipelineLayoutCreateFlags(last_bound_state.desc_set_pipeline_layout->create_flags));
             }
 
             if (last_bound_state.IsValidShaderObjectBound(ShaderObjectStage::TASK)) {
@@ -702,8 +709,8 @@ bool CoreChecks::ValidateDrawShaderObjectFlags(const LastBound& last_bound_state
         const LogObjectList objlist(last_bound_state.cb_state.Handle(), shader_with_independent_sets->VkHandle(),
                                     shader_without_independent_sets->VkHandle());
         skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_13361), objlist, loc,
-                         "Shader object bound at stage %s has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but shader object "
-                         "bound at stage %s does not.",
+                         "Shader object bound at stage {} has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but shader object "
+                         "bound at stage {} does not.",
                          string_VkShaderStageFlagBits(shader_with_independent_sets->GetStage()),
                          string_VkShaderStageFlagBits(shader_without_independent_sets->GetStage()));
     }
@@ -717,12 +724,12 @@ bool CoreChecks::ValidateDrawShaderObjectFlags(const LastBound& last_bound_state
             const LogObjectList objlist(last_bound_state.cb_state.Handle(), last_bound_state.desc_set_pipeline_layout->VkHandle(),
                                         shader_with_independent_sets->VkHandle());
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_13362), objlist, loc,
-                             "Shader object bound at stage %s has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but the "
-                             "VkPipelineLayout (bound with %s) "
-                             "was created without the VK_PIPELINE_LAYOUT_CREATE_INDEPENDENT_SETS_BIT_EXT flag\nCreate flags: %s.",
+                             "Shader object bound at stage {} has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but the "
+                             "VkPipelineLayout (bound with {}) "
+                             "was created without the VK_PIPELINE_LAYOUT_CREATE_INDEPENDENT_SETS_BIT_EXT flag\nCreate flags: {}.",
                              string_VkShaderStageFlagBits(shader_with_independent_sets->GetStage()),
                              vvl::String(last_bound_state.GetDescriptorModeFunc()),
-                             string_VkPipelineLayoutCreateFlags(last_bound_state.desc_set_pipeline_layout->create_flags).c_str());
+                             vvl::Flags::PipelineLayoutCreateFlags(last_bound_state.desc_set_pipeline_layout->create_flags));
         }
 
         std::optional<std::pair<uint32_t, uint32_t>> binding_with_pre_rast_stage;
@@ -777,7 +784,7 @@ bool CoreChecks::ValidateDrawShaderObjectFlags(const LastBound& last_bound_state
             }
             const LogObjectList objlist(last_bound_state.cb_state.Handle(), last_bound_state.desc_set_pipeline_layout->VkHandle(),
                                         pre_raster_dsl->VkHandle(), mesh_dsl->VkHandle(), shader_with_independent_sets->VkHandle());
-            skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_13363), objlist, loc, "%s",
+            skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_13363), objlist, loc, "{}",
                              ss.str().c_str());
         }
     }
@@ -792,13 +799,13 @@ bool CoreChecks::ValidateDrawShaderObjectFlags(const LastBound& last_bound_state
                                             shader_with_independent_sets->VkHandle());
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::INDEPENDENT_SETS_12491), objlist, loc,
-                    "Shader object bound at stage %s has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but the "
-                    "VkPipelineLayout (bound with %s) "
+                    "Shader object bound at stage {} has flag VK_SHADER_CREATE_INDEPENDENT_SETS_BIT_KHR but the "
+                    "VkPipelineLayout (bound with {}) "
                     "was created without the VK_PIPELINE_LAYOUT_CREATE_INDEPENDENT_SETS_BIT_EXT flag\nWhile there may be no "
-                    "descriptors, this Shader Object was created with push constant ranges\nCreate flags: %s.",
+                    "descriptors, this Shader Object was created with push constant ranges\nCreate flags: {}.",
                     string_VkShaderStageFlagBits(shader_with_independent_sets->GetStage()),
                     vvl::String(last_bound_state.GetDescriptorModeFunc()),
-                    string_VkPipelineLayoutCreateFlags(last_bound_state.push_constant_pipeline_layout->create_flags).c_str());
+                    vvl::Flags::PipelineLayoutCreateFlags(last_bound_state.push_constant_pipeline_layout->create_flags));
             }
         }
     }
@@ -814,8 +821,8 @@ bool CoreChecks::ValidateDrawShaderObject(const LastBound& last_bound_state, con
         if (!rp_state->UsesDynamicRendering()) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::RENDER_PASS_BEGAN_08876),
                              cb_state.GetObjectList(VK_PIPELINE_BIND_POINT_GRAPHICS), loc,
-                             "Shader objects must be used with dynamic rendering, but VkRenderPass %s is active.",
-                             FormatHandle(rp_state->Handle()).c_str());
+                             "Shader objects must be used with dynamic rendering, but VkRenderPass {} is active.",
+                             Handle(rp_state->Handle()));
         }
     }
 
@@ -852,11 +859,11 @@ bool CoreChecks::ValidateDrawShaderObjectLinking(const LastBound& last_bound_sta
                 const char* msg =
                     missing_shader ? string_VkShaderStageFlagBits(missing_shader->GetStage()) : "which was destroyed";
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::LINKED_SHADERS_08698), cb_state.Handle(), loc,
-                                 "Shader %s (%s) was created with VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but the linked %s "
-                                 "shader (%s) is not bound.",
-                                 FormatHandle(bound_shader).c_str(),
+                                 "Shader {} ({}) was created with VK_SHADER_CREATE_LINK_STAGE_BIT_EXT, but the linked {} "
+                                 "shader ({}) is not bound.",
+                                 Handle(bound_shader),
                                  string_VkShaderStageFlagBits(last_bound_state.shader_object_states[i]->GetStage()),
-                                 FormatHandle(linked_shader).c_str(), msg);
+                                 Handle(linked_shader), msg);
                 break;
             }
         }
@@ -876,8 +883,8 @@ bool CoreChecks::ValidateDrawShaderObjectLinking(const LastBound& last_bound_sta
         if (next_stage != VK_SHADER_STAGE_ALL && consumer->GetStage() != next_stage) {
             const LogObjectList objlist(cb_state.Handle(), consumer->Handle());
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::LINKED_SHADERS_08699), cb_state.Handle(), loc,
-                             "Shaders %s and %s were created with VK_SHADER_CREATE_LINK_STAGE_BIT_EXT without intermediate "
-                             "stage %s linked, but %s shader is bound.",
+                             "Shaders {} and {} were created with VK_SHADER_CREATE_LINK_STAGE_BIT_EXT without intermediate "
+                             "stage {} linked, but {} shader is bound.",
                              string_VkShaderStageFlagBits(prev_stage), string_VkShaderStageFlagBits(next_stage),
                              string_VkShaderStageFlagBits(stage), string_VkShaderStageFlagBits(stage));
             break;
@@ -922,8 +929,9 @@ bool CoreChecks::ValidateDrawShaderObjectPushConstantAndLayout(const LastBound& 
         if (first->create_info_ext.pushConstantRangeCount != shader_state->create_info_ext.pushConstantRangeCount) {
             const LogObjectList objlist(cb_state.Handle(), first->Handle(), shader_state->Handle());
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SHADERS_PUSH_CONSTANTS_08878), objlist, loc,
-                             "The bound %s shader was created with a pushConstantRangeCount of %" PRIu32
-                             " which doesn't match the bound %s shader created with a pushConstantRangeCount of %" PRIu32 "",
+                             "The bound {} shader was created with a pushConstantRangeCount of {}"
+                             " which doesn't match the bound {} shader created with a pushConstantRangeCount of {}"
+                             "",
                              string_VkShaderStageFlagBits(first->GetStage()), first->create_info_ext.pushConstantRangeCount,
                              string_VkShaderStageFlagBits(shader_state->GetStage()),
                              shader_state->create_info_ext.pushConstantRangeCount);
@@ -939,7 +947,7 @@ bool CoreChecks::ValidateDrawShaderObjectPushConstantAndLayout(const LastBound& 
                 if (!found) {
                     const LogObjectList objlist(cb_state.Handle(), first->Handle(), shader_state->Handle());
                     skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SHADERS_PUSH_CONSTANTS_08878), objlist, loc,
-                                     "The bound %s and %s shader have different push constant ranges.",
+                                     "The bound {} and {} shader have different push constant ranges.",
                                      string_VkShaderStageFlagBits(first->GetStage()),
                                      string_VkShaderStageFlagBits(shader_state->GetStage()));
                     break;
@@ -953,8 +961,8 @@ bool CoreChecks::ValidateDrawShaderObjectPushConstantAndLayout(const LastBound& 
         if (first->create_info_ext.setLayoutCount != shader_state->create_info_ext.setLayoutCount && !has_independent_sets) {
             const LogObjectList objlist(cb_state.Handle(), first->Handle(), shader_state->Handle());
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SHADERS_DESCRIPTOR_LAYOUTS_08879), objlist, loc,
-                             "The bound %s shader was created with a setLayoutCount of %" PRIu32
-                             " which doesn't match the bound %s shader created with a setLayoutCount of %" PRIu32,
+                             "The bound {} shader was created with a setLayoutCount of {}"
+                             " which doesn't match the bound {} shader created with a setLayoutCount of {}",
                              string_VkShaderStageFlagBits(first->GetStage()), first->create_info_ext.setLayoutCount,
                              string_VkShaderStageFlagBits(shader_state->GetStage()), shader_state->create_info_ext.setLayoutCount);
         } else {
@@ -978,7 +986,7 @@ bool CoreChecks::ValidateDrawShaderObjectPushConstantAndLayout(const LastBound& 
                         "VkShaderCreateInfoEXT::pSetLayouts not being used by the stage.";
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::SHADERS_DESCRIPTOR_LAYOUTS_08879), objlist, loc,
-                        "The bound %s and %s shader are incompatible due to differently defined VkDescriptorSetLayouts.\n%s%s",
+                        "The bound {} and {} shader are incompatible due to differently defined VkDescriptorSetLayouts.\n{}{}",
                         string_VkShaderStageFlagBits(first->GetStage()), string_VkShaderStageFlagBits(shader_state->GetStage()),
                         err_msg.c_str(), has_independent_sets ? hint : "");
                     break;
@@ -994,7 +1002,7 @@ bool CoreChecks::ValidateDrawShaderObjectPushConstantAndLayout(const LastBound& 
                 (first->create_info_ext.flags & VK_SHADER_CREATE_DESCRIPTOR_HEAP_BIT_EXT) ? shader_state : first;
             const LogObjectList objlist(cb_state.Handle(), heap_shader->Handle(), non_heap_shader->Handle());
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SHADERS_DESCRIPTOR_LAYOUTS_08879), objlist, loc,
-                             "The bound %s shader was created with VK_SHADER_CREATE_DESCRIPTOR_HEAP_BIT_EXT, but the bound %s "
+                             "The bound {} shader was created with VK_SHADER_CREATE_DESCRIPTOR_HEAP_BIT_EXT, but the bound {} "
                              "shader was created without VK_SHADER_CREATE_DESCRIPTOR_HEAP_BIT_EXT",
                              string_VkShaderStageFlagBits(heap_shader->GetStage()),
                              string_VkShaderStageFlagBits(non_heap_shader->GetStage()));
@@ -1035,11 +1043,11 @@ bool CoreChecks::ValidateDrawShaderObjectMesh(const LastBound& last_bound_state,
 
         if (!is_mesh_command) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DRAW_SHADERS_NO_TASK_MESH_08885), cb_state.Handle(),
-                             loc, "%s bound, but this is not a vkCmdDrawMeshTasks* call.", print_mesh_task().c_str());
+                             loc, "{} bound, but this is not a vkCmdDrawMeshTasks* call.", print_mesh_task().c_str());
         }
         if (has_vertex_shader) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VERT_TASK_MESH_SHADER_08696), cb_state.Handle(), loc,
-                             "Vertex shader (%s) is bound, but %s bound as well.", FormatHandle(vertex_shader_handle).c_str(),
+                             "Vertex shader ({}) is bound, but {} bound as well.", Handle(vertex_shader_handle),
                              print_mesh_task().c_str());
         }
     }
@@ -1047,14 +1055,13 @@ bool CoreChecks::ValidateDrawShaderObjectMesh(const LastBound& last_bound_state,
     if (enabled_features.taskShader || enabled_features.meshShader) {
         if (has_vertex_shader && has_mesh_shader) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VERT_MESH_SHADER_08693), cb_state.Handle(), loc,
-                             "Both vertex shader (%s) and mesh shader (%s) are bound, but only %s should be bound (the other needs "
+                             "Both vertex shader ({}) and mesh shader ({}) are bound, but only {} should be bound (the other needs "
                              "to be set to VK_NULL_HANDLE).",
-                             FormatHandle(vertex_shader_handle).c_str(), FormatHandle(mesh_shader_handle).c_str(),
-                             is_mesh_command ? "mesh" : "vertex");
+                             Handle(vertex_shader_handle), Handle(mesh_shader_handle), is_mesh_command ? "mesh" : "vertex");
         } else if (!has_vertex_shader && !has_mesh_shader) {
             // TODO - should have a dedicated VU or rework 08693
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VERT_MESH_SHADER_08693), cb_state.Handle(), loc,
-                             "Neither vertex shader nor mesh shader are bound (for %s you need %s)", String(loc.function),
+                             "Neither vertex shader nor mesh shader are bound (for {} you need {})", String(loc.function),
                              is_mesh_command ? "mesh" : "vertex");
         }
     }
@@ -1066,16 +1073,16 @@ bool CoreChecks::ValidateDrawShaderObjectMesh(const LastBound& last_bound_state,
             if (!no_task_shader_flag && !has_task_shader) {
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::TASK_MESH_SHADER_08694), cb_state.Handle(), loc,
-                    "Mesh shader (%s) was created without VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT, but no task shader is bound.%s",
-                    FormatHandle(mesh_shader_handle).c_str(),
+                    "Mesh shader ({}) was created without VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT, but no task shader is bound.{}",
+                    Handle(mesh_shader_handle),
                     enabled_features.taskShader ? ""
                                                 : "\nEven with the taskShader feature not enabled, the driver still needs the "
                                                   "shader create flag, this ensures Binary Shader Compatibility.");
             } else if (no_task_shader_flag && has_task_shader) {
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::TASK_MESH_SHADER_08695), cb_state.Handle(), loc,
-                    "Mesh shader (%s) was created with VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT, but a task shader (%s) is bound.",
-                    FormatHandle(mesh_shader_handle).c_str(), FormatHandle(task_shader_handle).c_str());
+                    "Mesh shader ({}) was created with VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT, but a task shader ({}) is bound.",
+                    Handle(mesh_shader_handle), Handle(task_shader_handle));
             }
         }
     }
@@ -1095,7 +1102,7 @@ bool CoreChecks::ValidateDrawShaderObjectMesh(const LastBound& last_bound_state,
             if (has_geom_shader) msg << "Geometry shader: " << FormatHandle(geom_shader_handle) << '\n';
             skip |=
                 LogError(CreateActionVuid(loc.function, vvl::ActionVUID::BOUND_NON_MESH_10680), cb_state.Handle(), loc,
-                         "Calling a mesh draw call, but the following stages are bound, but need to be bound as VK_NULL_HANDLE\n%s",
+                         "Calling a mesh draw call, but the following stages are bound, but need to be bound as VK_NULL_HANDLE\n{}",
                          msg.str().c_str());
         }
     }

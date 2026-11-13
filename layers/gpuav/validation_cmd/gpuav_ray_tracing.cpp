@@ -133,9 +133,10 @@ void TraceRaysIndirect(Validator& gpuav, const Location& loc, CommandBufferSubSt
                 case kErrorSubCode_PreTraceRays_LimitWidth: {
                     const uint32_t width = error_record[kValCmd_ErrorPayloadDword_0];
                     skip |= gpuav.LogError("VUID-VkTraceRaysIndirectCommandKHR-width-03638", objlist, loc_with_debug_region,
-                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::width of %" PRIu32
+                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::width of {}"
                                            " would exceed VkPhysicalDeviceLimits::maxComputeWorkGroupCount[0] * "
-                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[0] limit of %" PRIu64 ".",
+                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[0] limit of {}"
+                                           ".",
                                            width,
                                            static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupCount[0]) *
                                                static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupSize[0]));
@@ -144,9 +145,10 @@ void TraceRaysIndirect(Validator& gpuav, const Location& loc, CommandBufferSubSt
                 case kErrorSubCode_PreTraceRays_LimitHeight: {
                     const uint32_t height = error_record[kValCmd_ErrorPayloadDword_0];
                     skip |= gpuav.LogError("VUID-VkTraceRaysIndirectCommandKHR-height-03639", objlist, loc_with_debug_region,
-                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::height of %" PRIu32
+                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::height of {}"
                                            " would exceed VkPhysicalDeviceLimits::maxComputeWorkGroupCount[1] * "
-                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[1] limit of %" PRIu64 ".",
+                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[1] limit of {}"
+                                           ".",
                                            height,
                                            static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupCount[1]) *
                                                static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupSize[1]));
@@ -155,9 +157,10 @@ void TraceRaysIndirect(Validator& gpuav, const Location& loc, CommandBufferSubSt
                 case kErrorSubCode_PreTraceRays_LimitDepth: {
                     const uint32_t depth = error_record[kValCmd_ErrorPayloadDword_0];
                     skip |= gpuav.LogError("VUID-VkTraceRaysIndirectCommandKHR-depth-03640", objlist, loc_with_debug_region,
-                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::depth of %" PRIu32
+                                           "Indirect trace rays of VkTraceRaysIndirectCommandKHR::depth of {}"
                                            " would exceed VkPhysicalDeviceLimits::maxComputeWorkGroupCount[2] * "
-                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[2] limit of %" PRIu64 ".",
+                                           "VkPhysicalDeviceLimits::maxComputeWorkGroupSize[2] limit of {}"
+                                           ".",
                                            depth,
                                            static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupCount[2]) *
                                                static_cast<uint64_t>(gpuav.phys_dev_props.limits.maxComputeWorkGroupSize[2]));
@@ -170,9 +173,10 @@ void TraceRaysIndirect(Validator& gpuav, const Location& loc, CommandBufferSubSt
                     const uint64_t rays_volume = trace_rays_extent.width * trace_rays_extent.height * trace_rays_extent.depth;
                     skip |= gpuav.LogError(
                         "VUID-VkTraceRaysIndirectCommandKHR-width-03641", objlist, loc_with_debug_region,
-                        "Indirect trace rays of volume %" PRIu64
-                        " (%s) would exceed VkPhysicalDeviceRayTracingPipelinePropertiesKHR::maxRayDispatchInvocationCount "
-                        "limit of %" PRIu32 ".",
+                        "Indirect trace rays of volume {}"
+                        " ({}) would exceed VkPhysicalDeviceRayTracingPipelinePropertiesKHR::maxRayDispatchInvocationCount "
+                        "limit of {}"
+                        ".",
                         rays_volume, string_VkExtent3D(trace_rays_extent).c_str(),
                         gpuav.phys_dev_ext_props.ray_tracing_props_khr.maxRayDispatchInvocationCount);
                     break;
@@ -678,21 +682,21 @@ void TLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
         switch (error_sub_code) {
             case kErrorSubCode_PreBuildAccelerationStructures_BlasAddrAlignment: {
                 skip |= gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-03717", objlist, loc_with_debug_region,
-                                       "%s is not aligned to 16 bytes. TLAS being built: %s.", invalid_blas_loc.str().c_str(),
+                                       "{} is not aligned to 16 bytes. TLAS being built: {}.", invalid_blas_loc.str().c_str(),
                                        tlas_build_loc.str().c_str());
                 break;
             }
             case kErrorSubCode_PreBuildAccelerationStructures_InvalidAS: {
                 skip |= gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-12281", objlist, loc_with_debug_region,
-                                       "%s is an invalid acceleration structure reference. TLAS being built: %s.",
+                                       "{} is an invalid acceleration structure reference. TLAS being built: {}.",
                                        invalid_blas_loc.str().c_str(), tlas_build_loc.str().c_str());
                 break;
             }
             case kErrorSubCode_PreBuildAccelerationStructures_DestroyedASBuffer: {
                 skip |=
                     gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-12281", objlist, loc_with_debug_region,
-                                   "%s is an invalid acceleration structure reference - its underlying buffer was already "
-                                   "destroyed when the build command started execution.%s. TLAS being built: %s.",
+                                   "{} is an invalid acceleration structure reference - its underlying buffer was already "
+                                   "destroyed when the build command started execution.{}. TLAS being built: {}.",
                                    invalid_blas_loc.str().c_str(), invalid_blas_info.str().c_str(), tlas_build_loc.str().c_str());
                 break;
             }
@@ -703,7 +707,7 @@ void TLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 }
                 const std::string ss_as_type_str = ss_as_type.str();
                 skip |= gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-12281", objlist, loc_with_debug_region,
-                                       "%s is not a bottom level acceleration structure%s.%s. TLAS being built: %s.",
+                                       "{} is not a bottom level acceleration structure{}.{}. TLAS being built: {}.",
                                        invalid_blas_loc.str().c_str(), ss_as_type_str.c_str(), invalid_blas_info.str().c_str(),
                                        tlas_build_loc.str().c_str());
                 break;
@@ -711,9 +715,9 @@ void TLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
             case kErrorSubCode_PreBuildAccelerationStructures_DestroyedASMemory: {
                 skip |=
                     gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-03709", objlist, loc_with_debug_region,
-                                   "%s is an invalid acceleration structure reference - its underlying buffer was not bound to "
-                                   "memory anymore when the build command started execution. Memory was probably destroyed.%s. "
-                                   "TLAS being built: %s.",
+                                   "{} is an invalid acceleration structure reference - its underlying buffer was not bound to "
+                                   "memory anymore when the build command started execution. Memory was probably destroyed.{}. "
+                                   "TLAS being built: {}.",
                                    invalid_blas_loc.str().c_str(), invalid_blas_info.str().c_str(), tlas_build_loc.str().c_str());
                 break;
             }
@@ -753,13 +757,13 @@ void TLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 }
                 const std::string error_str = error_ss.str();
                 skip |= gpuav.LogError("VUID-vkCmdBuildAccelerationStructuresKHR-dstAccelerationStructure-03706", objlist,
-                                       loc_with_debug_region, "%s.", error_str.c_str());
+                                       loc_with_debug_region, "{}.", error_str.c_str());
                 break;
             }
             case kErrorSubCode_PreBuildAccelerationStructures_BlasNotBuilt: {
                 skip |=
                     gpuav.LogError("UNASSIGNED-BLAS-not-built", objlist, loc_with_debug_region,
-                                   "%s was not built when the build command started execution.%s. TLAS being built: %s.",
+                                   "{} was not built when the build command started execution.{}. TLAS being built: {}.",
                                    invalid_blas_loc.str().c_str(), invalid_blas_info.str().c_str(), tlas_build_loc.str().c_str());
                 break;
             }
@@ -1282,20 +1286,27 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 skip |= gpuav.LogError(
                     "VUID-VkAccelerationStructureBuildRangeInfoKHR-maxVertex-10774", objlist, loc_with_debug_region,
                     "Index out of bounds.\n"
-                    "Index (%" PRIu32 ") + firstVertex (%" PRIu32 ") = %" PRIu32
-                    " but VkAccelerationStructureGeometryTrianglesDataKHR::maxVertex is only %" PRIu32
+                    "Index ({}"
+                    ") + firstVertex ({}"
+                    ") = {}"
+                    " but VkAccelerationStructureGeometryTrianglesDataKHR::maxVertex is only {}"
                     ".\n"
-                    "Index buffer starts at VkDeviceAddress indexData (0x%" PRIx64 ") + primitiveOffset (%" PRIu32 ") = 0x%" PRIx64
+                    "Index buffer starts at VkDeviceAddress indexData (0x{:x}"
+                    ") + primitiveOffset ({}"
+                    ") = 0x{:x}"
                     "\n"
-                    "Given index type of %s, and that starting address, that's IndexBuffer[%" PRIu32
-                    "] (VkDeviceAddress: 0x%" PRIx64
+                    "Given index type of {}, and that starting address, that's IndexBuffer[{}"
+                    "] (VkDeviceAddress: 0x{:x}"
                     ")\n\n"
 
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     index, error_info.build_range_info.firstVertex, index + error_info.build_range_info.firstVertex,
                     error_info.geom.triangles.maxVertex, error_info.geom.triangles.indexData.deviceAddress,
@@ -1342,18 +1353,24 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 }
                 skip |= gpuav.LogError(
                     vuid, objlist, loc_with_debug_region,
-                    "Ill formed AABB at primitive index %" PRIu32
+                    "Ill formed AABB at primitive index {}"
                     ".\n"
-                    "%s (%f) > %s (%f)\n"
-                    "AABB was found at VkDeviceAddress aabbs.data (0x%" PRIx64 ") + primitiveOffset (%" PRIu32
-                    ") + primitive index (%" PRIu32 ") * stride (%" PRIu64 ") = 0x%" PRIx64
+                    "{} ({:f}) > {} ({:f})\n"
+                    "AABB was found at VkDeviceAddress aabbs.data (0x{:x}"
+                    ") + primitiveOffset ({}"
+                    ") + primitive index ({}"
+                    ") * stride ({}"
+                    ") = 0x{:x}"
                     "\n"
 
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryAabbsDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryAabbsDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     gid, vvl::String(min_field), min, vvl::String(max_field), max, error_info.geom.aabbs.data.deviceAddress,
                     error_info.build_range_info.primitiveOffset, gid, error_info.geom.aabbs.stride,
@@ -1372,10 +1389,13 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                     "VUID-VkTransformMatrixKHR-matrix-03799", objlist, loc_with_debug_region,
                     "Transform matrix's first three columns do not define an invertible 3x3 matrix.\n"
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     error_info.info_i, error_info.geom_i,
                     string_VkAccelerationStructureGeometryTrianglesDataKHR(*gpuav.device_state, error_info.geom.triangles).c_str(),
@@ -1434,21 +1454,27 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 skip |= gpuav.LogError(
                     "VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-03768", objlist, loc_with_debug_region,
                     "Index buffer value(s) updated between acceleration structure build and update.\n"
-                    "Index type is %s. At offset %" PRIu32 " index supplied at acceleration structure build time was %" PRIu32
-                    ", but at update time index at same offset is %" PRIu32 " (found at VkDeviceAddress: 0x%" PRIx64
+                    "Index type is {}. At offset {}"
+                    " index supplied at acceleration structure build time was {}"
+                    ", but at update time index at same offset is {}"
+                    " (found at VkDeviceAddress: 0x{:x}"
                     ").\n"
-                    "Updated index buffer starts at VkDeviceAddress indexData (0x%" PRIx64 ") + primitiveOffset (%" PRIu32
-                    ") = 0x%" PRIx64
+                    "Updated index buffer starts at VkDeviceAddress indexData (0x{:x}"
+                    ") + primitiveOffset ({}"
+                    ") = 0x{:x}"
                     ".\n\n"
 
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32
-                    "] was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "] was:\n{}\n"
 
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     string_VkIndexType(error_info.geom.triangles.indexType), index_buffer_pos, build_time_index, update_time_index,
                     index_address, error_info.geom.triangles.indexData.deviceAddress, error_info.build_range_info.primitiveOffset,
@@ -1472,20 +1498,24 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 const char* error_type = is_build_time_vertex_nan ? "inactive to active" : "active to inactive";
                 skip |= gpuav.LogError(
                     vuid, objlist, loc_with_debug_region,
-                    "Primitive status changed from %s between acceleration structure build and update. In terms of vertices of "
-                    "format %s strided by %" PRIu64 " bytes, primitive was found at index %" PRIu32
+                    "Primitive status changed from {} between acceleration structure build and update. In terms of vertices of "
+                    "format {} strided by {}"
+                    " bytes, primitive was found at index {}"
                     " in vertex buffer. "
-                    "Corresponding vertex buffer address is 0x%" PRIx64
+                    "Corresponding vertex buffer address is 0x{:x}"
                     ".\n\n"
 
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32
-                    "] was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "] was:\n{}\n"
 
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryTrianglesDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     error_type, string_VkFormat(error_info.geom.triangles.vertexFormat), error_info.geom.triangles.vertexStride,
                     index, error_info.geom.triangles.vertexData.deviceAddress + index * error_info.geom.triangles.vertexStride,
@@ -1507,16 +1537,24 @@ void BLAS(Validator& gpuav, const Location& loc, CommandBufferSubState& cb_state
                 const char* error_type = is_build_time_aabb_nan ? "inactive to active" : "active to inactive";
                 skip |= gpuav.LogError(
                     vuid, objlist, loc_with_debug_region,
-                    "Primitive status changed from %s between acceleration structure build and update. AABB primitive at index "
-                    "%" PRIu32 " strided by %" PRIu64 " bytes was found at VkDeviceAddress aabbs.data (0x%" PRIx64
-                    ") + primitiveOffset (%" PRIu32 ") + primitive index (%" PRIu32 ") * stride (%" PRIu64 ") = 0x%" PRIx64
+                    "Primitive status changed from {} between acceleration structure build and update. AABB primitive at index "
+                    "{}"
+                    " strided by {}"
+                    " bytes was found at VkDeviceAddress aabbs.data (0x{:x}"
+                    ") + primitiveOffset ({}"
+                    ") + primitive index ({}"
+                    ") * stride ({}"
+                    ") = 0x{:x}"
                     ".\n\n"
 
                     "Corresponding BLAS build command info:\n"
-                    "VkAccelerationStructureBuildGeometryInfoKHR[%" PRIu32 "]::VkAccelerationStructureGeometryKHR[%" PRIu32
-                    "]::VkAccelerationStructureGeometryAabbsDataKHR was:\n%s\n"
+                    "VkAccelerationStructureBuildGeometryInfoKHR[{}"
+                    "]::VkAccelerationStructureGeometryKHR[{}"
+                    "]::VkAccelerationStructureGeometryAabbsDataKHR was:\n{}\n"
 
-                    "VkAccelerationStructureBuildRangeInfoKHR[%" PRIu32 "][%" PRIu32 "] was:\n%s\n",
+                    "VkAccelerationStructureBuildRangeInfoKHR[{}"
+                    "][{}"
+                    "] was:\n{}\n",
 
                     error_type, gid, error_info.geom.aabbs.stride, error_info.geom.aabbs.data.deviceAddress,
                     error_info.build_range_info.primitiveOffset, gid, error_info.geom.aabbs.stride,

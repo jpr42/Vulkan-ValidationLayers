@@ -54,22 +54,22 @@ bool CoreChecks::PreCallValidateGetMemoryFdKHR(VkDevice device, const VkMemoryGe
         if (!export_info) {
             skip |= LogError("VUID-VkMemoryGetFdInfoKHR-handleType-00671", pGetFdInfo->memory,
                              error_obj.location.dot(Field::pGetFdInfo).dot(Field::memory),
-                             "pNext chain does not contain an instance of VkExportMemoryAllocateInfo.\n%s",
+                             "pNext chain does not contain an instance of VkExportMemoryAllocateInfo.\n{}",
                              PrintPNextChain(Struct::VkMemoryAllocateInfo, memory_state->allocate_info.pNext).c_str());
         } else if ((export_info->handleTypes & pGetFdInfo->handleType) == 0) {
             skip |= LogError("VUID-VkMemoryGetFdInfoKHR-handleType-00671", pGetFdInfo->memory,
                              error_obj.location.dot(Field::pGetFdInfo).dot(Field::memory),
-                             "the requested handle type (%s) is not included in the memory's "
-                             "VkExportMemoryAllocateInfo::handleTypes (%s).",
+                             "the requested handle type ({}) is not included in the memory's "
+                             "VkExportMemoryAllocateInfo::handleTypes ({}).",
                              string_VkExternalMemoryHandleTypeFlagBits(pGetFdInfo->handleType),
-                             string_VkExternalMemoryHandleTypeFlags(export_info->handleTypes).c_str());
+                             vvl::Flags::ExternalMemoryHandleTypeFlags(export_info->handleTypes));
         }
 
         if (pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT && memory_state->multi_instance) {
             skip |= LogError("VUID-VkMemoryGetFdInfoKHR-handleType-12524", pGetFdInfo->memory,
                              error_obj.location.dot(Field::pGetFdInfo).dot(Field::handleType),
-                             "is VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT, but %s was allocated with multiple instances.",
-                             FormatHandle(pGetFdInfo->memory).c_str());
+                             "is VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT, but {} was allocated with multiple instances.",
+                             Handle(pGetFdInfo->memory));
         }
     }
     return skip;
@@ -93,8 +93,8 @@ bool CoreChecks::PreCallValidateImportSemaphoreFdKHR(VkDevice device, const VkIm
         // only valid type with copy payload transference semantics currently
         if (pImportSemaphoreFdInfo->handleType == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT) {
             skip |= LogError("VUID-VkImportSemaphoreFdInfoKHR-handleType-07307", sem_state->Handle(), info_loc.dot(Field::flags),
-                             "is %s and handleType is VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT.",
-                             string_VkSemaphoreImportFlags(pImportSemaphoreFdInfo->flags).c_str());
+                             "is {} and handleType is VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT.",
+                             vvl::Flags::SemaphoreImportFlags(pImportSemaphoreFdInfo->flags));
         }
     }
 
@@ -110,16 +110,16 @@ bool CoreChecks::PreCallValidateGetSemaphoreFdKHR(VkDevice device, const VkSemap
     const Location info_loc = error_obj.location.dot(Field::pGetFdInfo);
     if ((pGetFdInfo->handleType & sem_state->export_handle_types) == 0) {
         skip |= LogError("VUID-VkSemaphoreGetFdInfoKHR-handleType-01132", sem_state->Handle(), info_loc.dot(Field::handleType),
-                         "(%s) is different from VkExportSemaphoreCreateInfo::handleTypes (%s).",
+                         "({}) is different from VkExportSemaphoreCreateInfo::handleTypes ({}).",
                          string_VkExternalSemaphoreHandleTypeFlagBits(pGetFdInfo->handleType),
-                         string_VkExternalSemaphoreHandleTypeFlags(sem_state->export_handle_types).c_str());
+                         vvl::Flags::ExternalSemaphoreHandleTypeFlags(sem_state->export_handle_types));
     }
 
     if (sem_state->ImportedHandleType().has_value() &&
         !CanSemaphoreExportFromImported(pGetFdInfo->handleType, sem_state->ImportedHandleType().value())) {
         // See https://gitlab.khronos.org/vulkan/vulkan/-/issues/3670 for more details
         skip |= LogError("VUID-VkSemaphoreGetFdInfoKHR-semaphore-01133", sem_state->Handle(), info_loc.dot(Field::handleType),
-                         "(%s) cannot be exported from semaphore with imported payload with handle type %s",
+                         "({}) cannot be exported from semaphore with imported payload with handle type {}",
                          string_VkExternalSemaphoreHandleTypeFlagBits(pGetFdInfo->handleType),
                          string_VkExternalSemaphoreHandleTypeFlagBits(sem_state->ImportedHandleType().value()));
     }
@@ -127,18 +127,18 @@ bool CoreChecks::PreCallValidateGetSemaphoreFdKHR(VkDevice device, const VkSemap
     if (pGetFdInfo->handleType == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT) {
         if (sem_state->type != VK_SEMAPHORE_TYPE_BINARY) {
             skip |= LogError("VUID-VkSemaphoreGetFdInfoKHR-handleType-03253", sem_state->Handle(), info_loc.dot(Field::handleType),
-                             "is VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT, but semaphore type is %s.",
+                             "is VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT, but semaphore type is {}.",
                              string_VkSemaphoreType(sem_state->type));
         } else if (!sem_state->CanBinaryBeWaited()) {
             skip |= LogError("VUID-VkSemaphoreGetFdInfoKHR-handleType-03254", sem_state->Handle(), info_loc.dot(Field::semaphore),
                              "must be signaled or have a pending signal operation.");
         } else if (auto timeline_wait_info = sem_state->GetPendingBinarySignalTimelineDependency()) {
             const LogObjectList objlist(sem_state->Handle(), timeline_wait_info->semaphore->Handle());
-            skip |= LogError("VUID-VkSemaphoreGetFdInfoKHR-handleType-03254", objlist, info_loc.dot(Field::semaphore),
-                             "(%s) has an associated signal but it depends on timeline semaphore wait (%s, wait value = %" PRIu64
-                             ") that does not have resolving signal submitted yet.",
-                             FormatHandle(sem_state->Handle()).c_str(),
-                             FormatHandle(timeline_wait_info->semaphore->Handle()).c_str(), timeline_wait_info->payload);
+            skip |=
+                LogError("VUID-VkSemaphoreGetFdInfoKHR-handleType-03254", objlist, info_loc.dot(Field::semaphore),
+                         "({}) has an associated signal but it depends on timeline semaphore wait ({}, wait value = {}"
+                         ") that does not have resolving signal submitted yet.",
+                         Handle(sem_state->Handle()), Handle(timeline_wait_info->semaphore->Handle()), timeline_wait_info->payload);
         }
     }
     return skip;
@@ -149,7 +149,7 @@ bool CoreChecks::ValidateImportFence(VkFence fence, const char* vuid, const Loca
     bool skip = false;
     ASSERT_AND_RETURN_SKIP(fence_node);
     if (fence_node->Scope() == vvl::Fence::kInternal && fence_node->State() == vvl::Fence::kInflight) {
-        skip |= LogError(vuid, fence, loc.dot(Field::fence), "(%s) is currently in use.", FormatHandle(fence).c_str());
+        skip |= LogError(vuid, fence, loc.dot(Field::fence), "({}) is currently in use.", Handle(fence));
     }
     return skip;
 }
@@ -167,15 +167,15 @@ bool CoreChecks::PreCallValidateGetFenceFdKHR(VkDevice device, const VkFenceGetF
         const Location info_loc = error_obj.location.dot(Field::pGetFdInfo);
         if ((pGetFdInfo->handleType & fence_state->export_handle_types) == 0) {
             skip |= LogError("VUID-VkFenceGetFdInfoKHR-handleType-01453", fence_state->Handle(), info_loc.dot(Field::handleType),
-                             "(%s) is different from VkExportFenceCreateInfo::handleTypes (%s).",
+                             "({}) is different from VkExportFenceCreateInfo::handleTypes ({}).",
                              string_VkExternalFenceHandleTypeFlagBits(pGetFdInfo->handleType),
-                             string_VkExternalFenceHandleTypeFlags(fence_state->export_handle_types).c_str());
+                             vvl::Flags::ExternalFenceHandleTypeFlags(fence_state->export_handle_types));
         }
 
         if (fence_state->ImportedHandleType().has_value() &&
             !CanFenceExportFromImported(pGetFdInfo->handleType, fence_state->ImportedHandleType().value())) {
             skip |= LogError("VUID-VkFenceGetFdInfoKHR-fence-01455", fence_state->Handle(), info_loc.dot(Field::handleType),
-                             "(%s) cannot be exported from fence with imported payload with handle type %s",
+                             "({}) cannot be exported from fence with imported payload with handle type {}",
                              string_VkExternalFenceHandleTypeFlagBits(pGetFdInfo->handleType),
                              string_VkExternalFenceHandleTypeFlagBits(fence_state->ImportedHandleType().value()));
         }
@@ -199,15 +199,15 @@ bool CoreChecks::PreCallValidateGetMemoryWin32HandleKHR(VkDevice device, const V
         if (!export_info) {
             skip |= LogError("VUID-VkMemoryGetWin32HandleInfoKHR-handleType-00662", pGetWin32HandleInfo->memory,
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::memory),
-                             "pNext chain does not contain an instance of VkExportMemoryAllocateInfo.\n%s",
+                             "pNext chain does not contain an instance of VkExportMemoryAllocateInfo.\n{}",
                              PrintPNextChain(Struct::VkMemoryAllocateInfo, memory_state->allocate_info.pNext).c_str());
         } else if ((export_info->handleTypes & pGetWin32HandleInfo->handleType) == 0) {
             skip |= LogError("VUID-VkMemoryGetWin32HandleInfoKHR-handleType-00662", pGetWin32HandleInfo->memory,
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::memory),
-                             "the requested handle type (%s) is not included in the memory's "
-                             "VkExportMemoryAllocateInfo::handleTypes (%s).",
+                             "the requested handle type ({}) is not included in the memory's "
+                             "VkExportMemoryAllocateInfo::handleTypes ({}).",
                              string_VkExternalMemoryHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
-                             string_VkExternalMemoryHandleTypeFlags(export_info->handleTypes).c_str());
+                             vvl::Flags::ExternalMemoryHandleTypeFlags(export_info->handleTypes));
         }
     }
     return skip;
@@ -239,16 +239,16 @@ bool CoreChecks::PreCallValidateGetSemaphoreWin32HandleKHR(VkDevice device,
         if ((pGetWin32HandleInfo->handleType & sem_state->export_handle_types) == 0) {
             skip |= LogError("VUID-VkSemaphoreGetWin32HandleInfoKHR-handleType-01126", sem_state->Handle(),
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::handleType),
-                             "(%s) is different from VkExportSemaphoreCreateInfo::handleTypes (%s)",
+                             "({}) is different from VkExportSemaphoreCreateInfo::handleTypes ({})",
                              string_VkExternalSemaphoreHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
-                             string_VkExternalSemaphoreHandleTypeFlags(sem_state->export_handle_types).c_str());
+                             vvl::Flags::ExternalSemaphoreHandleTypeFlags(sem_state->export_handle_types));
         }
 
         if (sem_state->ImportedHandleType().has_value() &&
             !CanSemaphoreExportFromImported(pGetWin32HandleInfo->handleType, sem_state->ImportedHandleType().value())) {
             skip |= LogError("VUID-VkSemaphoreGetWin32HandleInfoKHR-semaphore-01128", sem_state->Handle(),
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::handleType),
-                             "(%s) cannot be exported from semaphore with imported payload with handle type %s",
+                             "({}) cannot be exported from semaphore with imported payload with handle type {}",
                              string_VkExternalSemaphoreHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
                              string_VkExternalSemaphoreHandleTypeFlagBits(sem_state->ImportedHandleType().value()));
         }
@@ -270,16 +270,16 @@ bool CoreChecks::PreCallValidateGetFenceWin32HandleKHR(VkDevice device, const Vk
         if ((pGetWin32HandleInfo->handleType & fence_state->export_handle_types) == 0) {
             skip |= LogError("VUID-VkFenceGetWin32HandleInfoKHR-handleType-01448", fence_state->Handle(),
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::handleType),
-                             "(%s) is different from VkExportFenceCreateInfo::handleTypes (%s)",
+                             "({}) is different from VkExportFenceCreateInfo::handleTypes ({})",
                              string_VkExternalFenceHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
-                             string_VkExternalFenceHandleTypeFlags(fence_state->export_handle_types).c_str());
+                             vvl::Flags::ExternalFenceHandleTypeFlags(fence_state->export_handle_types));
         }
 
         if (fence_state->ImportedHandleType().has_value() &&
             !CanFenceExportFromImported(pGetWin32HandleInfo->handleType, fence_state->ImportedHandleType().value())) {
             skip |= LogError("VUID-VkFenceGetWin32HandleInfoKHR-fence-01450", fence_state->Handle(),
                              error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::handleType),
-                             "(%s) cannot be exported from fence with imported payload with handle type %s",
+                             "({}) cannot be exported from fence with imported payload with handle type {}",
                              string_VkExternalFenceHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
                              string_VkExternalFenceHandleTypeFlagBits(fence_state->ImportedHandleType().value()));
         }
@@ -340,10 +340,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                     skip |= LogError(
                         "VUID-VkExportMetalObjectsInfoEXT-pNext-06791", device, error_obj.location,
                         "pNext chain contains a VkExportMetalDeviceInfoEXT structure "
-                        "but instance %s did not have a "
+                        "but instance {} did not have a "
                         "VkExportMetalObjectCreateInfoEXT struct with exportObjectType of "
                         "VK_EXPORT_METAL_OBJECT_TYPE_METAL_DEVICE_BIT_EXT in the pNext chain of its VkInstanceCreateInfo structure",
-                        FormatHandle(instance_state->instance).c_str());
+                        Handle(instance_state->instance));
                 }
                 break;
 
@@ -353,11 +353,11 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                     instance_state->export_metal_flags.end()) {
                     skip |= LogError("VUID-VkExportMetalObjectsInfoEXT-pNext-06792", device, error_obj.location,
                                      "pNext chain contains a VkExportMetalCommandQueueInfoEXT structure "
-                                     "but instance %s did not have a "
+                                     "but instance {} did not have a "
                                      "VkExportMetalObjectCreateInfoEXT struct with exportObjectType of "
                                      "VK_EXPORT_METAL_OBJECT_TYPE_METAL_COMMAND_QUEUE_BIT_EXT in the pNext chain of its "
                                      "VkInstanceCreateInfo structure",
-                                     FormatHandle(instance_state->instance).c_str());
+                                     Handle(instance_state->instance));
                 }
                 break;
 
@@ -368,10 +368,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                         skip |= LogError(
                             "VUID-VkExportMetalObjectsInfoEXT-pNext-06793", device, error_obj.location,
                             "pNext chain contains a VkExportMetalBufferInfoEXT structure with memory = "
-                            "%s, but that memory was not allocated with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
+                            "{}, but that memory was not allocated with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
                             "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_BUFFER_BIT_EXT in the pNext chain of the "
                             "VkMemoryAllocateInfo structure",
-                            FormatHandle(metal_buffer_ptr->memory).c_str());
+                            Handle(metal_buffer_ptr->memory));
                     }
                 }
             } break;
@@ -389,9 +389,9 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                     skip |=
                         LogError("VUID-VkExportMetalObjectsInfoEXT-pNext-06794", device, error_obj.location,
                                  "pNext chain contains a VkExportMetalTextureInfoEXT structure with image = "
-                                 "%s, imageView = %s and bufferView = %s, but exactly one of those 3 must not be VK_NULL_HANDLE",
-                                 FormatHandle(metal_texture_ptr->image).c_str(), FormatHandle(metal_texture_ptr->imageView).c_str(),
-                                 FormatHandle(metal_texture_ptr->bufferView).c_str());
+                                 "{}, imageView = {} and bufferView = {}, but exactly one of those 3 must not be VK_NULL_HANDLE",
+                                 Handle(metal_texture_ptr->image), Handle(metal_texture_ptr->imageView),
+                                 Handle(metal_texture_ptr->bufferView));
                 }
                 if (metal_texture_ptr->image) {
                     if (auto image_info = Get<vvl::Image>(metal_texture_ptr->image)) {
@@ -399,10 +399,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                             skip |= LogError(
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06795", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with image = "
-                                "%s, but that image was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
+                                "{}, but that image was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
                                 "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT in the pNext chain of the "
                                 "VkImageCreateInfo structure",
-                                FormatHandle(metal_texture_ptr->image).c_str());
+                                Handle(metal_texture_ptr->image));
                         }
                         auto format_plane_count = vkuFormatPlaneCount(image_info->GetFormat());
                         auto image_plane = metal_texture_ptr->plane;
@@ -410,18 +410,18 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                             skip |= LogError(
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06799", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with image = "
-                                "%s, and plane = %s, but image was created with format %s, which is not multiplanar and plane is "
+                                "{}, and plane = {}, but image was created with format {}, which is not multiplanar and plane is "
                                 "required to be VK_IMAGE_ASPECT_PLANE_0_BIT",
-                                FormatHandle(metal_texture_ptr->image).c_str(), string_VkImageAspectFlags(image_plane).c_str(),
+                                Handle(metal_texture_ptr->image), vvl::Flags::ImageAspectFlags(image_plane),
                                 string_VkFormat(image_info->GetFormat()));
                         }
                         if ((format_plane_count == 2) && (image_plane == VK_IMAGE_ASPECT_PLANE_2_BIT)) {
                             skip |= LogError(
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06800", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with image = "
-                                "%s, and plane = %s, but image was created with format %s, which has exactly 2 planes and plane "
+                                "{}, and plane = {}, but image was created with format {}, which has exactly 2 planes and plane "
                                 "cannot be VK_IMAGE_ASPECT_PLANE_2_BIT",
-                                FormatHandle(metal_texture_ptr->image).c_str(), string_VkImageAspectFlags(image_plane).c_str(),
+                                Handle(metal_texture_ptr->image), vvl::Flags::ImageAspectFlags(image_plane),
                                 string_VkFormat(image_info->GetFormat()));
                         }
                     }
@@ -433,11 +433,11 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06796", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with "
                                 "imageView = "
-                                "%s, but that image view was not created with a VkExportMetalObjectCreateInfoEXT whose "
+                                "{}, but that image view was not created with a VkExportMetalObjectCreateInfoEXT whose "
                                 "exportObjectType "
                                 "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT in the pNext chain of the "
                                 "VkImageViewCreateInfo structure",
-                                FormatHandle(metal_texture_ptr->imageView).c_str());
+                                Handle(metal_texture_ptr->imageView));
                         }
                         auto format_plane_count = vkuFormatPlaneCount(image_view_info->create_info.format);
                         auto image_plane = metal_texture_ptr->plane;
@@ -446,21 +446,20 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06801", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with "
                                 "imageView = "
-                                "%s, and plane = %s, but imageView was created with format %s, which is not multiplanar and "
+                                "{}, and plane = {}, but imageView was created with format {}, which is not multiplanar and "
                                 "plane is "
                                 "required to be VK_IMAGE_ASPECT_PLANE_0_BIT",
-                                FormatHandle(metal_texture_ptr->imageView).c_str(), string_VkImageAspectFlags(image_plane).c_str(),
+                                Handle(metal_texture_ptr->imageView), vvl::Flags::ImageAspectFlags(image_plane),
                                 string_VkFormat(image_view_info->create_info.format));
                         }
                         if ((format_plane_count == 2) && (image_plane == VK_IMAGE_ASPECT_PLANE_2_BIT)) {
                             skip |= LogError("VUID-VkExportMetalObjectsInfoEXT-pNext-06802", device, error_obj.location,
                                              "pNext chain contains a VkExportMetalTextureInfoEXT structure "
                                              "with imageView = "
-                                             "%s, and plane = %s, but imageView was created with format %s, which has exactly 2 "
+                                             "{}, and plane = {}, but imageView was created with format {}, which has exactly 2 "
                                              "planes and plane "
                                              "cannot be VK_IMAGE_ASPECT_PLANE_2_BIT",
-                                             FormatHandle(metal_texture_ptr->imageView).c_str(),
-                                             string_VkImageAspectFlags(image_plane).c_str(),
+                                             Handle(metal_texture_ptr->imageView), vvl::Flags::ImageAspectFlags(image_plane),
                                              string_VkFormat(image_view_info->create_info.format));
                         }
                     }
@@ -472,11 +471,11 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                                 "VUID-VkExportMetalObjectsInfoEXT-pNext-06797", device, error_obj.location,
                                 "pNext chain contains a VkExportMetalTextureInfoEXT structure with "
                                 "bufferView = "
-                                "%s, but that buffer view was not created with a VkExportMetalObjectCreateInfoEXT whose "
+                                "{}, but that buffer view was not created with a VkExportMetalObjectCreateInfoEXT whose "
                                 "exportObjectType "
                                 "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT in the pNext chain of the "
                                 "VkBufferViewCreateInfo structure",
-                                FormatHandle(metal_texture_ptr->bufferView).c_str());
+                                Handle(metal_texture_ptr->bufferView));
                         }
                     }
                 }
@@ -487,11 +486,11 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                         skip |= LogError(
                             "VUID-VkExportMetalObjectsInfoEXT-pNext-06798", device, error_obj.location,
                             "pNext chain contains a VkExportMetalTextureInfoEXT structure with "
-                            "image = %s and imageView = "
-                            "%s, but plane = %s which is not one of VK_IMAGE_ASPECT_PLANE_0_BIT, VK_IMAGE_ASPECT_PLANE_1_BIT, "
+                            "image = {} and imageView = "
+                            "{}, but plane = {} which is not one of VK_IMAGE_ASPECT_PLANE_0_BIT, VK_IMAGE_ASPECT_PLANE_1_BIT, "
                             "or VK_IMAGE_ASPECT_PLANE_2_BIT",
-                            FormatHandle(metal_texture_ptr->image).c_str(), FormatHandle(metal_texture_ptr->imageView).c_str(),
-                            string_VkImageAspectFlags(metal_texture_ptr->plane).c_str());
+                            Handle(metal_texture_ptr->image), Handle(metal_texture_ptr->imageView),
+                            vvl::Flags::ImageAspectFlags(metal_texture_ptr->plane));
                     }
                 }
             } break;
@@ -503,10 +502,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                         skip |= LogError(
                             "VUID-VkExportMetalObjectsInfoEXT-pNext-06803", device, error_obj.location,
                             "pNext chain contains a VkExportMetalIOSurfaceInfoEXT structure with image = "
-                            "%s, but that image was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
+                            "{}, but that image was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
                             "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_IOSURFACE_BIT_EXT in the pNext chain of the "
                             "VkImageCreateInfo structure",
-                            FormatHandle(metal_io_surface_ptr->image).c_str());
+                            Handle(metal_io_surface_ptr->image));
                     }
                 }
             } break;
@@ -517,9 +516,8 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                     (metal_shared_event_ptr->event != VK_NULL_HANDLE && metal_shared_event_ptr->semaphore != VK_NULL_HANDLE)) {
                     skip |= LogError("VUID-VkExportMetalObjectsInfoEXT-pNext-06804", device, error_obj.location,
                                      "pNext chain contains a VkExportMetalSharedEventInfoEXT structure with semaphore = "
-                                     "%s, and event = %s, but exactly one of them must not be VK_NULL_HANDLE",
-                                     FormatHandle(metal_shared_event_ptr->semaphore).c_str(),
-                                     FormatHandle(metal_shared_event_ptr->event).c_str());
+                                     "{}, and event = {}, but exactly one of them must not be VK_NULL_HANDLE",
+                                     Handle(metal_shared_event_ptr->semaphore), Handle(metal_shared_event_ptr->event));
                 }
 
                 if (metal_shared_event_ptr->semaphore) {
@@ -529,10 +527,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                             "VUID-VkExportMetalObjectsInfoEXT-pNext-06805", device, error_obj.location,
                             "pNext chain contains a VkExportMetalSharedEventInfoEXT structure "
                             "with semaphore = "
-                            "%s, but that semaphore was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
+                            "{}, but that semaphore was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
                             "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_SHARED_EVENT_BIT_EXT in the pNext chain of the "
                             "VkSemaphoreCreateInfo structure",
-                            FormatHandle(metal_shared_event_ptr->semaphore).c_str());
+                            Handle(metal_shared_event_ptr->semaphore));
                     }
                 }
                 if (metal_shared_event_ptr->event) {
@@ -542,10 +540,10 @@ bool CoreChecks::PreCallValidateExportMetalObjectsEXT(VkDevice device, VkExportM
                             "VUID-VkExportMetalObjectsInfoEXT-pNext-06806", device, error_obj.location,
                             "pNext chain contains a VkExportMetalSharedEventInfoEXT structure "
                             "with event = "
-                            "%s, but that event was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
+                            "{}, but that event was not created with a VkExportMetalObjectCreateInfoEXT whose exportObjectType "
                             "member was set to VK_EXPORT_METAL_OBJECT_TYPE_METAL_SHARED_EVENT_BIT_EXT in the pNext chain of the "
                             "VkEventCreateInfo structure",
-                            FormatHandle(metal_shared_event_ptr->event).c_str());
+                            Handle(metal_shared_event_ptr->event));
                     }
                 }
             } break;
@@ -596,7 +594,7 @@ bool CoreChecks::ValidateAllocateMemoryMetal(const VkMemoryAllocateInfo& allocat
         (import_memory_metal_info->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT)) {
         skip |= LogError("VUID-VkImportMemoryMetalHandleInfoEXT-handleType-10410", device,
                          allocate_info_loc.pNext(Struct::VkImportMemoryMetalHandleInfoEXT, Field::handleType),
-                         "is %s, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
+                         "is {}, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
                          "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT, or "
                          "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT.",
                          string_VkExternalMemoryHandleTypeFlagBits(import_memory_metal_info->handleType));
@@ -609,10 +607,10 @@ bool CoreChecks::ValidateAllocateMemoryMetal(const VkMemoryAllocateInfo& allocat
     // operations on buffers.
     if (import_memory_metal_info->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT) {
         if (allocate_info.allocationSize != 0) {
-            skip |=
-                LogError("VUID-VkMemoryAllocateInfo-pNext-10397", device, allocate_info_loc.dot(Field::allocationSize),
-                         "is %" PRIu64 ", but must be 0 when importing a VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT handle.",
-                         allocate_info.allocationSize);
+            skip |= LogError("VUID-VkMemoryAllocateInfo-pNext-10397", device, allocate_info_loc.dot(Field::allocationSize),
+                             "is {}"
+                             ", but must be 0 when importing a VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT handle.",
+                             allocate_info.allocationSize);
         }
 
         if (dedicated_allocation_info == nullptr) {
@@ -646,7 +644,7 @@ bool CoreChecks::ValidateAllocateMemoryMetal(const VkMemoryAllocateInfo& allocat
              VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) == 0u) {
             skip |= LogError("VUID-VkImportMemoryMetalHandleInfoEXT-handleType-10408", device,
                              allocate_info_loc.pNext(Struct::VkImportMemoryMetalHandleInfoEXT, Field::handleType),
-                             "does not support importing image with format %s", string_VkFormat(image_format));
+                             "does not support importing image with format {}", string_VkFormat(image_format));
         }
     }
 
@@ -662,13 +660,13 @@ bool CoreChecks::PreCallValidateGetMemoryMetalHandleEXT(VkDevice device, const V
     auto export_memory_allocate_info = vku::FindStructInPNextChain<VkExportMemoryAllocateInfo>(memory->safe_allocate_info.pNext);
     if (export_memory_allocate_info == nullptr) {
         skip |= LogError("VUID-VkMemoryGetMetalHandleInfoEXT-memory-10413", device, get_metal_handle_info.dot(Field::memory),
-                         "(%s) was not allocated with a VkExportMemoryAllocateInfo in the VkMemoryAllocateInfo pNext chain.",
-                         FormatHandle(pGetMetalHandleInfo->memory).c_str());
+                         "({}) was not allocated with a VkExportMemoryAllocateInfo in the VkMemoryAllocateInfo pNext chain.",
+                         Handle(pGetMetalHandleInfo->memory));
     } else if ((export_memory_allocate_info->handleTypes & pGetMetalHandleInfo->handleType) == 0u) {
         skip |=
             LogError("VUID-VkMemoryGetMetalHandleInfoEXT-handleType-10414", device, get_metal_handle_info.dot(Field::handleType),
-                     "device memory was created with handle types (%s), which does not include %s.",
-                     string_VkExternalMemoryHandleTypeFlags(export_memory_allocate_info->handleTypes).c_str(),
+                     "device memory was created with handle types ({}), which does not include {}.",
+                     vvl::Flags::ExternalMemoryHandleTypeFlags(export_memory_allocate_info->handleTypes),
                      string_VkExternalMemoryHandleTypeFlagBits(pGetMetalHandleInfo->handleType));
     }
 
@@ -677,7 +675,7 @@ bool CoreChecks::PreCallValidateGetMemoryMetalHandleEXT(VkDevice device, const V
         (pGetMetalHandleInfo->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT)) {
         skip |=
             LogError("VUID-VkMemoryGetMetalHandleInfoEXT-handleType-10415", device, get_metal_handle_info.dot(Field::handleType),
-                     "is %s, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
+                     "is {}, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
                      "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT, or "
                      "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT.",
                      string_VkExternalMemoryHandleTypeFlagBits(pGetMetalHandleInfo->handleType));
@@ -696,7 +694,7 @@ bool CoreChecks::PreCallValidateGetMemoryMetalHandlePropertiesEXT(VkDevice devic
         (handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT)) {
         skip |=
             LogError("VUID-vkGetMemoryMetalHandlePropertiesEXT-handleType-10417", device, error_obj.location.dot(Field::handleType),
-                     "is %s, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
+                     "is {}, but must be VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLBUFFER_BIT_EXT, "
                      "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLTEXTURE_BIT_EXT, or "
                      "VK_EXTERNAL_MEMORY_HANDLE_TYPE_MTLHEAP_BIT_EXT.",
                      string_VkExternalMemoryHandleTypeFlagBits(handleType));

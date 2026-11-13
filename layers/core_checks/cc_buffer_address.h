@@ -165,7 +165,7 @@ class BufferAddressValidation {
                     ss << "\n  " << buffer->Describe(validator);
                 }
             }
-            skip |= validator.LogError("VUID-VkDeviceAddress-size-11364", objlist, device_address_loc, "%s", ss.str().c_str());
+            skip |= validator.LogError("VUID-VkDeviceAddress-size-11364", objlist, device_address_loc, "{}", ss.str().c_str());
             return skip;  // Without any buffer nothing left to validate
         }
 
@@ -325,7 +325,7 @@ bool BufferAddressValidation<ChecksCount>::LogInvalidBuffers(const vvl::DevicePr
             for (const auto& obj : objlist) {
                 error.objlist.add(obj);
             }
-            skip |= validator.LogError(vav.vuid.data(), error.objlist, device_address_loc, "%s", error.error_msg.c_str());
+            skip |= validator.LogError(vav.vuid.data(), error.objlist, device_address_loc, "{}", error.error_msg.c_str());
         }
     }
 

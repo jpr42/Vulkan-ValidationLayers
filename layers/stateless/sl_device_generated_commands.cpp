@@ -57,8 +57,10 @@ bool Device::ValidateIndirectExecutionSetPipelineInfo(const Context& context,
     } else if (pipeline_info.maxPipelineCount > props.maxIndirectPipelineCount) {
         skip |= LogError("VUID-VkIndirectExecutionSetPipelineInfoEXT-maxPipelineCount-11018", device,
                          pipeline_info_loc.dot(Field::maxPipelineCount),
-                         "(%" PRIu32 ") is larger than maxIndirectPipelineCount (%" PRIu32 ").", pipeline_info.maxPipelineCount,
-                         props.maxIndirectPipelineCount);
+                         "({}"
+                         ") is larger than maxIndirectPipelineCount ({}"
+                         ").",
+                         pipeline_info.maxPipelineCount, props.maxIndirectPipelineCount);
     }
 
     skip |= ValidateIndirectExecutionSetPipelineInfoEXT(context, pipeline_info, pipeline_info_loc);
@@ -77,11 +79,16 @@ bool Device::ValidateIndirectExecutionSetShaderInfo(const Context& context, cons
     } else if (shader_info.maxShaderCount > props.maxIndirectShaderObjectCount) {
         skip |= LogError("VUID-VkIndirectExecutionSetShaderInfoEXT-maxShaderCount-11022", device,
                          shader_info_loc.dot(Field::maxShaderCount),
-                         "(%" PRIu32 ") is larger than maxIndirectShaderObjectCount (%" PRIu32 ").", shader_info.maxShaderCount,
-                         props.maxIndirectShaderObjectCount);
+                         "({}"
+                         ") is larger than maxIndirectShaderObjectCount ({}"
+                         ").",
+                         shader_info.maxShaderCount, props.maxIndirectShaderObjectCount);
     } else if (shader_info.maxShaderCount < shader_info.shaderCount) {
         skip |= LogError("VUID-VkIndirectExecutionSetShaderInfoEXT-maxShaderCount-11036", device,
-                         shader_info_loc.dot(Field::maxShaderCount), "(%" PRIu32 ") is less than shaderCount (%" PRIu32 ").",
+                         shader_info_loc.dot(Field::maxShaderCount),
+                         "({}"
+                         ") is less than shaderCount ({}"
+                         ").",
                          shader_info.maxShaderCount, shader_info.shaderCount);
     }
 
@@ -182,7 +189,8 @@ bool Device::ValidateIndirectCommandsPushConstantToken(const Context& context,
         push_constant_token.updateRange.size != 4) {
         skip |= LogError("VUID-VkIndirectCommandsPushConstantTokenEXT-size-11133", device,
                          push_constant_token_loc.dot(Field::updateRange).dot(Field::size),
-                         "is %" PRIu32 ", but needs to be 4 when using VK_INDIRECT_COMMANDS_TOKEN_TYPE_SEQUENCE_INDEX_EXT.",
+                         "is {}"
+                         ", but needs to be 4 when using VK_INDIRECT_COMMANDS_TOKEN_TYPE_SEQUENCE_INDEX_EXT.",
                          push_constant_token.updateRange.size);
     }
     if (token_type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_PUSH_DATA_EXT ||
@@ -190,8 +198,8 @@ bool Device::ValidateIndirectCommandsPushConstantToken(const Context& context,
         if (push_constant_token.updateRange.stageFlags != VK_SHADER_STAGE_ALL) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutTokenEXT-type-11333", device,
                              push_constant_token_loc.dot(Field::updateRange).dot(Field::stageFlags),
-                             "is %s, but must be VK_SHADER_STAGE_ALL when the token type is %s.",
-                             string_VkShaderStageFlags(push_constant_token.updateRange.stageFlags).c_str(),
+                             "is {}, but must be VK_SHADER_STAGE_ALL when the token type is {}.",
+                             vvl::Flags::ShaderStageFlags(push_constant_token.updateRange.stageFlags),
                              string_VkIndirectCommandsTokenTypeEXT(token_type));
         }
         if (enabled_features.descriptorHeap) {
@@ -199,9 +207,12 @@ bool Device::ValidateIndirectCommandsPushConstantToken(const Context& context,
             if (range_end > phys_dev_ext_props.descriptor_heap_props.maxPushDataSize) {
                 skip |= LogError("VUID-VkIndirectCommandsPushConstantTokenEXT-offset-12548", device,
                                  push_constant_token_loc.dot(Field::updateRange),
-                                 "offset (%" PRIu32 ") + size (%" PRIu32 ") is %" PRIu64
+                                 "offset ({}"
+                                 ") + size ({}"
+                                 ") is {}"
                                  ", but must be less than or equal to "
-                                 "maxPushDataSize (%" PRIu64 ") when the token type is %s.",
+                                 "maxPushDataSize ({}"
+                                 ") when the token type is {}.",
                                  push_constant_token.updateRange.offset, push_constant_token.updateRange.size, range_end,
                                  phys_dev_ext_props.descriptor_heap_props.maxPushDataSize,
                                  string_VkIndirectCommandsTokenTypeEXT(token_type));
@@ -224,9 +235,9 @@ bool Device::ValidateIndirectCommandsIndexBufferToken(const Context& context,
     const auto& props = phys_dev_ext_props.device_generated_commands_props;
     if ((index_buffer_token.mode & props.supportedIndirectCommandsInputModes) == 0) {
         skip |= LogError("VUID-VkIndirectCommandsIndexBufferTokenEXT-mode-11136", device, index_buffer_token_loc.dot(Field::mode),
-                         "is %s, but that is not supported by supportedIndirectCommandsInputModes (%s).",
+                         "is {}, but that is not supported by supportedIndirectCommandsInputModes ({}).",
                          string_VkIndirectCommandsInputModeFlagBitsEXT(index_buffer_token.mode),
-                         string_VkIndirectCommandsInputModeFlagsEXT(props.supportedIndirectCommandsInputModes).c_str());
+                         vvl::Flags::IndirectCommandsInputModeFlagsEXT(props.supportedIndirectCommandsInputModes));
     }
     return skip;
 }
@@ -247,11 +258,11 @@ bool Device::ValidateIndirectCommandsExecutionSetToken(const Context& context,
                                        props.supportedIndirectCommandsShaderStagesShaderBinding)) == 0) {
         skip |= LogError("VUID-VkIndirectCommandsExecutionSetTokenEXT-shaderStages-11137", device,
                          exe_set_token_loc.dot(Field::shaderStages),
-                         "is %s, but that is not supported by supportedIndirectCommandsShaderStagesPipelineBinding (%s) or "
-                         "supportedIndirectCommandsShaderStagesShaderBinding (%s).",
-                         string_VkShaderStageFlags(exe_set_token.shaderStages).c_str(),
-                         string_VkShaderStageFlags(props.supportedIndirectCommandsShaderStagesPipelineBinding).c_str(),
-                         string_VkShaderStageFlags(props.supportedIndirectCommandsShaderStagesShaderBinding).c_str());
+                         "is {}, but that is not supported by supportedIndirectCommandsShaderStagesPipelineBinding ({}) or "
+                         "supportedIndirectCommandsShaderStagesShaderBinding ({}).",
+                         vvl::Flags::ShaderStageFlags(exe_set_token.shaderStages),
+                         vvl::Flags::ShaderStageFlags(props.supportedIndirectCommandsShaderStagesPipelineBinding),
+                         vvl::Flags::ShaderStageFlags(props.supportedIndirectCommandsShaderStagesShaderBinding));
     }
 
     return skip;
@@ -270,7 +281,7 @@ bool Device::ValidateIndirectCommandsLayoutToken(const Context& context, const V
             if (!token.data.pPushConstant) {
                 skip |=
                     LogError("VUID-VkIndirectCommandsLayoutTokenEXT-pPushConstant-parameter", device, token_loc.dot(Field::type),
-                             "is %s, but data.pPushConstant is NULL.", string_VkIndirectCommandsTokenTypeEXT(token.type));
+                             "is {}, but data.pPushConstant is NULL.", string_VkIndirectCommandsTokenTypeEXT(token.type));
             } else {
                 skip |= ValidateIndirectCommandsPushConstantToken(context, *token.data.pPushConstant, token.type,
                                                                   data_loc.dot(Field::pPushConstant));
@@ -310,7 +321,7 @@ bool Device::ValidateIndirectCommandsLayoutToken(const Context& context, const V
     if (IsMeshCommand(token.type)) {
         if (!enabled_features.meshShader || !enabled_features.taskShader) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutTokenEXT-meshShader-11126", device, token_loc.dot(Field::type),
-                             "is %s, but the meshShader and taskShader features were not enabled.",
+                             "is {}, but the meshShader and taskShader features were not enabled.",
                              string_VkIndirectCommandsTokenTypeEXT(token.type));
         } else if (!props.deviceGeneratedCommandsMultiDrawIndirectCount) {
             if (token.type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_COUNT_EXT) {
@@ -330,7 +341,7 @@ bool Device::ValidateIndirectCommandsLayoutToken(const Context& context, const V
         if (!props.deviceGeneratedCommandsMultiDrawIndirectCount) {
             skip |=
                 LogError("VUID-VkIndirectCommandsLayoutTokenEXT-deviceGeneratedCommandsMultiDrawIndirectCount-11129", device,
-                         token_loc.dot(Field::type), "is %s but deviceGeneratedCommandsMultiDrawIndirectCount is not supported.",
+                         token_loc.dot(Field::type), "is {} but deviceGeneratedCommandsMultiDrawIndirectCount is not supported.",
                          string_VkIndirectCommandsTokenTypeEXT(token.type));
         }
     } else if (token.type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_TRACE_RAYS2_EXT && !enabled_features.rayTracingMaintenance1) {
@@ -341,7 +352,7 @@ bool Device::ValidateIndirectCommandsLayoutToken(const Context& context, const V
                token.type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_PUSH_DATA_SEQUENCE_INDEX_EXT) {
         if (!enabled_features.descriptorHeap) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutTokenEXT-descriptorHeap-11332", device, token_loc.dot(Field::type),
-                             "is %s, but the descriptorHeap feature was not enabled.",
+                             "is {}, but the descriptorHeap feature was not enabled.",
                              string_VkIndirectCommandsTokenTypeEXT(token.type));
         }
     }
@@ -350,12 +361,16 @@ bool Device::ValidateIndirectCommandsLayoutToken(const Context& context, const V
     if (token.type != VK_INDIRECT_COMMANDS_TOKEN_TYPE_SEQUENCE_INDEX_EXT) {
         if (token.offset > props.maxIndirectCommandsTokenOffset) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutTokenEXT-offset-11124", device, token_loc.dot(Field::offset),
-                             "(%" PRIu32 ") is greater than maxIndirectCommandsTokenOffset (%" PRIu32 ")", token.offset,
-                             props.maxIndirectCommandsTokenOffset);
+                             "({}"
+                             ") is greater than maxIndirectCommandsTokenOffset ({}"
+                             ")",
+                             token.offset, props.maxIndirectCommandsTokenOffset);
         }
         if (!IsIntegerMultipleOf(token.offset, 4)) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutTokenEXT-offset-11125", device, token_loc.dot(Field::offset),
-                             "(%" PRIu32 ") is not aligned to 4.", token.offset);
+                             "({}"
+                             ") is not aligned to 4.",
+                             token.offset);
         }
     }
 
@@ -377,48 +392,48 @@ bool Device::ValidateIndirectCommandsLayoutStage(const Context& context, const V
              VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_NV_EXT, VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_COUNT_NV_EXT,
              VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_EXT, VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_COUNT_EXT})) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11104", device, token_loc.dot(Field::type),
-                         "is %s, but shaderStages (%s) doesn't contain graphics stages.",
-                         string_VkIndirectCommandsTokenTypeEXT(token.type), string_VkShaderStageFlags(shader_stages).c_str());
+                         "is {}, but shaderStages ({}) doesn't contain graphics stages.",
+                         string_VkIndirectCommandsTokenTypeEXT(token.type), vvl::Flags::ShaderStageFlags(shader_stages));
     }
     if (!has_stage_compute && token.type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_EXT) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11105", device, token_loc.dot(Field::type),
-                         "is VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_EXT, but shaderStages (%s) doesn't contain "
+                         "is VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_EXT, but shaderStages ({}) doesn't contain "
                          "VK_SHADER_STAGE_COMPUTE_BIT.",
-                         string_VkShaderStageFlags(shader_stages).c_str());
+                         vvl::Flags::ShaderStageFlags(shader_stages));
     }
     if (!has_stage_mesh && IsValueIn(token.type, {VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_EXT,
                                                   VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_COUNT_EXT})) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11106", device, token_loc.dot(Field::type),
-                         "is %s, but shaderStages (%s) doesn't contain mesh stages.",
-                         string_VkIndirectCommandsTokenTypeEXT(token.type), string_VkShaderStageFlags(shader_stages).c_str());
+                         "is {}, but shaderStages ({}) doesn't contain mesh stages.",
+                         string_VkIndirectCommandsTokenTypeEXT(token.type), vvl::Flags::ShaderStageFlags(shader_stages));
     }
     if (!has_stage_mesh && IsValueIn(token.type, {VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_NV_EXT,
                                                   VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_COUNT_NV_EXT})) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11107", device, token_loc.dot(Field::type),
-                         "is %s, but shaderStages (%s) doesn't contain mesh stages.",
-                         string_VkIndirectCommandsTokenTypeEXT(token.type), string_VkShaderStageFlags(shader_stages).c_str());
+                         "is {}, but shaderStages ({}) doesn't contain mesh stages.",
+                         string_VkIndirectCommandsTokenTypeEXT(token.type), vvl::Flags::ShaderStageFlags(shader_stages));
     }
     if (!has_stage_ray_tracing && token.type == VK_INDIRECT_COMMANDS_TOKEN_TYPE_TRACE_RAYS2_EXT) {
         skip |= LogError(
             "VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11108", device, token_loc.dot(Field::type),
-            "is VK_INDIRECT_COMMANDS_TOKEN_TYPE_TRACE_RAYS2_EXT, but shaderStages (%s) doesn't contain ray tracing stages.",
-            string_VkShaderStageFlags(shader_stages).c_str());
+            "is VK_INDIRECT_COMMANDS_TOKEN_TYPE_TRACE_RAYS2_EXT, but shaderStages ({}) doesn't contain ray tracing stages.",
+            vvl::Flags::ShaderStageFlags(shader_stages));
     }
 
     // Check if certain stages, it is limited to certain tokens
     if (has_stage_graphics &&
         IsValueIn(token.type, {VK_INDIRECT_COMMANDS_TOKEN_TYPE_TRACE_RAYS2_EXT, VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_EXT})) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11109", device, token_loc.dot(Field::type),
-                         "is %s but shaderStages is graphics (%s).", string_VkIndirectCommandsTokenTypeEXT(token.type),
-                         string_VkShaderStageFlags(shader_stages).c_str());
+                         "is {} but shaderStages is graphics ({}).", string_VkIndirectCommandsTokenTypeEXT(token.type),
+                         vvl::Flags::ShaderStageFlags(shader_stages));
     } else if (has_stage_compute && !IsComputeCommand(token.type)) {
         skip |=
             LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11110", device, token_loc.dot(Field::type),
-                     "is %s but shaderStages is VK_SHADER_STAGE_COMPUTE_BIT.", string_VkIndirectCommandsTokenTypeEXT(token.type));
+                     "is {} but shaderStages is VK_SHADER_STAGE_COMPUTE_BIT.", string_VkIndirectCommandsTokenTypeEXT(token.type));
     } else if (has_stage_ray_tracing && !IsRayTracingCommand(token.type)) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11111", device, token_loc.dot(Field::type),
-                         "is %s but shaderStages is ray tracing (%s).", string_VkIndirectCommandsTokenTypeEXT(token.type),
-                         string_VkShaderStageFlags(shader_stages).c_str());
+                         "is {} but shaderStages is ray tracing ({}).", string_VkIndirectCommandsTokenTypeEXT(token.type),
+                         vvl::Flags::ShaderStageFlags(shader_stages));
     }
 
     return skip;
@@ -442,31 +457,34 @@ bool Device::manual_PreCallValidateCreateIndirectCommandsLayoutEXT(VkDevice devi
     if (pCreateInfo->indirectStride > props.maxIndirectCommandsIndirectStride) {
         skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-indirectStride-11090", device,
                          create_info_loc.dot(Field::indirectStride),
-                         "(%" PRIu32 ") is greater than maxIndirectCommandsIndirectStride (%" PRIu32 ")",
+                         "({}"
+                         ") is greater than maxIndirectCommandsIndirectStride ({}"
+                         ")",
                          pCreateInfo->indirectStride, props.maxIndirectCommandsIndirectStride);
     }
     const VkShaderStageFlags shader_stages = pCreateInfo->shaderStages;
     if (shader_stages & ~props.supportedIndirectCommandsShaderStages) {
-        skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11091", device,
-                         create_info_loc.dot(Field::shaderStages),
-                         "(%s) contains stages not found in supportedIndirectCommandsShaderStages (%s).",
-                         string_VkShaderStageFlags(shader_stages).c_str(),
-                         string_VkShaderStageFlags(props.supportedIndirectCommandsShaderStages).c_str());
+        skip |= LogError(
+            "VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11091", device, create_info_loc.dot(Field::shaderStages),
+            "({}) contains stages not found in supportedIndirectCommandsShaderStages ({}).",
+            vvl::Flags::ShaderStageFlags(shader_stages), vvl::Flags::ShaderStageFlags(props.supportedIndirectCommandsShaderStages));
     }
     if (pCreateInfo->tokenCount > props.maxIndirectCommandsTokenCount) {
         skip |=
             LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-tokenCount-11092", device, create_info_loc.dot(Field::tokenCount),
-                     "(%" PRIu32 ") is greater than maxIndirectCommandsTokenCount (%" PRIu32 ")", pCreateInfo->tokenCount,
-                     props.maxIndirectCommandsTokenCount);
+                     "({}"
+                     ") is greater than maxIndirectCommandsTokenCount ({}"
+                     ")",
+                     pCreateInfo->tokenCount, props.maxIndirectCommandsTokenCount);
     }
 
     if (shader_stages & VK_SHADER_STAGE_FRAGMENT_BIT) {
         if (!(shader_stages & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_MESH_BIT_EXT))) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11113", device,
                              create_info_loc.dot(Field::shaderStages),
-                             "(%s) contains VK_SHADER_STAGE_FRAGMENT_BIT but does not contain VK_SHADER_STAGE_VERTEX_BIT or "
+                             "({}) contains VK_SHADER_STAGE_FRAGMENT_BIT but does not contain VK_SHADER_STAGE_VERTEX_BIT or "
                              "VK_SHADER_STAGE_MESH_BIT_EXT.",
-                             string_VkShaderStageFlags(shader_stages).c_str());
+                             vvl::Flags::ShaderStageFlags(shader_stages));
         }
     }
 
@@ -495,8 +513,8 @@ bool Device::manual_PreCallValidateCreateIndirectCommandsLayoutEXT(VkDevice devi
         if (!valid_stages) {
             skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-shaderStages-11112", device,
                              create_info_loc.dot(Field::shaderStages),
-                             "is %s but you can't mix graphics/compute/mesh/rayTracing stages with each other.",
-                             string_VkShaderStageFlags(shader_stages).c_str());
+                             "is {} but you can't mix graphics/compute/mesh/rayTracing stages with each other.",
+                             vvl::Flags::ShaderStageFlags(shader_stages));
         }
     }
 
@@ -516,8 +534,11 @@ bool Device::manual_PreCallValidateCreateIndirectCommandsLayoutEXT(VkDevice devi
         if (token.type != VK_INDIRECT_COMMANDS_TOKEN_TYPE_SEQUENCE_INDEX_EXT) {
             if (has_previous_token && token.offset < current_token_offset) {
                 skip |= LogError("VUID-VkIndirectCommandsLayoutCreateInfoEXT-pTokens-11103", device, token_loc.dot(Field::offset),
-                                 "(%" PRIu32 ") is less than pTokens[%" PRIu32 "].offset (%" PRIu32 ")", token.offset,
-                                 current_token_index, current_token_offset);
+                                 "({}"
+                                 ") is less than pTokens[{}"
+                                 "].offset ({}"
+                                 ")",
+                                 token.offset, current_token_index, current_token_offset);
             }
             // is a monotonic increasing value so can give previous value
             current_token_offset = token.offset;
@@ -536,7 +557,9 @@ bool Device::ValidateGeneratedCommandsInfo(VkCommandBuffer command_buffer,
 
     if (generated_commands_info.sequenceCountAddress != 0 && !IsPointerAligned(generated_commands_info.sequenceCountAddress, 4)) {
         skip |= LogError("VUID-VkGeneratedCommandsInfoEXT-sequenceCountAddress-11073", command_buffer,
-                         info_loc.dot(Field::sequenceCountAddress), "(0x%" PRIx64 ") is not aligned to 4.",
+                         info_loc.dot(Field::sequenceCountAddress),
+                         "(0x{:x}"
+                         ") is not aligned to 4.",
                          generated_commands_info.sequenceCountAddress);
     }
     if (generated_commands_info.maxSequenceCount == 0) {
@@ -547,7 +570,9 @@ bool Device::ValidateGeneratedCommandsInfo(VkCommandBuffer command_buffer,
     if (!IsPointerAligned(generated_commands_info.indirectAddress, 4)) {
         skip |=
             LogError("VUID-VkGeneratedCommandsInfoEXT-indirectAddress-11074", command_buffer, info_loc.dot(Field::indirectAddress),
-                     "(0x%" PRIx64 ") is not aligned to 4.", generated_commands_info.indirectAddress);
+                     "(0x{:x}"
+                     ") is not aligned to 4.",
+                     generated_commands_info.indirectAddress);
     }
 
     if (generated_commands_info.indirectAddressSize == 0) {
@@ -574,10 +599,9 @@ bool Device::manual_PreCallValidateCmdPreprocessGeneratedCommandsEXT(VkCommandBu
         ~phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages) {
         skip |= LogError(
             "VUID-vkCmdPreprocessGeneratedCommandsEXT-supportedIndirectCommandsShaderStages-11088", commandBuffer,
-            info_loc.dot(Field::shaderStages), "(%s) contains stages not found in supportedIndirectCommandsShaderStages (%s).",
-            string_VkShaderStageFlags(pGeneratedCommandsInfo->shaderStages).c_str(),
-            string_VkShaderStageFlags(phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages)
-                .c_str());
+            info_loc.dot(Field::shaderStages), "({}) contains stages not found in supportedIndirectCommandsShaderStages ({}).",
+            vvl::Flags::ShaderStageFlags(pGeneratedCommandsInfo->shaderStages),
+            vvl::Flags::ShaderStageFlags(phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages));
     }
 
     skip |= ValidateGeneratedCommandsInfo(commandBuffer, *pGeneratedCommandsInfo, info_loc);
@@ -601,10 +625,9 @@ bool Device::manual_PreCallValidateCmdExecuteGeneratedCommandsEXT(VkCommandBuffe
         ~phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages) {
         skip |= LogError(
             "VUID-vkCmdExecuteGeneratedCommandsEXT-supportedIndirectCommandsShaderStages-11061", commandBuffer,
-            info_loc.dot(Field::shaderStages), "(%s) contains stages not found in supportedIndirectCommandsShaderStages (%s).",
-            string_VkShaderStageFlags(pGeneratedCommandsInfo->shaderStages).c_str(),
-            string_VkShaderStageFlags(phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages)
-                .c_str());
+            info_loc.dot(Field::shaderStages), "({}) contains stages not found in supportedIndirectCommandsShaderStages ({}).",
+            vvl::Flags::ShaderStageFlags(pGeneratedCommandsInfo->shaderStages),
+            vvl::Flags::ShaderStageFlags(phys_dev_ext_props.device_generated_commands_props.supportedIndirectCommandsShaderStages));
     }
 
     skip |= ValidateGeneratedCommandsInfo(commandBuffer, *pGeneratedCommandsInfo, info_loc);

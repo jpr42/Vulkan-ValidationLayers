@@ -242,8 +242,9 @@ void CopyBufferToImage(Validator& gpuav, const Location& loc, CommandBufferSubSt
                                        ? "VUID-vkCmdCopyBufferToImage-pRegions-07931"
                                        : "VUID-VkCopyBufferToImageInfo2-pRegions-07931";
                 skip |= gpuav.LogError(vuid, objlist_and_src_buffer, loc_with_debug_region,
-                                       "Source buffer %s has a float value at offset %" PRIu32 " that is not in the range [0, 1].",
-                                       gpuav.FormatHandle(src_buffer).c_str(), texel_offset);
+                                       "Source buffer {} has a float value at offset {}"
+                                       " that is not in the range [0, 1].",
+                                       gpuav.Handle(src_buffer), texel_offset);
 
                 break;
             }

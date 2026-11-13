@@ -45,12 +45,12 @@ bool Instance::ValidateLegacyExtensions(const Location& loc, vvl::Extension exte
             (dep_info.target.version == vvl::Version::_VK_VERSION_1_4 && (version >= VK_API_VERSION_1_4))) {
             // Due to the sheer number of extension that get promoted, only warn currently if the user min version matches it
             skip |= LogWarning("WARNING-legacy-extension-version", instance, loc,
-                               "Attempting to enable legacy extension %s, but this extension has been %s %s.", String(extension),
+                               "Attempting to enable legacy extension {}, but this extension has been {} {}.", String(extension),
                                reason_to_string(dep_info.reason), String(dep_info.target).c_str());
         } else if (dep_info.target.version == vvl::Version::Empty) {
             if (dep_info.target.extension == vvl::Extension::Empty) {
                 skip |= LogWarning("WARNING-legacy-extension-no-replacement", instance, loc,
-                                   "Attempting to enable legacy extension %s, but this extension has been deprecated "
+                                   "Attempting to enable legacy extension {}, but this extension has been deprecated "
                                    "without replacement.",
                                    String(extension));
             } else {
@@ -60,17 +60,17 @@ bool Instance::ValidateLegacyExtensions(const Location& loc, vvl::Extension exte
                 if (legacy_detection_settings.only_enabled && IsExtEnabled(state)) {
                     skip |= LogWarning(
                         "WARNING-legacy-extension-new", instance, loc,
-                        "Attempting to enable legacy extension %s, but this extension has been %s the enabled extension %s.",
+                        "Attempting to enable legacy extension {}, but this extension has been {} the enabled extension {}.",
                         String(extension), reason_to_string(dep_info.reason), String(dep_info.target).c_str());
                 } else if (legacy_detection_settings.only_supported && IsExtSupported(state)) {
                     skip |= LogWarning(
                         "WARNING-legacy-extension-new", instance, loc,
-                        "Attempting to enable legacy extension %s, but this extension has been %s the supported extension %s.",
+                        "Attempting to enable legacy extension {}, but this extension has been {} the supported extension {}.",
                         String(extension), reason_to_string(dep_info.reason), String(dep_info.target).c_str());
                 } else if (legacy_detection_settings.always) {
                     skip |= LogWarning("WARNING-legacy-extension-new", instance, loc,
-                                       "Attempting to enable legacy extension %s, but this extension has been %s the extension "
-                                       "%s.\nTo limit warnings "
+                                       "Attempting to enable legacy extension {}, but this extension has been {} the extension "
+                                       "{}.\nTo limit warnings "
                                        "by only what the VkDevice currently supports/enables, you can adjust the "
                                        "VK_LAYER_LEGACY_DETECTION_MODE (legacy_detection_mode) setting.",
                                        String(extension), reason_to_string(dep_info.reason), String(dep_info.target).c_str());

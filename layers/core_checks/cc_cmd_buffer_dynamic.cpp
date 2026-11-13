@@ -267,7 +267,7 @@ bool CoreChecks::ValidateDynamicStateIsSet(const LastBound& last_bound_state, co
             ss << ", but the command buffer never called " << DescribeDynamicStateCommand(dynamic_state);
         }
         ss << '\n' << DescribeDynamicStateDependency(dynamic_state, pipeline);
-        return LogError(CreateActionVuid(loc.function, vuid), objlist, loc, "%s", ss.str().c_str());
+        return LogError(CreateActionVuid(loc.function, vuid), objlist, loc, "{}", ss.str().c_str());
     }
     return false;
 }
@@ -537,9 +537,9 @@ bool CoreChecks::ValidateGraphicsDynamicStateSetStatus(const LastBound& last_bou
         LogObjectList objlist(last_bound_state.cb_state.Handle());
         skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::BIND_VERTEX_BUFFERS_3_STRIDE_13118), objlist, loc,
                          "vkCmdBindVertexBuffers3KHR() was called with at least one of VkBindVertexBuffer3InfoKHR::setStride being "
-                         "VK_TRUE, but the pipeline %s was created without VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE or "
+                         "VK_TRUE, but the pipeline {} was created without VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE or "
                          "VK_DYNAMIC_STATE_VERTEX_INPUT_EXT dynamic states",
-                         FormatHandle(last_bound_state.pipeline_state->Handle()).c_str());
+                         Handle(last_bound_state.pipeline_state->Handle()));
     }
 
     return skip;
@@ -557,21 +557,22 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineRenderPass(const LastBound& las
                 subpass_rasterization_samples &&
                 *subpass_rasterization_samples != cb_state.dynamic_state_value.rasterization_samples) {
                 const LogObjectList objlist(cb_state.Handle(), pipeline.Handle(), rp_state.Handle());
-                skip |= LogError(
-                    CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_07471), objlist, loc,
-                    "VkPhysicalDeviceFeatures::variableMultisampleRate is VK_FALSE and the rasterizationSamples set with "
-                    "vkCmdSetRasterizationSamplesEXT() were %s but a previous draw used rasterization samples %" PRIu32 ".%s",
-                    string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
-                    *subpass_rasterization_samples,
-                    cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT).c_str());
+                skip |=
+                    LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_07471), objlist, loc,
+                             "VkPhysicalDeviceFeatures::variableMultisampleRate is VK_FALSE and the rasterizationSamples set with "
+                             "vkCmdSetRasterizationSamplesEXT() were {} but a previous draw used rasterization samples {}"
+                             ".{}",
+                             string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
+                             static_cast<unsigned int>(*subpass_rasterization_samples),
+                             cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT).c_str());
             } else if ((cb_state.dynamic_state_value.rasterization_samples &
                         phys_dev_props.limits.framebufferNoAttachmentsSampleCounts) == 0) {
                 const LogObjectList objlist(cb_state.Handle(), pipeline.Handle(), rp_state.Handle());
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_07471), objlist, loc,
-                                 "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() are %s but this bit is not in "
-                                 "framebufferNoAttachmentsSampleCounts (%s).%s",
+                                 "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() are {} but this bit is not in "
+                                 "framebufferNoAttachmentsSampleCounts ({}).{}",
                                  string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
-                                 string_VkSampleCountFlags(phys_dev_props.limits.framebufferNoAttachmentsSampleCounts).c_str(),
+                                 vvl::Flags::SampleCountFlags(phys_dev_props.limits.framebufferNoAttachmentsSampleCounts),
                                  cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT).c_str());
             }
         }
@@ -603,9 +604,10 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineValue(const LastBound& last_bou
             if (!IsIntegerMultipleOf(multisample_prop.maxSampleLocationGridSize.width,
                                      sample_locations->sampleLocationsInfo.sampleLocationGridSize.width)) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_ENABLE_07936), objlist, loc,
-                                 "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.width (%" PRIu32
-                                 ") with rasterization samples %s is not evenly divided by "
-                                 "VkMultisamplePropertiesEXT::sampleLocationGridSize.width (%" PRIu32 ").",
+                                 "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.width ({}"
+                                 ") with rasterization samples {} is not evenly divided by "
+                                 "VkMultisamplePropertiesEXT::sampleLocationGridSize.width ({}"
+                                 ").",
                                  multisample_prop.maxSampleLocationGridSize.width,
                                  string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
                                  sample_locations->sampleLocationsInfo.sampleLocationGridSize.width);
@@ -613,9 +615,10 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineValue(const LastBound& last_bou
             if (!IsIntegerMultipleOf(multisample_prop.maxSampleLocationGridSize.height,
                                      sample_locations->sampleLocationsInfo.sampleLocationGridSize.height)) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_ENABLE_07937), objlist, loc,
-                                 "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.height (%" PRIu32
-                                 ") with rasterization samples %s is not evenly divided by "
-                                 "VkMultisamplePropertiesEXT::sampleLocationGridSize.height (%" PRIu32 ").",
+                                 "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.height ({}"
+                                 ") with rasterization samples {} is not evenly divided by "
+                                 "VkMultisamplePropertiesEXT::sampleLocationGridSize.height ({}"
+                                 ").",
                                  multisample_prop.maxSampleLocationGridSize.height,
                                  string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
                                  sample_locations->sampleLocationsInfo.sampleLocationGridSize.height);
@@ -624,8 +627,8 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineValue(const LastBound& last_bou
                 cb_state.dynamic_state_value.rasterization_samples) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_ENABLE_07938), objlist, loc,
                                  "Pipeline was created with "
-                                 "VkPipelineSampleLocationsStateCreateInfoEXT::sampleLocationsInfo.sampleLocationsPerPixel %s "
-                                 "which does not match rasterization samples (%s) set with vkCmdSetRasterizationSamplesEXT().",
+                                 "VkPipelineSampleLocationsStateCreateInfoEXT::sampleLocationsInfo.sampleLocationsPerPixel {} "
+                                 "which does not match rasterization samples ({}) set with vkCmdSetRasterizationSamplesEXT().",
                                  string_VkSampleCountFlagBits(sample_locations->sampleLocationsInfo.sampleLocationsPerPixel),
                                  string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples));
             }
@@ -651,8 +654,8 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineValue(const LastBound& last_bou
 
         if (!compatible_topology) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_TOPOLOGY_CLASS_07500), objlist, loc,
-                             "the last primitive topology %s state set by vkCmdSetPrimitiveTopology is "
-                             "not compatible with the pipeline topology %s.%s",
+                             "the last primitive topology {} state set by vkCmdSetPrimitiveTopology is "
+                             "not compatible with the pipeline topology {}.{}",
                              string_VkPrimitiveTopology(dynamic_topology), string_VkPrimitiveTopology(pipeline_topology),
                              cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY).c_str());
         }
@@ -684,14 +687,15 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineViewportScissor(const LastBound
             const auto missing_viewport_mask = ~cb_sub_state.viewport.mask & required_viewports_mask;
             if (missing_viewport_mask) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_07831), objlist, loc,
-                                 "Dynamic viewport(s) (0x%x) are used by pipeline state object, but were not provided via calls "
+                                 "Dynamic viewport(s) (0x{:x}) are used by pipeline state object, but were not provided via calls "
                                  "to vkCmdSetViewport().",
                                  missing_viewport_mask);
             } else if (const uint32_t trashed_viewport_mask = cb_sub_state.viewport.trashed_mask & required_viewports_mask) {
-                skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_07831), objlist, loc,
-                                 "Dynamic viewport(s) (0x%x) are used by pipeline state object and vkCmdSetViewport() was called, "
-                                 "but the state was invalidated and needs to be set again.%s",
-                                 trashed_viewport_mask, cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_VIEWPORT).c_str());
+                skip |=
+                    LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_07831), objlist, loc,
+                             "Dynamic viewport(s) (0x{:x}) are used by pipeline state object and vkCmdSetViewport() was called, "
+                             "but the state was invalidated and needs to be set again.{}",
+                             trashed_viewport_mask, cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_VIEWPORT).c_str());
             }
         }
 
@@ -700,13 +704,13 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineViewportScissor(const LastBound
             const auto missing_scissor_mask = ~cb_sub_state.scissor.mask & required_scissor_mask;
             if (missing_scissor_mask) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SCISSOR_07832), objlist, loc,
-                                 "Dynamic scissor(s) (0x%x) are used by pipeline state object, but were not provided via calls "
+                                 "Dynamic scissor(s) (0x{:x}) are used by pipeline state object, but were not provided via calls "
                                  "to vkCmdSetScissor().",
                                  missing_scissor_mask);
             } else if (const uint32_t trashed_scissor_mask = cb_sub_state.scissor.trashed_mask & required_scissor_mask) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SCISSOR_07832), objlist, loc,
-                                 "Dynamic scissor(s) (0x%x) are used by pipeline state object and vkCmdSetScissor() was called, "
-                                 "but the state was invalidated and needs to be set again.%s",
+                                 "Dynamic scissor(s) (0x{:x}) are used by pipeline state object and vkCmdSetScissor() was called, "
+                                 "but the state was invalidated and needs to be set again.{}",
                                  trashed_scissor_mask, cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_SCISSOR).c_str());
             }
         }
@@ -718,7 +722,9 @@ bool CoreChecks::ValidateDrawDynamicStatePipelineViewportScissor(const LastBound
         const uint32_t max_inherited = uint32_t(cb_sub_state.viewport.inherited_depths.size());
         if (viewport_count > max_inherited) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::STATE_INHERITED_07850), objlist, loc,
-                             "Pipeline requires more viewports (%" PRIu32 ") than inherited (viewportDepthCount = %" PRIu32 ").",
+                             "Pipeline requires more viewports ({}"
+                             ") than inherited (viewportDepthCount = {}"
+                             ").",
                              viewport_count, max_inherited);
         }
     }
@@ -760,9 +766,9 @@ bool CoreChecks::ValidateDrawDynamicStatePipeline(const LastBound& last_bound_st
     if (unset_status_pipeline.any()) {
         const LogObjectList objlist(cb_state.Handle(), pipeline.Handle());
         skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_STATE_ALL_SET_08608), objlist, loc,
-                         "%s doesn't set up %s, but since the vkCmdBindPipeline, the related dynamic state commands (%s) have been "
+                         "{} doesn't set up {}, but since the vkCmdBindPipeline, the related dynamic state commands ({}) have been "
                          "called in this command buffer.",
-                         FormatHandle(pipeline).c_str(), DynamicStatesToString(unset_status_pipeline).c_str(),
+                         Handle(pipeline), DynamicStatesToString(unset_status_pipeline).c_str(),
                          DynamicStatesCommandsToString(unset_status_pipeline).c_str());
         // Dynamic state was not set, will produce garbage when trying to read to values
         return skip;
@@ -795,7 +801,7 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
                            VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY})) {
                 skip |=
                     LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_RESTART_09637), cb_state.Handle(), loc,
-                             "%s is %s, the primitiveTopologyListRestart feature was not enabled, but "
+                             "{} is {}, the primitiveTopologyListRestart feature was not enabled, but "
                              "vkCmdSetPrimitiveRestartEnable last set primitiveRestartEnable to VK_TRUE.",
                              last_bound_state.DescribeVertexInputAssemblerTopology().c_str(), string_VkPrimitiveTopology(topology));
             }
@@ -804,7 +810,7 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
             if (topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_RESTART_10909), cb_state.Handle(), loc,
-                    "%s is VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, the primitiveTopologyPatchListRestart feature was not enabled, but "
+                    "{} is VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, the primitiveTopologyPatchListRestart feature was not enabled, but "
                     "vkCmdSetPrimitiveRestartEnable last set primitiveRestartEnable to VK_TRUE.",
                     last_bound_state.DescribeVertexInputAssemblerTopology().c_str());
             }
@@ -853,8 +859,10 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
                     if (!enabled_features.legacyVertexAttributes || shader64) {
                         skip |= LogError(
                             CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_INPUT_08734), vert_spirv_state.handle(), loc,
-                            "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[%" PRIu32 "] (binding %" PRIu32
-                            ", location %" PRIu32 ") with format %s but the vertex shader %s is numeric type %s%s",
+                            "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[{}"
+                            "] (binding {}"
+                            ", location {}"
+                            ") with format {} but the vertex shader {} is numeric type {}{}",
                             attrib->index, attrib->desc.binding, attrib->desc.location, string_VkFormat(attrib->desc.format),
                             variable_ptr->Describe().c_str(), vert_spirv_state.DescribeType(var_base_type_id).c_str(),
                             shader64 ? "" : "\nHint: This can be allowed if the legacyVertexAttributes feature is enabled.");
@@ -862,15 +870,19 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
                 } else if (attribute64 && !shader64) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_INPUT_FORMAT_08936), vert_spirv_state.handle(), loc,
-                        "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[%" PRIu32 "] (binding %" PRIu32
-                        ", location %" PRIu32 ") with a 64-bit format (%s) but the vertex shader %s is a 32-bit type (%s)",
+                        "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[{}"
+                        "] (binding {}"
+                        ", location {}"
+                        ") with a 64-bit format ({}) but the vertex shader {} is a 32-bit type ({})",
                         attrib->index, attrib->desc.binding, attrib->desc.location, string_VkFormat(attrib->desc.format),
                         variable_ptr->Describe().c_str(), vert_spirv_state.DescribeType(var_base_type_id).c_str());
                 } else if (!attribute64 && shader64) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_INPUT_FORMAT_08937), vert_spirv_state.handle(), loc,
-                        "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[%" PRIu32 "] (binding %" PRIu32
-                        ", location %" PRIu32 ") with a 32-bit format (%s) but the vertex shader %s is a 64-bit type (%s)",
+                        "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[{}"
+                        "] (binding {}"
+                        ", location {}"
+                        ") with a 32-bit format ({}) but the vertex shader {} is a 64-bit type ({})",
                         attrib->index, attrib->desc.binding, attrib->desc.location, string_VkFormat(attrib->desc.format),
                         variable_ptr->Describe().c_str(), vert_spirv_state.DescribeType(var_base_type_id).c_str());
                 } else if (attribute64 && shader64) {
@@ -879,9 +891,11 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
                     if (attribute_components < input_components) {
                         skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_INPUT_FORMAT_09203),
                                          vert_spirv_state.handle(), loc,
-                                         "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[%" PRIu32 "] (binding %" PRIu32
-                                         ", location %" PRIu32 ") with a %" PRIu32
-                                         "-wide 64-bit format (%s) but the vertex shader %s is %" PRIu32
+                                         "vkCmdSetVertexInputEXT set pVertexAttributeDescriptions[{}"
+                                         "] (binding {}"
+                                         ", location {}"
+                                         ") with a {}"
+                                         "-wide 64-bit format ({}) but the vertex shader {} is {}"
                                          "-wide. (64-bit vertex input don't have default values and require "
                                          "components to match what is used in the shader)",
                                          attrib->index, attrib->desc.binding, attrib->desc.location, attribute_components,
@@ -892,7 +906,7 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
             if (!location_provided && !enabled_features.vertexAttributeRobustness && !enabled_features.maintenance9) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VERTEX_INPUT_FORMAT_07939),
                                  vert_spirv_state.handle(), loc,
-                                 "Vertex shader %s is using Location %" PRIu32
+                                 "Vertex shader {} is using Location {}"
                                  ", but it was not provided with vkCmdSetVertexInputEXT(). (This can be valid if "
                                  "either the vertexAttributeRobustness or maintenance9 feature is enabled)",
                                  variable_ptr->Describe().c_str(), variable_ptr->decorations.location);
@@ -911,10 +925,10 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
             topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST) {
             if (!vert_entrypoint.written_built_in_point_size && !enabled_features.maintenance5) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_TOPOLOGY_10748), cb_state.Handle(), loc,
-                                 "The bound vertex shader (%s) has a PointSize that is not written to, but the bound topology "
+                                 "The bound vertex shader ({}) has a PointSize that is not written to, but the bound topology "
                                  "is set to VK_PRIMITIVE_TOPOLOGY_POINT_LIST.\nHint: This can be allowed in some cases if "
                                  "maintenance5 feature is enabled.",
-                                 FormatHandle(vert_spirv_state.handle()).c_str());
+                                 Handle(vert_spirv_state.handle()));
             }
         }
 
@@ -923,7 +937,7 @@ bool CoreChecks::ValidateDrawDynamicStateVertex(const LastBound& last_bound_stat
         if (tess_shader_bound && !patch_topology) {
             skip |= LogError(
                 CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_TOPOLOGY_10286), cb_state.Handle(), loc,
-                "Tessellation shaders were bound, but the last call to vkCmdSetPrimitiveTopology set primitiveTopology to %s.",
+                "Tessellation shaders were bound, but the last call to vkCmdSetPrimitiveTopology set primitiveTopology to {}.",
                 string_VkPrimitiveTopology(topology));
         } else if (!tess_shader_bound && patch_topology) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVE_TOPOLOGY_10747), cb_state.Handle(), loc,
@@ -962,9 +976,9 @@ bool CoreChecks::ValidateDrawDynamicStateFragment(const LastBound& last_bound_st
                 if (!IsIntegerMultipleOf(multisample_prop.maxSampleLocationGridSize.width, gridSize.width)) {
                     const LogObjectList objlist(cb_state.Handle(), frag_spirv_state.handle());
                     skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATION_07485), objlist, loc,
-                                     "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.width (%" PRIu32
-                                     ") with rasterization samples %s is not evenly divided by "
-                                     "sampleLocationsInfo.sampleLocationGridSize.width (%" PRIu32
+                                     "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.width ({}"
+                                     ") with rasterization samples {} is not evenly divided by "
+                                     "sampleLocationsInfo.sampleLocationGridSize.width ({}"
                                      ") set with vkCmdSetSampleLocationsEXT().",
                                      multisample_prop.maxSampleLocationGridSize.width,
                                      string_VkSampleCountFlagBits(rasterization_samples), gridSize.width);
@@ -972,9 +986,9 @@ bool CoreChecks::ValidateDrawDynamicStateFragment(const LastBound& last_bound_st
                 if (!IsIntegerMultipleOf(multisample_prop.maxSampleLocationGridSize.height, gridSize.height)) {
                     const LogObjectList objlist(cb_state.Handle(), frag_spirv_state.handle());
                     skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATION_07486), objlist, loc,
-                                     "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.height (%" PRIu32
-                                     ") with rasterization samples %s is not evenly divided by "
-                                     "sampleLocationsInfo.sampleLocationGridSize.height (%" PRIu32
+                                     "VkMultisamplePropertiesEXT::maxSampleLocationGridSize.height ({}"
+                                     ") with rasterization samples {} is not evenly divided by "
+                                     "sampleLocationsInfo.sampleLocationGridSize.height ({}"
                                      ") set with vkCmdSetSampleLocationsEXT().",
                                      multisample_prop.maxSampleLocationGridSize.height,
                                      string_VkSampleCountFlagBits(rasterization_samples), gridSize.height);
@@ -998,8 +1012,8 @@ bool CoreChecks::ValidateDrawDynamicStateFragment(const LastBound& last_bound_st
                 LogObjectList objlist(cb_state.Handle(), frag_spirv_state.handle());
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::RASTERIZATION_SAMPLES_09211), objlist, loc,
                                  "VkMultisampledRenderToSingleSampledInfoEXT::multisampledRenderToSingleSampledEnable is VK_TRUE "
-                                 "and VkMultisampledRenderToSingleSampledInfoEXT::rasterizationSamples are %s, but rasterization "
-                                 "samples set with vkCmdSetRasterizationSamplesEXT() were %s.",
+                                 "and VkMultisampledRenderToSingleSampledInfoEXT::rasterizationSamples are {}, but rasterization "
+                                 "samples set with vkCmdSetRasterizationSamplesEXT() were {}.",
                                  string_VkSampleCountFlagBits(msrtss_info->rasterizationSamples),
                                  string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples));
             }
@@ -1027,8 +1041,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 skip |= LogError(
                     CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_07482),
                     cb_state.GetObjectList(VK_PIPELINE_BIND_POINT_GRAPHICS), loc,
-                    "sampleLocationsPerPixel set with vkCmdSetSampleLocationsEXT() was %s, but "
-                    "VkPipelineMultisampleStateCreateInfo::rasterizationSamples from the pipeline was %s.%s",
+                    "sampleLocationsPerPixel set with vkCmdSetSampleLocationsEXT() was {}, but "
+                    "VkPipelineMultisampleStateCreateInfo::rasterizationSamples from the pipeline was {}.{}",
                     string_VkSampleCountFlagBits(cb_state.dynamic_state_value.sample_locations_info.sampleLocationsPerPixel),
                     string_VkSampleCountFlagBits(pipeline_state->MultisampleState()->rasterizationSamples),
                     cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT).c_str());
@@ -1038,8 +1052,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
             skip |=
                 LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_LOCATIONS_07483),
                          cb_state.GetObjectList(VK_PIPELINE_BIND_POINT_GRAPHICS), loc,
-                         "sampleLocationsPerPixel set with vkCmdSetSampleLocationsEXT() was %s, but "
-                         "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() was %s.%s",
+                         "sampleLocationsPerPixel set with vkCmdSetSampleLocationsEXT() was {}, but "
+                         "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() was {}.{}",
                          string_VkSampleCountFlagBits(cb_state.dynamic_state_value.sample_locations_info.sampleLocationsPerPixel),
                          string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
                          cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT).c_str());
@@ -1055,7 +1069,7 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                     LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_MASK_07472),
                              cb_state.GetObjectList(VK_PIPELINE_BIND_POINT_GRAPHICS), loc,
                              "Currently bound pipeline was created with VkPipelineMultisampleStateCreateInfo::rasterizationSamples "
-                             "(%s) which is greater than the samples set with vkCmdSetSampleMaskEXT() (%s).%s",
+                             "({}) which is greater than the samples set with vkCmdSetSampleMaskEXT() ({}).{}",
                              string_VkSampleCountFlagBits(pipeline_state->MultisampleState()->rasterizationSamples),
                              string_VkSampleCountFlagBits(cb_state.dynamic_state_value.samples_mask_samples),
                              cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_SAMPLE_MASK_EXT).c_str());
@@ -1063,8 +1077,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
         } else if (cb_state.dynamic_state_value.samples_mask_samples < cb_state.dynamic_state_value.rasterization_samples) {
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SAMPLE_MASK_07473),
                              cb_state.GetObjectList(VK_PIPELINE_BIND_POINT_GRAPHICS), loc,
-                             "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() (%s) is greater than the samples "
-                             "set with vkCmdSetSampleMaskEXT() (%s).%s",
+                             "rasterizationSamples set with vkCmdSetRasterizationSamplesEXT() ({}) is greater than the samples "
+                             "set with vkCmdSetSampleMaskEXT() ({}).{}",
                              string_VkSampleCountFlagBits(cb_state.dynamic_state_value.rasterization_samples),
                              string_VkSampleCountFlagBits(cb_state.dynamic_state_value.samples_mask_samples),
                              cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_SAMPLE_MASK_EXT).c_str());
@@ -1079,15 +1093,15 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
             if (!query_pool_state || query_pool_state->create_info.queryType != VK_QUERY_TYPE_PRIMITIVES_GENERATED_EXT) {
                 continue;
             }
-            skip |= LogError(
-                CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVES_GENERATED_QUERY_07481), cb_state.Handle(), loc,
-                "query %" PRIu32
-                " in %s with type VK_QUERY_TYPE_PRIMITIVES_GENERATED_EXT is active and the last call to "
-                "vkCmdSetRasterizationStreamEXT() set rasterizationStreams as %" PRIu32
-                " (non-zero), but the primitivesGeneratedQueryWithNonZeroStreams "
-                "feature was not enabled.%s",
-                active_query.slot, FormatHandle(active_query.pool).c_str(), cb_state.dynamic_state_value.rasterization_stream,
-                cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_STREAM_EXT).c_str());
+            skip |=
+                LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PRIMITIVES_GENERATED_QUERY_07481), cb_state.Handle(), loc,
+                         "query {}"
+                         " in {} with type VK_QUERY_TYPE_PRIMITIVES_GENERATED_EXT is active and the last call to "
+                         "vkCmdSetRasterizationStreamEXT() set rasterizationStreams as {}"
+                         " (non-zero), but the primitivesGeneratedQueryWithNonZeroStreams "
+                         "feature was not enabled.{}",
+                         active_query.slot, Handle(active_query.pool), cb_state.dynamic_state_value.rasterization_stream,
+                         cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RASTERIZATION_STREAM_EXT).c_str());
 
             break;  // only need to check the feature VUs once
         }
@@ -1116,8 +1130,9 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::STENCIL_WRITE_MASK_08716),
                                  cb_state.GetObjectList(VK_SHADER_STAGE_FRAGMENT_BIT), loc,
                                  "Fragment shader contains OpStencilAttachmentReadEXT, but writeMask parameter in the last "
-                                 "call to vkCmdSetStencilWriteMask is not equal to 0 for both front (%" PRIu32
-                                 ") and back (%" PRIu32 ").",
+                                 "call to vkCmdSetStencilWriteMask is not equal to 0 for both front ({}"
+                                 ") and back ({}"
+                                 ").",
                                  cb_state.dynamic_state_value.write_mask_front, cb_state.dynamic_state_value.write_mask_back);
             }
         }
@@ -1147,8 +1162,9 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                     vvl::ActionVUID vuid =
                         use_max_limit ? vvl::ActionVUID::DISCARD_RECTANGLE_09236 : vvl::ActionVUID::DISCARD_RECTANGLE_07751;
                     skip |= LogError(CreateActionVuid(loc.function, vuid), cb_state.Handle(), loc,
-                                     "vkCmdSetDiscardRectangleEXT was not set for discard rectangle index %" PRIu32
-                                     " for this command buffer. It needs to be set once for each rectangle in %s (%" PRIu32 ").%s",
+                                     "vkCmdSetDiscardRectangleEXT was not set for discard rectangle index {}"
+                                     " for this command buffer. It needs to be set once for each rectangle in {} ({}"
+                                     ").{}",
                                      i, String(limit_name), rect_limit,
                                      cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT).c_str());
                     break;
@@ -1171,8 +1187,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                             has_pipeline ? vvl::ActionVUID::COVERAGE_TO_COLOR_07490 : vvl::ActionVUID::COVERAGE_TO_COLOR_09420;
                         skip |=
                             LogError(CreateActionVuid(loc.function, vuid), cb_state.Handle(), loc,
-                                     "coverageToColorLocation (%" PRIu32
-                                     ") set by vkCmdSetCoverageToColorLocationNV points to a color attachment with format %s.\n%s",
+                                     "coverageToColorLocation ({}"
+                                     ") set by vkCmdSetCoverageToColorLocationNV points to a color attachment with format {}.\n{}",
                                      cb_state.dynamic_state_value.coverage_to_color_location, string_VkFormat(format),
                                      cb_state.DescribeActiveColorAttachment().c_str());
                     }
@@ -1194,7 +1210,7 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                     rasterization_samples != attachment->samples) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::SET_RASTERIZATION_SAMPLES_08644), cb_state.Handle(), loc,
-                        "%s was created with %s but the last call to vkCmdSetRasterizationSamplesEXT was set to %s.",
+                        "{} was created with {} but the last call to vkCmdSetRasterizationSamplesEXT was set to {}.",
                         attachment_info.Describe(cb_state, i).c_str(), string_VkSampleCountFlagBits(attachment->samples),
                         string_VkSampleCountFlagBits(rasterization_samples));
                 }
@@ -1208,8 +1224,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if (IsLineTopology(topology) || IsPointTopology(topology)) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::CONSERVATIVE_RASTERIZATION_07499), cb_state.Handle(), loc,
-                        "the rasterization input topology is %s and conservativePointAndLineRasterization is VK_FALSE, but "
-                        "conservativeRasterizationMode set with vkCmdSetConservativeRasterizationModeEXT() was %s.%s",
+                        "the rasterization input topology is {} and conservativePointAndLineRasterization is VK_FALSE, but "
+                        "conservativeRasterizationMode set with vkCmdSetConservativeRasterizationModeEXT() was {}.{}",
                         string_VkPrimitiveTopology(topology),
                         string_VkConservativeRasterizationModeEXT(cb_state.dynamic_state_value.conservative_rasterization_mode),
                         cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_CONSERVATIVE_RASTERIZATION_MODE_EXT).c_str());
@@ -1230,11 +1246,11 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if ((color_write_mask & rgba) != rgba && (color_write_mask & rgba) != 0) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::COLOR_WRITE_MASK_09116), cb_state.Handle(), loc,
-                        "%s has format VK_FORMAT_E5B9G9R9_UFLOAT_PACK32, but vkCmdSetColorWriteMaskEXT::pColorWriteMasks[%" PRIu32
-                        "] is %s\nThe 999E5 format is special as it overlaps the traditional 8-bit boundary and has no real alpha "
+                        "{} has format VK_FORMAT_E5B9G9R9_UFLOAT_PACK32, but vkCmdSetColorWriteMaskEXT::pColorWriteMasks[{}"
+                        "] is {}\nThe 999E5 format is special as it overlaps the traditional 8-bit boundary and has no real alpha "
                         "channel. When updating, the driver needs the full RGBA mask in order to properly handle this format.",
                         attachment_info.Describe(cb_state, i).c_str(), color_index,
-                        string_VkColorComponentFlags(color_write_mask).c_str());
+                        vvl::Flags::ColorComponentFlags(color_write_mask));
                 }
             }
         }
@@ -1251,8 +1267,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 pipeline_state && pipeline_state->MultisampleState() && pipeline_state->MultisampleState()->sampleShadingEnable;
             if (alpha_to_coverage_enable || alpha_to_one_enable || sample_shading_enable) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::LINE_RASTERIZATION_10608), cb_state.Handle(), loc,
-                                 "lineRasterizationMode is %s, but alphaToCoverageEnable (%s), alphaToOneEnable (%s) and "
-                                 "sampleShadingEnable (%s) are not all VK_FALSE.",
+                                 "lineRasterizationMode is {}, but alphaToCoverageEnable ({}), alphaToOneEnable ({}) and "
+                                 "sampleShadingEnable ({}) are not all VK_FALSE.",
                                  string_VkLineRasterizationMode(cb_state.dynamic_state_value.line_rasterization_mode),
                                  alpha_to_coverage_enable ? "VK_TRUE" : "VK_FALSE", alpha_to_one_enable ? "VK_TRUE" : "VK_FALSE",
                                  sample_shading_enable ? "VK_TRUE" : "VK_FALSE");
@@ -1263,11 +1279,12 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
     if (last_bound_state.IsDynamic(CB_DYNAMIC_STATE_VIEWPORT_WITH_COUNT)) {
         if (last_bound_state.IsDynamic(CB_DYNAMIC_STATE_SCISSOR_WITH_COUNT)) {
             if (cb_state.dynamic_state_value.viewport_count != cb_state.dynamic_state_value.scissor_count) {
-                skip |= LogError(
-                    CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_AND_SCISSOR_WITH_COUNT_03419), cb_state.Handle(), loc,
-                    "viewportCount (%" PRIu32 ") set with vkCmdSetViewportWithCount is not equal to scissorCount (%" PRIu32
-                    ") set with vkCmdSetScissorWithCount",
-                    cb_state.dynamic_state_value.viewport_count, cb_state.dynamic_state_value.scissor_count);
+                skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_AND_SCISSOR_WITH_COUNT_03419),
+                                 cb_state.Handle(), loc,
+                                 "viewportCount ({}"
+                                 ") set with vkCmdSetViewportWithCount is not equal to scissorCount ({}"
+                                 ") set with vkCmdSetScissorWithCount",
+                                 cb_state.dynamic_state_value.viewport_count, cb_state.dynamic_state_value.scissor_count);
             }
         }
 
@@ -1277,7 +1294,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if (cb_state.dynamic_state_value.shading_rate_palette_count < cb_state.dynamic_state_value.viewport_count) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::SHADING_RATE_PALETTE_08637), cb_state.Handle(), loc,
-                        "viewportCount (%" PRIu32 ") set with vkCmdSetViewportWithCount is greater than viewportCount (%" PRIu32
+                        "viewportCount ({}"
+                        ") set with vkCmdSetViewportWithCount is greater than viewportCount ({}"
                         ") set with vkCmdSetViewportShadingRatePaletteNV",
                         cb_state.dynamic_state_value.viewport_count, cb_state.dynamic_state_value.shading_rate_palette_count);
                 }
@@ -1288,9 +1306,10 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if (shading_rate_palette_count < cb_state.dynamic_state_value.viewport_count) {
                     skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PIPELINE_SHADING_RATE_PALETTE_04139),
                                      cb_state.Handle(), loc,
-                                     "viewportCount (%" PRIu32
+                                     "viewportCount ({}"
                                      ") set with vkCmdSetViewportWithCount is greater than "
-                                     "VkPipelineViewportShadingRateImageStateCreateInfoNV::viewportCount (%" PRIu32 ")",
+                                     "VkPipelineViewportShadingRateImageStateCreateInfoNV::viewportCount ({}"
+                                     ")",
                                      cb_state.dynamic_state_value.viewport_count, shading_rate_palette_count);
                 }
             }
@@ -1303,8 +1322,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                     vvl::ActionVUID vuid =
                         has_pipeline ? vvl::ActionVUID::SET_VIEWPORT_SWIZZLE_07493 : vvl::ActionVUID::SET_VIEWPORT_SWIZZLE_09421;
                     skip |= LogError(CreateActionVuid(loc.function, vuid), cb_state.Handle(), loc,
-                                     "viewportCount (%" PRIu32
-                                     ") set with vkCmdSetViewportWithCount is greater than viewportCount (%" PRIu32
+                                     "viewportCount ({}"
+                                     ") set with vkCmdSetViewportWithCount is greater than viewportCount ({}"
                                      ") set with vkCmdSetViewportSwizzleNV",
                                      cb_state.dynamic_state_value.viewport_count, viewport_swizzle_count);
                 }
@@ -1316,9 +1335,10 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                     if (swizzle_state->viewportCount < cb_state.dynamic_state_value.viewport_count) {
                         skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PIPELINE_VIEWPORT_SWIZZLE_04141),
                                          cb_state.Handle(), loc,
-                                         "viewportCount (%" PRIu32
+                                         "viewportCount ({}"
                                          ") set with vkCmdSetViewportWithCount is greater than "
-                                         "VkPipelineViewportSwizzleStateCreateInfoNV::viewportCount (%" PRIu32 ")",
+                                         "VkPipelineViewportSwizzleStateCreateInfoNV::viewportCount ({}"
+                                         ")",
                                          cb_state.dynamic_state_value.viewport_count, swizzle_state->viewportCount);
                     }
                 }
@@ -1331,7 +1351,8 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if (cb_state.dynamic_state_value.viewport_w_scaling_count < cb_state.dynamic_state_value.viewport_count) {
                     skip |= LogError(
                         CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_W_SCALING_08636), cb_state.Handle(), loc,
-                        "viewportCount (%" PRIu32 ") set with vkCmdSetViewportWithCount is greater than viewportCount (%" PRIu32
+                        "viewportCount ({}"
+                        ") set with vkCmdSetViewportWithCount is greater than viewportCount ({}"
                         ") set with vkCmdSetViewportWScalingNV",
                         cb_state.dynamic_state_value.viewport_count, cb_state.dynamic_state_value.viewport_w_scaling_count);
                 }
@@ -1340,9 +1361,10 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                 if (viewport_w_scaling_count < cb_state.dynamic_state_value.viewport_count) {
                     skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PIPELINE_VIEWPORT_W_SCALING_04137),
                                      cb_state.Handle(), loc,
-                                     "viewportCount (%" PRIu32
+                                     "viewportCount ({}"
                                      ") set with vkCmdSetViewportWithCount is greater than "
-                                     "VkPipelineViewportWScalingStateCreateInfoNV::viewportCount (%" PRIu32 ")",
+                                     "VkPipelineViewportWScalingStateCreateInfoNV::viewportCount ({}"
+                                     ")",
                                      cb_state.dynamic_state_value.viewport_count, viewport_w_scaling_count);
                 }
             }
@@ -1359,9 +1381,10 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
                         skip |=
                             LogError(CreateActionVuid(loc.function, vvl::ActionVUID::PIPELINE_EXCLUSIVE_SCISSOR_04142),
                                      cb_state.Handle(), loc,
-                                     "viewportCount (%" PRIu32
+                                     "viewportCount ({}"
                                      ") set with vkCmdSetViewportWithCount is greater than "
-                                     "VkPipelineViewportExclusiveScissorStateCreateInfoNV::exclusiveScissorCount (%" PRIu32 ")",
+                                     "VkPipelineViewportExclusiveScissorStateCreateInfoNV::exclusiveScissorCount ({}"
+                                     ")",
                                      cb_state.dynamic_state_value.viewport_count, exclusive_scissor_state->exclusiveScissorCount);
                     }
                 }
@@ -1393,15 +1416,19 @@ bool CoreChecks::ValidateDrawDynamicStateValue(const LastBound& last_bound_state
             if (last_bound_state.IsDynamic(CB_DYNAMIC_STATE_VIEWPORT_WITH_COUNT) &&
                 msb >= cb_state.dynamic_state_value.viewport_count) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::VIEWPORT_MULTIVIEW_12262), cb_state.Handle(), loc,
-                                 "The current viewMask (0x%" PRIx32 ") most significant bit index (%" PRIu32
-                                 ") is not less than viewportCount (%" PRIu32 ") set with vkCmdSetViewportWithCount",
+                                 "The current viewMask (0x{:x}"
+                                 ") most significant bit index ({}"
+                                 ") is not less than viewportCount ({}"
+                                 ") set with vkCmdSetViewportWithCount",
                                  view_mask, msb, cb_state.dynamic_state_value.viewport_count);
             }
             if (last_bound_state.IsDynamic(CB_DYNAMIC_STATE_SCISSOR_WITH_COUNT) &&
                 msb >= cb_state.dynamic_state_value.scissor_count) {
                 skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::SCISSOR_MULTIVIEW_12263), cb_state.Handle(), loc,
-                                 "The current viewMask (0x%" PRIx32 ") most significant bit index (%" PRIu32
-                                 ") is not less than scissorCount (%" PRIu32 ") set with vkCmdSetScissorWithCount",
+                                 "The current viewMask (0x{:x}"
+                                 ") most significant bit index ({}"
+                                 ") is not less than scissorCount ({}"
+                                 ") set with vkCmdSetScissorWithCount",
                                  view_mask, msb, cb_state.dynamic_state_value.scissor_count);
             }
         }
@@ -1452,7 +1479,7 @@ bool CoreChecks::ValidateDrawRenderingAttachmentLocation(const vvl::CommandBuffe
                 ss << "was not called in this render pass so the index (" << i << ") is the implicit location";
             }
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_RENDERING_LOCAL_LOCATION_09548), objlist, loc,
-                             "%s", ss.str().c_str());
+                             "{}", ss.str().c_str());
             break;
         }
     }
@@ -1547,7 +1574,7 @@ bool CoreChecks::ValidateDrawRenderingInputAttachmentIndex(const vvl::CommandBuf
         ss << "\nThe values need to match because input attachment index "
            << (pipeline_index_used ? pipeline_color_index : dynamic_color_index)
            << " is statically used in the bound fragment shader.";
-        skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_RENDERING_LOCAL_INDEX_09549), objlist, loc, "%s",
+        skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_RENDERING_LOCAL_INDEX_09549), objlist, loc, "{}",
                          ss.str().c_str());
         break;
     }
@@ -1577,7 +1604,7 @@ bool CoreChecks::ValidateDrawRenderingInputAttachmentIndex(const vvl::CommandBuf
                << (pipeline_index_used ? *pipeline_depth_index : *cb_state.rendering_attachments.depth_index)
                << " is statically used in the bound fragment shader.";
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_RENDERING_LOCAL_INDEX_10927), objlist, loc,
-                             "%s", ss.str().c_str());
+                             "{}", ss.str().c_str());
         }
     }
 
@@ -1606,7 +1633,7 @@ bool CoreChecks::ValidateDrawRenderingInputAttachmentIndex(const vvl::CommandBuf
                << (pipeline_index_used ? *pipeline_stencil_index : *cb_state.rendering_attachments.stencil_index)
                << " is statically used in the bound fragment shader.";
             skip |= LogError(CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_RENDERING_LOCAL_INDEX_10928), objlist, loc,
-                             "%s", ss.str().c_str());
+                             "{}", ss.str().c_str());
         }
     }
     return skip;
@@ -1625,7 +1652,7 @@ bool CoreChecks::ValidateTraceRaysDynamicStateSetStatus(const LastBound& last_bo
                     CreateActionVuid(loc.function, vvl::ActionVUID::RTX_STACK_SIZE_09458), objlist, loc,
                     "VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR state is dynamic and "
                     "vkCmdSetRayTracingPipelineStackSizeKHR() was called, but the state was invalidated and needs to be set "
-                    "again.%s",
+                    "again.{}",
                     cb_state.DescribeInvalidatedState(CB_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR).c_str());
             } else {
                 skip |=
@@ -1639,9 +1666,9 @@ bool CoreChecks::ValidateTraceRaysDynamicStateSetStatus(const LastBound& last_bo
             const LogObjectList objlist(cb_state.Handle(), pipeline.Handle());
             skip |= LogError(
                 CreateActionVuid(loc.function, vvl::ActionVUID::DYNAMIC_STATE_ALL_SET_08608), objlist, loc,
-                "%s doesn't set up VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR, but since the vkCmdBindPipeline, the "
+                "{} doesn't set up VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR, but since the vkCmdBindPipeline, the "
                 "related dynamic state commands (vkCmdSetRayTracingPipelineStackSizeKHR) have been called in this command buffer.",
-                FormatHandle(pipeline).c_str());
+                Handle(pipeline));
         }
     }
 
@@ -1709,7 +1736,9 @@ bool CoreChecks::PreCallValidateCmdSetViewportShadingRatePaletteNV(VkCommandBuff
             skip |=
                 LogError("VUID-VkShadingRatePaletteNV-shadingRatePaletteEntryCount-02071", commandBuffer,
                          error_obj.location.dot(Field::pShadingRatePalettes, i).dot(Field::shadingRatePaletteEntryCount),
-                         "(%" PRIu32 ") must be between 1 and shadingRatePaletteSize (%" PRIu32 ").",
+                         "({}"
+                         ") must be between 1 and shadingRatePaletteSize ({}"
+                         ").",
                          palette->shadingRatePaletteEntryCount, phys_dev_ext_props.shading_rate_image_props.shadingRatePaletteSize);
         }
     }
@@ -1754,7 +1783,7 @@ bool CoreChecks::PreCallValidateCmdSetDepthBias(VkCommandBuffer commandBuffer, f
     if ((depthBiasClamp != 0.0) && !enabled_features.depthBiasClamp) {
         skip |=
             LogError("VUID-vkCmdSetDepthBias-depthBiasClamp-00790", commandBuffer, error_obj.location.dot(Field::depthBiasClamp),
-                     "is %f (not 0.0f), but the depthBiasClamp feature was not enabled.", depthBiasClamp);
+                     "is {:f} (not 0.0f), but the depthBiasClamp feature was not enabled.", depthBiasClamp);
     }
     return skip;
 }
@@ -1768,7 +1797,7 @@ bool CoreChecks::ValidateDepthBiasRepresentationInfo(const Location& loc, const 
         !enabled_features.leastRepresentableValueForceUnormRepresentation) {
         skip |= LogError("VUID-VkDepthBiasRepresentationInfoEXT-leastRepresentableValueForceUnormRepresentation-08947", objlist,
                          loc.pNext(Struct::VkDepthBiasRepresentationInfoEXT, Field::depthBiasRepresentation),
-                         "is %s, but the leastRepresentableValueForceUnormRepresentation feature was not enabled.",
+                         "is {}, but the leastRepresentableValueForceUnormRepresentation feature was not enabled.",
                          string_VkDepthBiasRepresentationEXT(depth_bias_representation.depthBiasRepresentation));
     }
 
@@ -1776,7 +1805,7 @@ bool CoreChecks::ValidateDepthBiasRepresentationInfo(const Location& loc, const 
         !enabled_features.floatRepresentation) {
         skip |= LogError("VUID-VkDepthBiasRepresentationInfoEXT-floatRepresentation-08948", objlist,
                          loc.pNext(Struct::VkDepthBiasRepresentationInfoEXT, Field::depthBiasRepresentation),
-                         "is %s but the floatRepresentation feature was not enabled.",
+                         "is {} but the floatRepresentation feature was not enabled.",
                          string_VkDepthBiasRepresentationEXT(depth_bias_representation.depthBiasRepresentation));
     }
 
@@ -1798,7 +1827,7 @@ bool CoreChecks::PreCallValidateCmdSetDepthBias2EXT(VkCommandBuffer commandBuffe
     if ((pDepthBiasInfo->depthBiasClamp != 0.0) && !enabled_features.depthBiasClamp) {
         skip |= LogError("VUID-VkDepthBiasInfoEXT-depthBiasClamp-08950", commandBuffer,
                          error_obj.location.dot(Field::pDepthBiasInfo).dot(Field::depthBiasClamp),
-                         "is %f (not 0.0f), but the depthBiasClamp feature was not enabled.", pDepthBiasInfo->depthBiasClamp);
+                         "is {:f} (not 0.0f), but the depthBiasClamp feature was not enabled.", pDepthBiasInfo->depthBiasClamp);
     }
 
     if (const auto* depth_bias_representation =
@@ -1825,21 +1854,21 @@ bool CoreChecks::PreCallValidateCmdSetDepthBounds(VkCommandBuffer commandBuffer,
         if (!(minDepthBounds >= 0.0) || !(minDepthBounds <= 1.0)) {
             skip |= LogError(
                 "VUID-vkCmdSetDepthBounds-minDepthBounds-00600", commandBuffer, error_obj.location.dot(Field::minDepthBounds),
-                "is %f which is not within the [0.0, 1.0] range and VK_EXT_depth_range_unrestricted extension was not enabled.",
+                "is {:f} which is not within the [0.0, 1.0] range and VK_EXT_depth_range_unrestricted extension was not enabled.",
                 minDepthBounds);
         }
 
         if (!(maxDepthBounds >= 0.0) || !(maxDepthBounds <= 1.0)) {
             skip |= LogError(
                 "VUID-vkCmdSetDepthBounds-maxDepthBounds-00601", commandBuffer, error_obj.location.dot(Field::maxDepthBounds),
-                "is %f which is not within the [0.0, 1.0] range and VK_EXT_depth_range_unrestricted extension was not enabled.",
+                "is {:f} which is not within the [0.0, 1.0] range and VK_EXT_depth_range_unrestricted extension was not enabled.",
                 maxDepthBounds);
         }
     }
     if (minDepthBounds > maxDepthBounds) {
         skip |=
             LogError("VUID-vkCmdSetDepthBounds-minDepthBounds-10912", commandBuffer, error_obj.location.dot(Field::minDepthBounds),
-                     "(%f) is greater than maxDepthBounds (%f).", minDepthBounds, maxDepthBounds);
+                     "({:f}) is greater than maxDepthBounds ({:f}).", minDepthBounds, maxDepthBounds);
     }
     return skip;
 }
@@ -1938,8 +1967,10 @@ bool CoreChecks::ValidateCmdSetPatchControlPoints(VkCommandBuffer commandBuffer,
     } else if (patchControlPoints > phys_dev_props.limits.maxTessellationPatchSize) {
         const char* vuid = "VUID-vkCmdSetPatchControlPointsEXT-patchControlPoints-04874";
         skip |= LogError(vuid, commandBuffer, error_obj.location.dot(Field::patchControlPoints),
-                         "(%" PRIu32 ") must not be greater than maxTessellationPatchSize (%" PRIu32 ")", patchControlPoints,
-                         phys_dev_props.limits.maxTessellationPatchSize);
+                         "({}"
+                         ") must not be greater than maxTessellationPatchSize ({}"
+                         ")",
+                         patchControlPoints, phys_dev_props.limits.maxTessellationPatchSize);
     }
     return skip;
 }
@@ -2355,7 +2386,7 @@ bool CoreChecks::ValidateCmdSetPolygonMode(VkCommandBuffer commandBuffer, VkPoly
     if ((polygonMode == VK_POLYGON_MODE_LINE || polygonMode == VK_POLYGON_MODE_POINT) && !enabled_features.fillModeNonSolid) {
         const char* vuid = "VUID-vkCmdSetPolygonModeEXT-fillModeNonSolid-07424";
         skip |= LogError(vuid, commandBuffer, error_obj.location.dot(Field::polygonMode),
-                         "is %s but the "
+                         "is {} but the "
                          "fillModeNonSolid feature was not enabled.",
                          string_VkPolygonMode(polygonMode));
     } else if (polygonMode == VK_POLYGON_MODE_FILL_RECTANGLE_NV && !IsExtEnabled(extensions.vk_nv_fill_rectangle)) {
@@ -2524,14 +2555,16 @@ bool CoreChecks::PreCallValidateCmdSetRasterizationStreamEXT(VkCommandBuffer com
     if (rasterizationStream >= phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams) {
         skip |= LogError("VUID-vkCmdSetRasterizationStreamEXT-rasterizationStream-07412", commandBuffer,
                          error_obj.location.dot(Field::rasterizationStream),
-                         "(%" PRIu32 ") must be less than maxTransformFeedbackStreams (%" PRIu32 ").", rasterizationStream,
-                         phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams);
+                         "({}"
+                         ") must be less than maxTransformFeedbackStreams ({}"
+                         ").",
+                         rasterizationStream, phys_dev_ext_props.transform_feedback_props.maxTransformFeedbackStreams);
     }
     if (rasterizationStream != 0U &&
         phys_dev_ext_props.transform_feedback_props.transformFeedbackRasterizationStreamSelect == VK_FALSE) {
         skip |= LogError("VUID-vkCmdSetRasterizationStreamEXT-rasterizationStream-07413", commandBuffer,
                          error_obj.location.dot(Field::rasterizationStream),
-                         "(%" PRIu32
+                         "({}"
                          ") is non-zero but "
                          "the transformFeedbackRasterizationStreamSelect feature was not enabled.",
                          rasterizationStream);
@@ -2568,7 +2601,7 @@ bool CoreChecks::PreCallValidateCmdSetExtraPrimitiveOverestimationSizeEXT(VkComm
             phys_dev_ext_props.conservative_rasterization_props.maxExtraPrimitiveOverestimationSize) {
         skip |= LogError("VUID-vkCmdSetExtraPrimitiveOverestimationSizeEXT-extraPrimitiveOverestimationSize-07428", commandBuffer,
                          error_obj.location.dot(Field::extraPrimitiveOverestimationSize),
-                         "(%f) must not be less than zero or greater than maxExtraPrimitiveOverestimationSize (%f).",
+                         "({:f}) must not be less than zero or greater than maxExtraPrimitiveOverestimationSize ({:f}).",
                          extraPrimitiveOverestimationSize,
                          phys_dev_ext_props.conservative_rasterization_props.maxExtraPrimitiveOverestimationSize);
     }
@@ -2862,26 +2895,30 @@ bool CoreChecks::PreCallValidateCmdSetFragmentShadingRateKHR(VkCommandBuffer com
     if (!enabled_features.pipelineFragmentShadingRate && pFragmentSize->width != 1) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pipelineFragmentShadingRate-04507", commandBuffer,
                          error_obj.location.dot(Field::pFragmentSize).dot(Field::width),
-                         "is %" PRIu32 " but the pipelineFragmentShadingRate feature was not enabled.", pFragmentSize->width);
+                         "is {}"
+                         " but the pipelineFragmentShadingRate feature was not enabled.",
+                         pFragmentSize->width);
     }
 
     if (!enabled_features.pipelineFragmentShadingRate && pFragmentSize->height != 1) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pipelineFragmentShadingRate-04508", commandBuffer,
                          error_obj.location.dot(Field::pFragmentSize).dot(Field::height),
-                         "is %" PRIu32 " but the pipelineFragmentShadingRate feature was not enabled.", pFragmentSize->height);
+                         "is {}"
+                         " but the pipelineFragmentShadingRate feature was not enabled.",
+                         pFragmentSize->height);
     }
 
     if (!enabled_features.primitiveFragmentShadingRate && combinerOps[0] != VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR) {
         skip |=
             LogError("VUID-vkCmdSetFragmentShadingRateKHR-primitiveFragmentShadingRate-04510", commandBuffer,
-                     error_obj.location.dot(Field::combinerOps, 0), "is %s but the primitiveFragmentShadingRate was not enabled.",
+                     error_obj.location.dot(Field::combinerOps, 0), "is {} but the primitiveFragmentShadingRate was not enabled.",
                      string_VkFragmentShadingRateCombinerOpKHR(combinerOps[0]));
     }
 
     if (!enabled_features.attachmentFragmentShadingRate && combinerOps[1] != VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR) {
         skip |=
             LogError("VUID-vkCmdSetFragmentShadingRateKHR-attachmentFragmentShadingRate-04511", commandBuffer,
-                     error_obj.location.dot(Field::combinerOps, 1), "is %s but the attachmentFragmentShadingRate was not enabled.",
+                     error_obj.location.dot(Field::combinerOps, 1), "is {} but the attachmentFragmentShadingRate was not enabled.",
                      string_VkFragmentShadingRateCombinerOpKHR(combinerOps[1]));
     }
 
@@ -2890,7 +2927,7 @@ bool CoreChecks::PreCallValidateCmdSetFragmentShadingRateKHR(VkCommandBuffer com
          combinerOps[0] != VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-fragmentSizeNonTrivialCombinerOps-04512", commandBuffer,
                          error_obj.location.dot(Field::combinerOps, 0),
-                         "is %s but the fragmentShadingRateNonTrivialCombinerOps feature was not enabled.",
+                         "is {} but the fragmentShadingRateNonTrivialCombinerOps feature was not enabled.",
                          string_VkFragmentShadingRateCombinerOpKHR(combinerOps[0]));
     }
 
@@ -2899,7 +2936,7 @@ bool CoreChecks::PreCallValidateCmdSetFragmentShadingRateKHR(VkCommandBuffer com
          combinerOps[1] != VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-fragmentSizeNonTrivialCombinerOps-04512", commandBuffer,
                          error_obj.location.dot(Field::combinerOps, 1),
-                         "is %s but the fragmentShadingRateNonTrivialCombinerOps feature was not enabled.",
+                         "is {} but the fragmentShadingRateNonTrivialCombinerOps feature was not enabled.",
                          string_VkFragmentShadingRateCombinerOpKHR(combinerOps[1]));
     }
 
@@ -2915,25 +2952,33 @@ bool CoreChecks::PreCallValidateCmdSetFragmentShadingRateKHR(VkCommandBuffer com
 
     if (pFragmentSize->width != 0 && !IsPowerOfTwo(pFragmentSize->width)) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pFragmentSize-04515", commandBuffer,
-                         error_obj.location.dot(Field::pFragmentSize).dot(Field::width), "(%" PRIu32 ") is a non-power-of-two.",
+                         error_obj.location.dot(Field::pFragmentSize).dot(Field::width),
+                         "({}"
+                         ") is a non-power-of-two.",
                          pFragmentSize->width);
     }
 
     if (pFragmentSize->height != 0 && !IsPowerOfTwo(pFragmentSize->height)) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pFragmentSize-04516", commandBuffer,
-                         error_obj.location.dot(Field::pFragmentSize).dot(Field::height), "(%" PRIu32 ") is a non-power-of-two.",
+                         error_obj.location.dot(Field::pFragmentSize).dot(Field::height),
+                         "({}"
+                         ") is a non-power-of-two.",
                          pFragmentSize->height);
     }
 
     if (pFragmentSize->width > 4) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pFragmentSize-04517", commandBuffer,
-                         error_obj.location.dot(Field::pFragmentSize).dot(Field::width), "(%" PRIu32 ") is larger than 4.",
+                         error_obj.location.dot(Field::pFragmentSize).dot(Field::width),
+                         "({}"
+                         ") is larger than 4.",
                          pFragmentSize->width);
     }
 
     if (pFragmentSize->height > 4) {
         skip |= LogError("VUID-vkCmdSetFragmentShadingRateKHR-pFragmentSize-04518", commandBuffer,
-                         error_obj.location.dot(Field::pFragmentSize).dot(Field::height), "(%" PRIu32 ") is larger than 4.",
+                         error_obj.location.dot(Field::pFragmentSize).dot(Field::height),
+                         "({}"
+                         ") is larger than 4.",
                          pFragmentSize->height);
     }
     return skip;
@@ -2953,8 +2998,10 @@ bool CoreChecks::PreCallValidateCmdSetColorWriteEnableEXT(VkCommandBuffer comman
     if (attachmentCount > phys_dev_props.limits.maxColorAttachments) {
         skip |= LogError("VUID-vkCmdSetColorWriteEnableEXT-attachmentCount-06656", commandBuffer,
                          error_obj.location.dot(Field::attachmentCount),
-                         "(%" PRIu32 ") is greater than the maxColorAttachments limit (%" PRIu32 ").", attachmentCount,
-                         phys_dev_props.limits.maxColorAttachments);
+                         "({}"
+                         ") is greater than the maxColorAttachments limit ({}"
+                         ").",
+                         attachmentCount, phys_dev_props.limits.maxColorAttachments);
     }
     return skip;
 }
@@ -3039,15 +3086,15 @@ bool CoreChecks::PreCallValidateCmdSetAttachmentFeedbackLoopEnableEXT(VkCommandB
     if (aspectMask != VK_IMAGE_ASPECT_NONE && !enabled_features.attachmentFeedbackLoopLayout) {
         skip |= LogError("VUID-vkCmdSetAttachmentFeedbackLoopEnableEXT-attachmentFeedbackLoopLayout-08864", commandBuffer,
                          error_obj.location.dot(Field::aspectMask),
-                         "is %s but the attachmentFeedbackLoopLayout feature "
+                         "is {} but the attachmentFeedbackLoopLayout feature "
                          "was not enabled.",
-                         string_VkImageAspectFlags(aspectMask).c_str());
+                         vvl::Flags::ImageAspectFlags(aspectMask));
     }
 
     if ((aspectMask &
          ~(VK_IMAGE_ASPECT_NONE | VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0) {
         skip |= LogError("VUID-vkCmdSetAttachmentFeedbackLoopEnableEXT-aspectMask-08863", commandBuffer,
-                         error_obj.location.dot(Field::aspectMask), "is %s.", string_VkImageAspectFlags(aspectMask).c_str());
+                         error_obj.location.dot(Field::aspectMask), "is {}.", vvl::Flags::ImageAspectFlags(aspectMask));
     }
 
     return skip;

@@ -75,7 +75,7 @@ bool Device::manual_PreCallValidateCmdBuildClusterAccelerationStructureIndirectN
                                                                                op_input_loc.dot(Field::pTriangleClusters));
         } else {
             skip |= LogError("VUID-VkClusterAccelerationStructureInputInfoNV-pTriangleClusters-parameter", commandBuffer,
-                             input_loc.dot(Field::opType), "is %s, but opInput.pTriangleClusters is NULL.",
+                             input_loc.dot(Field::opType), "is {}, but opInput.pTriangleClusters is NULL.",
                              string_VkClusterAccelerationStructureOpTypeNV(input.opType));
         }
     }
@@ -122,7 +122,7 @@ bool Device::manual_PreCallValidateGetClusterAccelerationStructureBuildSizesNV(
                                                                                op_input_loc.dot(Field::pTriangleClusters));
         } else {
             skip |= LogError("VUID-VkClusterAccelerationStructureInputInfoNV-pTriangleClusters-parameter", device,
-                             input_loc.dot(Field::opType), "is %s, but opInput.pTriangleClusters is NULL.",
+                             input_loc.dot(Field::opType), "is {}, but opInput.pTriangleClusters is NULL.",
                              string_VkClusterAccelerationStructureOpTypeNV(pInfo->opType));
         }
     }

@@ -37,11 +37,11 @@ bool BestPractices::PreCallValidateAllocateCommandBuffers(VkDevice device, const
     if (pAllocateInfo->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY && (queue_flags & sec_cmd_buf_queue_flags) == 0) {
         skip |= LogWarning("BestPractices-vkAllocateCommandBuffers-unusable-secondary", device, error_obj.location,
                            "Allocating secondary level command buffer from command pool "
-                           "created against queue family %" PRIu32
-                           " (queue flags: %s), but vkCmdExecuteCommands() is only "
+                           "created against queue family {}"
+                           " (queue flags: {}), but vkCmdExecuteCommands() is only "
                            "supported on queue families supporting VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT, or "
                            "VK_QUEUE_TRANSFER_BIT. The allocated command buffer will not be submittable.",
-                           cp_state->queueFamilyIndex, string_VkQueueFlags(queue_flags).c_str());
+                           cp_state->queueFamilyIndex, vvl::Flags::QueueFlags(queue_flags));
     }
 
     return skip;
@@ -57,22 +57,22 @@ bool BestPractices::PreCallValidateBeginCommandBuffer(VkCommandBuffer commandBuf
             skip |=
                 LogPerformanceWarning("BestPractices-Arm-vkBeginCommandBuffer-one-time-submit", device,
                                       error_obj.location.dot(Field::pBeginInfo).dot(Field::flags),
-                                      "(%s) doesn't have VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set. %s For best performance "
+                                      "({}) doesn't have VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set. {} For best performance "
                                       "on Mali GPUs, consider setting ONE_TIME_SUBMIT by default.",
-                                      string_VkCommandBufferUsageFlags(pBeginInfo->flags).c_str(), VendorSpecificTag(kBPVendorArm));
+                                      vvl::Flags::CommandBufferUsageFlags(pBeginInfo->flags), VendorSpecificTag(kBPVendorArm));
         }
     }
     if (VendorCheckEnabled(kBPVendorNVIDIA)) {
         auto cb_state = GetRead<vvl::CommandBuffer>(commandBuffer);
         const auto& sub_state = bp_state::SubState(*cb_state);
         if (sub_state.num_submits == 1 && !is_one_time_submit) {
-            skip |= LogPerformanceWarning("BestPractices-NVIDIA-vkBeginCommandBuffer-one-time-submit", device,
-                                          error_obj.location.dot(Field::pBeginInfo).dot(Field::flags),
-                                          "(%s) doesn't have VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set "
-                                          "and the command buffer has only been submitted once. %s "
-                                          "For best performance on NVIDIA GPUs, use ONE_TIME_SUBMIT.",
-                                          string_VkCommandBufferUsageFlags(pBeginInfo->flags).c_str(),
-                                          VendorSpecificTag(kBPVendorNVIDIA));
+            skip |=
+                LogPerformanceWarning("BestPractices-NVIDIA-vkBeginCommandBuffer-one-time-submit", device,
+                                      error_obj.location.dot(Field::pBeginInfo).dot(Field::flags),
+                                      "({}) doesn't have VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set "
+                                      "and the command buffer has only been submitted once. {} "
+                                      "For best performance on NVIDIA GPUs, use ONE_TIME_SUBMIT.",
+                                      vvl::Flags::CommandBufferUsageFlags(pBeginInfo->flags), VendorSpecificTag(kBPVendorNVIDIA));
         }
     }
 
@@ -104,8 +104,9 @@ bool BestPractices::PreCallValidateGetQueryPoolResults(VkDevice device, VkQueryP
         if (can_have_begin && query_pool_state->GetQueryState(i, 0u) == QUERYSTATE_RESET) {
             const LogObjectList objlist(queryPool);
             skip |= LogWarning("BestPractices-QueryPool-Unavailable", objlist, error_obj.location,
-                               "QueryPool %s and query %" PRIu32 ": vkCmdBeginQuery() was never called.",
-                               FormatHandle(query_pool_state->Handle()).c_str(), i);
+                               "QueryPool {} and query {}"
+                               ": vkCmdBeginQuery() was never called.",
+                               Handle(query_pool_state->Handle()), i);
             break;
         }
     }
@@ -139,10 +140,9 @@ struct EventValidator {
                     const LogObjectList objlist(primary_cb.VkHandle(), secondary_cb.VkHandle(), event);
                     skip |= log.LogWarning(
                         "BestPractices-Event-SignalSignaledEvent", objlist, secondary_cb_loc,
-                        "%s sets event %s which was already set (in the primary command buffer %s or in the executed secondary "
+                        "{} sets event {} which was already set (in the primary command buffer {} or in the executed secondary "
                         "command buffers). If this is not the desired behavior, the event must be reset before it is set again.",
-                        log.FormatHandle(secondary_cb.Handle()).c_str(), log.FormatHandle(event).c_str(),
-                        log.FormatHandle(primary_cb.Handle()).c_str());
+                        log.Handle(secondary_cb.Handle()), log.Handle(event), log.Handle(primary_cb.Handle()));
                 }
             }
             signaling_state[event] = signaling_info.signaled;
@@ -178,11 +178,11 @@ bool BestPractices::PreCallValidateCmdExecuteCommands(VkCommandBuffer commandBuf
                 // Warn that non-simultaneous secondary cmd buffer renders primary non-simultaneous
                 const LogObjectList objlist(commandBuffer, pCommandBuffers[i]);
                 skip |= LogWarning("BestPractices-vkCmdExecuteCommands-CommandBufferSimultaneousUse", objlist, cb_loc,
-                                   "(%s) does not have "
+                                   "({}) does not have "
                                    "VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and will cause primary "
-                                   "(%s) to be treated as if it does not have "
+                                   "({}) to be treated as if it does not have "
                                    "VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set, even though it does.",
-                                   FormatHandle(pCommandBuffers[i]).c_str(), FormatHandle(commandBuffer).c_str());
+                                   Handle(pCommandBuffers[i]), Handle(commandBuffer));
             }
         }
         skip |= event_validator.ValidateSecondaryCbSignalingState(primary_sub_state, secondary_sub_state, cb_loc);
@@ -191,7 +191,7 @@ bool BestPractices::PreCallValidateCmdExecuteCommands(VkCommandBuffer commandBuf
     if (VendorCheckEnabled(kBPVendorAMD)) {
         if (commandBufferCount > 0) {
             skip |= LogPerformanceWarning("BestPractices-AMD-VkCommandBuffer-AvoidSecondaryCmdBuffers", commandBuffer,
-                                          error_obj.location, "%s Use of secondary command buffers is not recommended.",
+                                          error_obj.location, "{} Use of secondary command buffers is not recommended.",
                                           VendorSpecificTag(kBPVendorAMD));
         }
     }

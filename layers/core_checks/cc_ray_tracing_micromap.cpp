@@ -30,16 +30,19 @@ bool CoreChecks::PreCallValidateCreateMicromapEXT(VkDevice device, const VkMicro
     const Location create_info_loc = error_obj.location.dot(Field::pCreateInfo);
     const Location buffer_loc = create_info_loc.dot(Field::buffer);
     if (!(buffer_state->usage & VK_BUFFER_USAGE_2_MICROMAP_STORAGE_BIT_EXT)) {
-        skip |= LogError("VUID-VkMicromapCreateInfoEXT-buffer-07435", buffer_state->Handle(), buffer_loc, "was created with %s.",
-                         string_VkBufferUsageFlags2(buffer_state->usage).c_str());
+        skip |= LogError("VUID-VkMicromapCreateInfoEXT-buffer-07435", buffer_state->Handle(), buffer_loc, "was created with {}.",
+                         vvl::Flags::BufferUsageFlags2(buffer_state->usage));
     }
     if (buffer_state->GetFlags() & VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT) {
-        skip |= LogError("VUID-VkMicromapCreateInfoEXT-buffer-07436", buffer_state->Handle(), buffer_loc, "was created with %s.",
-                         string_VkBufferCreateFlags(buffer_state->GetFlags()).c_str());
+        skip |= LogError("VUID-VkMicromapCreateInfoEXT-buffer-07436", buffer_state->Handle(), buffer_loc, "was created with {}.",
+                         vvl::Flags::BufferCreateFlags(buffer_state->GetFlags()));
     }
     if (pCreateInfo->offset + pCreateInfo->size > buffer_state->GetSize()) {
         skip |= LogError("VUID-VkMicromapCreateInfoEXT-offset-07437", buffer_state->Handle(), buffer_loc.dot(Field::offset),
-                         "(%" PRIu64 ") + size (%" PRIu64 ") must not be greater than the size of the buffer (%" PRIu64 ").",
+                         "({}"
+                         ") + size ({}"
+                         ") must not be greater than the size of the buffer ({}"
+                         ").",
                          pCreateInfo->offset, pCreateInfo->size, buffer_state->GetSize());
     }
 
@@ -47,7 +50,7 @@ bool CoreChecks::PreCallValidateCreateMicromapEXT(VkDevice device, const VkMicro
         if (device_state->physical_device_count > 1 && !enabled_features.bufferDeviceAddressMultiDevice &&
             !enabled_features.bufferDeviceAddressMultiDeviceEXT) {
             skip |= LogError("VUID-VkMicromapCreateInfoEXT-bufferDeviceAddressMultiDevice-11617", device, error_obj.location,
-                             "device was created with multiple physical devices (%" PRIu32
+                             "device was created with multiple physical devices ({}"
                              "), but the bufferDeviceAddressMultiDevice feature was not enabled.",
                              device_state->physical_device_count);
         }
@@ -63,7 +66,7 @@ bool CoreChecks::PreCallValidateGetMicromapBuildSizesEXT(VkDevice device, VkAcce
     if (device_state->physical_device_count > 1 && !enabled_features.bufferDeviceAddressMultiDevice &&
         !enabled_features.bufferDeviceAddressMultiDeviceEXT) {
         skip |= LogError("VUID-vkGetMicromapBuildSizesEXT-device-07440", device, error_obj.location,
-                         "device was created with multiple physical devices (%" PRIu32
+                         "device was created with multiple physical devices ({}"
                          "), but the bufferDeviceAddressMultiDevice feature was not enabled.",
                          device_state->physical_device_count);
     }
@@ -144,13 +147,15 @@ bool CoreChecks::PreCallValidateCmdWriteMicromapsPropertiesEXT(VkCommandBuffer c
     if (query_pool_ci.queryType != queryType) {
         const LogObjectList objlist(commandBuffer, queryPool);
         skip |= LogError("VUID-vkCmdWriteMicromapsPropertiesEXT-queryPool-07525", objlist, error_obj.location.dot(Field::queryType),
-                         "is %s, but queryPool was created with %s.", string_VkQueryType(queryType),
+                         "is {}, but queryPool was created with {}.", string_VkQueryType(queryType),
                          string_VkQueryType(query_pool_ci.queryType));
     }
     if (firstQuery + micromapCount > query_pool_ci.queryCount) {
         const LogObjectList objlist(commandBuffer, queryPool);
         skip |= LogError("VUID-vkCmdWriteMicromapsPropertiesEXT-query-07528", objlist, error_obj.location.dot(Field::firstQuery),
-                         "(%" PRIu32 ") + micromapCount (%" PRIu32 ") is greater than the number of queries in queryPool (%" PRIu32
+                         "({}"
+                         ") + micromapCount ({}"
+                         ") is greater than the number of queries in queryPool ({}"
                          ").",
                          firstQuery, micromapCount, query_pool_ci.queryCount);
     }

@@ -69,6 +69,22 @@
             ]
         },
         {
+            "name": "fmt",
+            "url": "https://github.com/fmtlib/fmt.git",
+            "sub_dir": "fmt",
+            "build_dir": "fmt/build",
+            "install_dir": "fmt/build/install",
+            "cmake_options": [
+                "-DFMT_TEST=OFF",
+                "-DFMT_DOC=OFF",
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            ],
+            "commit": "12.2.1",
+            "optional": [
+                "fmt"
+            ]
+        },
+        {
             "name": "googletest",
             "url": "https://github.com/google/googletest.git",
             "sub_dir": "googletest",
@@ -163,6 +179,7 @@
         "SPIRV-Tools": "SPIRV_TOOLS_INSTALL_DIR",
         "googletest": "GOOGLETEST_INSTALL_DIR",
         "mimalloc": "MIMALLOC_INSTALL_DIR",
+        "fmt": "FMT_INSTALL_DIR",
         "slang": "SLANG_INSTALL_DIR"
     }
 }

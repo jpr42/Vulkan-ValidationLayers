@@ -271,7 +271,7 @@ bool ErrorReporter::ReportEventError(const SyncEventState& event_state, const ch
         return false;
     }
     Collect(report);
-    return cb_context.GetSyncState().LogError(vuid, objlist, error_loc, "%s", message.c_str());
+    return cb_context.GetSyncState().LogError(vuid, objlist, error_loc, "{}", message.c_str());
 }
 
 ResourceUsageTag ErrorReporter::CommandTag() const {
@@ -1298,10 +1298,9 @@ uint32_t CommandBufferContext::GetViewMask() const {
 // VK_SYNCVAL_DEBUG_CMDBUF_PATTERN: (optional, empty string by default) pattern to match command buffer debug name
 void CommandBufferContext::CheckCommandTagDebugCheckpoint() {
     auto get_cmdbuf_name = [](const DebugReport& debug_report, uint64_t cmdbuf_handle) {
-        std::unique_lock<std::mutex> lock(debug_report.debug_output_mutex);
-        std::string object_name = debug_report.GetUtilsObjectNameNoLock(cmdbuf_handle);
+        std::string object_name = debug_report.GetUtilsObjectName(cmdbuf_handle);
         if (object_name.empty()) {
-            object_name = debug_report.GetMarkerObjectNameNoLock(cmdbuf_handle);
+            object_name = debug_report.GetMarkerObjectName(cmdbuf_handle);
         }
         text::ToLower(object_name);
         return object_name;
@@ -1312,8 +1311,9 @@ void CommandBufferContext::CheckCommandTagDebugCheckpoint() {
         const bool cmdbuf_match = pattern.empty() || (cmdbuf_name.find(pattern) != std::string::npos);
         if (cmdbuf_match) {
             sync_state_.LogInfo("SYNCVAL_DEBUG_COMMAND", LogObjectList(), Location(recording_->access_log.back().command),
-                                "Command stream has reached command #%" PRIu32 " in command buffer %s with reset count #%" PRIu32,
-                                sync_state_.debug_command_number, sync_state_.FormatHandle(cb_state_->Handle()).c_str(),
+                                "Command stream has reached command #{}"
+                                " in command buffer {} with reset count #{}",
+                                sync_state_.debug_command_number, sync_state_.Handle(cb_state_->Handle()),
                                 sync_state_.debug_reset_count);
         }
     }

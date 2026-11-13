@@ -733,16 +733,16 @@ bool VideoSessionDeviceState::ValidateRateControlState(const Logger& log, const 
         if (mismatch_recorder.HasMismatch()) {
             skip |= log.LogError("VUID-vkCmdBeginVideoCodingKHR-pBeginInfo-08254", vs_state->Handle(), loc,
                                  "The video encode rate control information specified when beginning the video coding scope "
-                                 "does not match the currently configured video encode rate control state for %s:\n%s",
-                                 log.FormatHandle(vs_state->Handle()).c_str(), mismatch_recorder.c_str());
+                                 "does not match the currently configured video encode rate control state for {}:\n{}",
+                                 log.Handle(vs_state->Handle()), mismatch_recorder.c_str());
         }
 
     } else {
         if (encode_.rate_control_state.base.rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR) {
             skip |= log.LogError("VUID-vkCmdBeginVideoCodingKHR-pBeginInfo-08253", vs_state->Handle(), loc,
                                  "No VkVideoEncodeRateControlInfoKHR structure was specified when beginning the "
-                                 "video coding scope but the currently set video encode rate control mode for %s is %s.",
-                                 log.FormatHandle(vs_state->Handle()).c_str(),
+                                 "video coding scope but the currently set video encode rate control mode for {} is {}.",
+                                 log.Handle(vs_state->Handle()),
                                  string_VkVideoEncodeRateControlModeFlagBitsKHR(encode_.rate_control_state.base.rateControlMode));
         }
     }

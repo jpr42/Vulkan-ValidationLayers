@@ -377,7 +377,7 @@ static inline std::string SpvExtensionRequirements(std::string_view extension) {
                     if (GetSpirvCapabilites().count(insn_capability) == 0) {
                         const char *vuid = pipeline ? "VUID-VkShaderModuleCreateInfo-pCode-08739" : "VUID-VkShaderCreateInfoEXT-pCode-08739";
                         skip |= LogError(vuid, module_state.handle(), loc,
-                            "SPIR-V has Capability (%s) declared, but this is not supported by Vulkan.", spv::CapabilityToString(static_cast<spv::Capability>(insn_capability)));
+                            "SPIR-V has Capability ({}) declared, but this is not supported by Vulkan.", spv::CapabilityToString(static_cast<spv::Capability>(insn_capability)));
                         return skip; // no known capability to validate
                     }
 
@@ -441,7 +441,7 @@ static inline std::string SpvExtensionRequirements(std::string_view extension) {
                 if (has_support == false) {
                     const char *vuid = pipeline ? "VUID-VkShaderModuleCreateInfo-pCode-08740" : "VUID-VkShaderCreateInfoEXT-pCode-08740";
                     skip |= LogError(vuid, module_state.handle(), loc,
-                        "SPIR-V Capability %s was declared, but one of the following requirements must be met (%s).", spv::CapabilityToString(static_cast<spv::Capability>(insn_capability)), SpvCapabilityRequirements(insn_capability));
+                        "SPIR-V Capability {} was declared, but one of the following requirements must be met ({}).", spv::CapabilityToString(static_cast<spv::Capability>(insn_capability)), SpvCapabilityRequirements(insn_capability));
                 }
 
                 // Portability checks
@@ -461,13 +461,13 @@ static inline std::string SpvExtensionRequirements(std::string_view extension) {
                     if (GetSpirvExtensions().count(extension_name) == 0) {
                         const char *vuid = pipeline ? "VUID-VkShaderModuleCreateInfo-pCode-08741" : "VUID-VkShaderCreateInfoEXT-pCode-08741";
                         skip |= LogError(vuid, module_state.handle(), loc,
-                            "SPIR-V Extension %s was declared, but that is not supported by Vulkan.", extension_name.c_str());
+                            "SPIR-V Extension {} was declared, but that is not supported by Vulkan.", extension_name.c_str());
                         return skip; // no known extension to validate
                     }
                 } else {
                     const char *vuid = pipeline ? "VUID-VkShaderModuleCreateInfo-pCode-08741" : "VUID-VkShaderCreateInfoEXT-pCode-08741";
                     skip |= LogError(vuid, module_state.handle(), loc,
-                        "SPIR-V Extension %s was declared, but this is not a SPIR-V extension. Please use a SPIR-V"
+                        "SPIR-V Extension {} was declared, but this is not a SPIR-V extension. Please use a SPIR-V"
                         " extension (https://github.com/KhronosGroup/SPIRV-Registry) for OpExtension instructions. Non-SPIR-V extensions can be"
                         " recorded in SPIR-V using the OpSourceExtension instruction.", extension_name.c_str());
                     return skip; // no known extension to validate
@@ -497,7 +497,7 @@ static inline std::string SpvExtensionRequirements(std::string_view extension) {
                 if (has_support == false) {
                     const char *vuid = pipeline ? "VUID-VkShaderModuleCreateInfo-pCode-08742" : "VUID-VkShaderCreateInfoEXT-pCode-08742";
                     skip |= LogError(vuid, module_state.handle(), loc,
-                        "SPIR-V Extension %s was declared, but one of the following requirements must be met (%s).", extension_name.c_str(), SpvExtensionRequirements(extension_name).c_str());
+                        "SPIR-V Extension {} was declared, but one of the following requirements must be met ({}).", extension_name.c_str(), SpvExtensionRequirements(extension_name).c_str());
                 }
             } //spv::OpExtension
             return skip;

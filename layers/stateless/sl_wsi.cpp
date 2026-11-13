@@ -86,25 +86,25 @@ bool Device::ValidateSwapchainCreateInfoMaintenance1(const VkSwapchainCreateInfo
         if (present_scaling_create_info->scalingBehavior != 0) {
             skip |= LogError("VUID-VkSwapchainPresentScalingCreateInfoKHR-swapchainMaintenance1-10154", device,
                              loc.pNext(Struct::VkSwapchainPresentScalingCreateInfoKHR, Field::scalingBehavior),
-                             "is %s, but the swapchainMaintenance1 feature was not enabled.",
-                             string_VkPresentScalingFlagsKHR(present_scaling_create_info->scalingBehavior).c_str());
+                             "is {}, but the swapchainMaintenance1 feature was not enabled.",
+                             vvl::Flags::PresentScalingFlagsKHR(present_scaling_create_info->scalingBehavior));
         } else if (present_scaling_create_info->presentGravityX != 0) {
             skip |= LogError("VUID-VkSwapchainPresentScalingCreateInfoKHR-swapchainMaintenance1-10154", device,
                              loc.pNext(Struct::VkSwapchainPresentScalingCreateInfoKHR, Field::presentGravityX),
-                             "is %s, but the swapchainMaintenance1 feature was not enabled.",
-                             string_VkPresentGravityFlagsKHR(present_scaling_create_info->presentGravityX).c_str());
+                             "is {}, but the swapchainMaintenance1 feature was not enabled.",
+                             vvl::Flags::PresentGravityFlagsKHR(present_scaling_create_info->presentGravityX));
         } else if (present_scaling_create_info->presentGravityY != 0) {
             skip |= LogError("VUID-VkSwapchainPresentScalingCreateInfoKHR-swapchainMaintenance1-10154", device,
                              loc.pNext(Struct::VkSwapchainPresentScalingCreateInfoKHR, Field::presentGravityY),
-                             "is %s, but the swapchainMaintenance1 feature was not enabled.",
-                             string_VkPresentGravityFlagsKHR(present_scaling_create_info->presentGravityY).c_str());
+                             "is {}, but the swapchainMaintenance1 feature was not enabled.",
+                             vvl::Flags::PresentGravityFlagsKHR(present_scaling_create_info->presentGravityY));
         }
     }
 
     if (create_info.flags & VK_SWAPCHAIN_CREATE_DEFERRED_MEMORY_ALLOCATION_BIT_EXT) {
         skip |= LogError("VUID-VkSwapchainCreateInfoKHR-swapchainMaintenance1-10157", device, loc.dot(Field::flags),
-                         "is %s, but the swapchainMaintenance1 feature was not enabled.",
-                         string_VkSwapchainCreateFlagsKHR(create_info.flags).c_str());
+                         "is {}, but the swapchainMaintenance1 feature was not enabled.",
+                         vvl::Flags::SwapchainCreateFlagsKHR(create_info.flags));
     }
 
     return skip;
@@ -119,7 +119,8 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
         // If imageSharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
         if (create_info.queueFamilyIndexCount <= 1) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-imageSharingMode-01278", device, loc.dot(Field::imageSharingMode),
-                             "is VK_SHARING_MODE_CONCURRENT, but queueFamilyIndexCount is %" PRIu32 ".",
+                             "is VK_SHARING_MODE_CONCURRENT, but queueFamilyIndexCount is {}"
+                             ".",
                              create_info.queueFamilyIndexCount);
         }
 
@@ -141,8 +142,9 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
         if (((create_info.flags & VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR) == 0) && (view_format_count > 1)) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-flags-04100", device,
                              loc.pNext(Struct::VkImageFormatListCreateInfo, Field::viewFormatCount),
-                             "is %" PRIu32 " but flags (%s) does not include VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR.",
-                             view_format_count, string_VkSwapchainCreateFlagsKHR(create_info.flags).c_str());
+                             "is {}"
+                             " but flags ({}) does not include VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR.",
+                             view_format_count, vvl::Flags::SwapchainCreateFlagsKHR(create_info.flags));
         }
 
         // Using the first format, compare the rest of the formats against it that they are compatible
@@ -151,7 +153,7 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
                 vkuFormatCompatibilityClass(format_list_info->pViewFormats[i])) {
                 skip |= LogError("VUID-VkSwapchainCreateInfoKHR-pNext-04099", device,
                                  loc.pNext(Struct::VkImageFormatListCreateInfo, Field::pViewFormats, i),
-                                 "(%s) and pViewFormats[0] (%s) are not compatible in the pNext chain.",
+                                 "({}) and pViewFormats[0] ({}) are not compatible in the pNext chain.",
                                  string_VkFormat(format_list_info->pViewFormats[i]),
                                  string_VkFormat(format_list_info->pViewFormats[0]));
             }
@@ -163,12 +165,12 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
         if (format_list_info == nullptr) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-flags-03168", device, loc.dot(Field::flags),
                              "includes VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR but the pNext chain does not contain an instance "
-                             "of VkImageFormatListCreateInfo.\n%s",
+                             "of VkImageFormatListCreateInfo.\n{}",
                              PrintPNextChain(Struct::VkSwapchainCreateInfoKHR, create_info.pNext).c_str());
         } else if (format_list_info->viewFormatCount == 0) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-flags-03168", device, loc.dot(Field::flags),
-                             "includes VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR but %s is zero.",
-                             loc.pNext(Struct::VkImageFormatListCreateInfo, Field::viewFormatCount).Fields().c_str());
+                             "includes VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR but {} is zero.",
+                             loc.pNext(Struct::VkImageFormatListCreateInfo, Field::viewFormatCount));
         } else {
             bool found_base_format = false;
             for (uint32_t i = 0; i < format_list_info->viewFormatCount; ++i) {
@@ -181,7 +183,7 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
                 skip |= LogError("VUID-VkSwapchainCreateInfoKHR-flags-03168", device, loc.dot(Field::flags),
                                  "includes VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR but none of the "
                                  "elements of the pViewFormats member of VkImageFormatListCreateInfo match "
-                                 "imageFormat (%s).",
+                                 "imageFormat ({}).",
                                  string_VkFormat(create_info.imageFormat));
             }
         }
@@ -189,7 +191,7 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
 
     if (create_info.presentMode == VK_PRESENT_MODE_FIFO_LATEST_READY_KHR && !enabled_features.presentModeFifoLatestReady) {
         skip |= LogError("VUID-VkSwapchainCreateInfoKHR-presentModeFifoLatestReady-10161", device, loc.dot(Field::presentMode),
-                         "is %s, but the presentModeFifoLatestReady feature was not enabled.",
+                         "is {}, but the presentModeFifoLatestReady feature was not enabled.",
                          string_VkPresentModeKHR(create_info.presentMode));
     }
 
@@ -222,17 +224,17 @@ bool Device::ValidateSwapchainCreateInfo(const Context& context, const VkSwapcha
     if (create_info.flags & VK_SWAPCHAIN_CREATE_PRESENT_TIMING_BIT_EXT) {
         if (!enabled_features.presentTiming && !enabled_features.presentAtAbsoluteTime && !enabled_features.presentAtRelativeTime) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-presentTiming-12232", device, loc.dot(Field::flags),
-                             "(%s) contains VK_SWAPCHAIN_CREATE_PRESENT_TIMING_BIT_EXT, but none of presentTiming, "
+                             "({}) contains VK_SWAPCHAIN_CREATE_PRESENT_TIMING_BIT_EXT, but none of presentTiming, "
                              "presentAtAbsoluteTime or presentAtRelativeTime features are enabled.",
-                             string_VkSwapchainCreateFlagsKHR(create_info.flags).c_str());
+                             vvl::Flags::SwapchainCreateFlagsKHR(create_info.flags));
         }
     }
 
     if (create_info.flags & VK_SWAPCHAIN_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT) {
         if (!enabled_features.multisampledRenderToSwapchain) {
             skip |= LogError("VUID-VkSwapchainCreateInfoKHR-multisampledRenderToSwapchain-12447", device, loc.dot(Field::flags),
-                             "is %s, but the multisampledRenderToSwapchain feature was not enabled.",
-                             string_VkSwapchainCreateFlagsKHR(create_info.flags).c_str());
+                             "is {}, but the multisampledRenderToSwapchain feature was not enabled.",
+                             vvl::Flags::SwapchainCreateFlagsKHR(create_info.flags));
         }
     }
 
@@ -297,16 +299,17 @@ bool Device::manual_PreCallValidateQueuePresentKHR(VkQueue queue, const VkPresen
     if (vku::FindStructInPNextChain<VkSwapchainPresentFenceInfoKHR>(pPresentInfo->pNext) &&
         !enabled_features.swapchainMaintenance1) {
         skip |= LogError("VUID-VkPresentInfoKHR-swapchainMaintenance1-10158", queue, present_info_loc.dot(Field::pNext),
-                         "contains VkSwapchainPresentFenceInfoKHR, but the swapchainMaintenance1 feature was not enabled.\n%s",
+                         "contains VkSwapchainPresentFenceInfoKHR, but the swapchainMaintenance1 feature was not enabled.\n{}",
                          PrintPNextChain(vvl::Struct::VkPresentInfoKHR, pPresentInfo->pNext).c_str());
     }
 
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
         for (uint32_t j = i + 1; j < pPresentInfo->swapchainCount; ++j) {
             if (pPresentInfo->pSwapchains[i] == pPresentInfo->pSwapchains[j]) {
-                skip |=
-                    LogError("VUID-VkPresentInfoKHR-pSwapchain-09231", queue, present_info_loc.dot(Field::pSwapchains, i),
-                             "and pSwapchains[%" PRIu32 "] are both %s.", j, FormatHandle(pPresentInfo->pSwapchains[i]).c_str());
+                skip |= LogError("VUID-VkPresentInfoKHR-pSwapchain-09231", queue, present_info_loc.dot(Field::pSwapchains, i),
+                                 "and pSwapchains[{}"
+                                 "] are both {}.",
+                                 j, Handle(pPresentInfo->pSwapchains[i]));
             }
         }
     }
@@ -318,7 +321,9 @@ bool Device::manual_PreCallValidateQueuePresentKHR(VkQueue queue, const VkPresen
         if (pPresentInfo->swapchainCount != present_times_info->swapchainCount) {
             skip |= LogError("VUID-VkPresentTimesInfoGOOGLE-swapchainCount-01247", queue,
                              present_info_loc.pNext(Struct::VkPresentTimesInfoGOOGLE, Field::swapchainCount),
-                             "(%" PRIu32 ") is not equal to VkPresentInfoKHR::swapchainCount (%" PRIu32 ").",
+                             "({}"
+                             ") is not equal to VkPresentInfoKHR::swapchainCount ({}"
+                             ").",
                              present_times_info->swapchainCount, pPresentInfo->swapchainCount);
         }
     }
@@ -343,7 +348,7 @@ bool Device::manual_PreCallValidateGetSwapchainTimeDomainPropertiesEXT(
     } else if (time_domains || time_domain_ids) {
         const char* msg = time_domains ? "pTimeDomains is not NULL, but pTimeDomainIds is NULL."
                                        : "pTimeDomainIds is not NULL, but pTimeDomains is NULL.";
-        skip |= LogError("VUID-VkSwapchainTimeDomainPropertiesEXT-pTimeDomains-12370", swapchain, properties_loc, "%s", msg);
+        skip |= LogError("VUID-VkSwapchainTimeDomainPropertiesEXT-pTimeDomains-12370", swapchain, properties_loc, "{}", msg);
     }
 
     return skip;
@@ -422,7 +427,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError("VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-02671", physicalDevice,
                              error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
                              "contains VkSurfaceCapabilitiesFullScreenExclusiveEXT, but pSurfaceInfo->pNext does not contain "
-                             "VkSurfaceFullScreenExclusiveWin32InfoEXT.\n%s",
+                             "VkSurfaceFullScreenExclusiveWin32InfoEXT.\n{}",
                              PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
     }
@@ -440,7 +445,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError("VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-07776", physicalDevice,
                              error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
                              "contains VkSurfacePresentModeCompatibilityKHR, but "
-                             "pSurfaceInfo->pNext does not contain a VkSurfacePresentModeKHR structure.\n%s",
+                             "pSurfaceInfo->pNext does not contain a VkSurfacePresentModeKHR structure.\n{}",
                              PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
 
@@ -448,7 +453,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError("VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-07777", physicalDevice,
                              error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
                              "contains VkSurfacePresentScalingCapabilitiesKHR, but "
-                             "pSurfaceInfo->pNext does not contain a VkSurfacePresentModeKHR structure.\n%s",
+                             "pSurfaceInfo->pNext does not contain a VkSurfacePresentModeKHR structure.\n{}",
                              PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
     }
@@ -458,7 +463,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError(
                 "VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-07778", physicalDevice,
                 error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
-                "contains a VkSurfacePresentModeCompatibilityKHR structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n%s",
+                "contains a VkSurfacePresentModeCompatibilityKHR structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n{}",
                 PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
 
@@ -466,7 +471,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError(
                 "VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-07779", physicalDevice,
                 error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
-                "contains a VkSurfacePresentScalingCapabilitiesKHR structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n%s",
+                "contains a VkSurfacePresentScalingCapabilitiesKHR structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n{}",
                 PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
 
@@ -474,7 +479,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceSurfaceCapabilities2KHR(Vk
             skip |= LogError(
                 "VUID-vkGetPhysicalDeviceSurfaceCapabilities2KHR-pNext-12446", physicalDevice,
                 error_obj.location.dot(Field::pSurfaceCapabilities).dot(Field::pNext),
-                "contains a VkSwapchainFlagsSurfaceCapabilitiesEXT structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n%s",
+                "contains a VkSwapchainFlagsSurfaceCapabilitiesEXT structure, but pSurfaceInfo->surface is VK_NULL_HANDLE.\n{}",
                 PrintPNextChain(Struct::VkSurfaceCapabilities2KHR, pSurfaceCapabilities->pNext).c_str());
         }
     }
@@ -711,7 +716,7 @@ bool Device::manual_PreCallValidateGetCalibratedTimestampsKHR(VkDevice device, u
             if (!swapchain_calibrated_timestamp_info) {
                 skip |= LogError("VUID-VkCalibratedTimestampInfoKHR-timeDomain-12227", device,
                                  context.error_obj.location.dot(Field::pTimestampInfos, i).dot(Field::timeDomain),
-                                 "is %s but pNext (%s) does not contain VkSwapchainCalibratedTimestampInfoEXT.",
+                                 "is {} but pNext ({}) does not contain VkSwapchainCalibratedTimestampInfoEXT.",
                                  string_VkTimeDomainKHR(pTimestampInfos[i].timeDomain),
                                  PrintPNextChain(Struct::VkCalibratedTimestampInfoKHR, pTimestampInfos[i].pNext).c_str());
             } else if (pTimestampInfos[i].timeDomain == VK_TIME_DOMAIN_PRESENT_STAGE_LOCAL_EXT) {
@@ -720,8 +725,7 @@ bool Device::manual_PreCallValidateGetCalibratedTimestampsKHR(VkDevice device, u
                                      context.error_obj.location.dot(Field::pTimestampInfos, i)
                                          .pNext(Struct::VkSwapchainCalibratedTimestampInfoEXT)
                                          .dot(Field::presentStage),
-                                     "is %s.",
-                                     string_VkPresentStageFlagsEXT(swapchain_calibrated_timestamp_info->presentStage).c_str());
+                                     "is {}.", vvl::Flags::PresentStageFlagsEXT(swapchain_calibrated_timestamp_info->presentStage));
                 }
             }
         }

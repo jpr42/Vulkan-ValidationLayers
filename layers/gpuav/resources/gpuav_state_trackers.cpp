@@ -400,7 +400,7 @@ void CommandBufferSubState::OnCompletion(VkQueue queue, gpuav::QueueSubmission& 
                     const LogObjectList objlist(queue, VkHandle());
                     gpuav_.LogError(
                         "GPUAV-Overflow-Unknown", queue, submission_loc,
-                        "An error was detected, but after internal limit of %" PRIu32
+                        "An error was detected, but after internal limit of {}"
                         " draw/dispatch/traceRays commands in a command buffer, we are unable to track which validation error "
                         "occurred.\nThis can be adjusted setting env var VK_LAYER_GPUAV_MAX_INDICES_COUNT to a higher value.",
                         gpuav_.gpuav_settings.invalid_index_command);

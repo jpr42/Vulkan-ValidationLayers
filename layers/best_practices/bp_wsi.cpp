@@ -100,7 +100,8 @@ bool BestPractices::PreCallValidateCreateSwapchainKHR(VkDevice device, const VkS
     if ((pCreateInfo->queueFamilyIndexCount > 1) && (pCreateInfo->imageSharingMode == VK_SHARING_MODE_EXCLUSIVE)) {
         skip |= LogWarning("BestPractices-vkCreateSwapchainKHR-sharing-mode-exclusive", device, error_obj.location,
                            "A Swapchain is being created which specifies a sharing mode of VK_SHARING_MODE_EXCLUSIVE while "
-                           "specifying multiple queues (queueFamilyIndexCount of %" PRIu32 ").",
+                           "specifying multiple queues (queueFamilyIndexCount of {}"
+                           ").",
                            pCreateInfo->queueFamilyIndexCount);
     }
 
@@ -110,7 +111,7 @@ bool BestPractices::PreCallValidateCreateSwapchainKHR(VkDevice device, const VkS
         (pCreateInfo->minImageCount == 2)) {
         skip |= LogPerformanceWarning(
             "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count", device, error_obj.location,
-            "A Swapchain is being created with minImageCount set to %" PRIu32
+            "A Swapchain is being created with minImageCount set to {}"
             ", which means double buffering is going "
             "to be used. Using double buffering and vsync locks rendering to an integer fraction of the vsync rate. In turn, "
             "reducing the performance of the application if rendering is slower than vsync. Consider setting minImageCount to "
@@ -130,7 +131,7 @@ bool BestPractices::PreCallValidateCreateSwapchainKHR(VkDevice device, const VkS
 
     if (VendorCheckEnabled(kBPVendorArm) && (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR)) {
         skip |= LogWarning("BestPractices-Arm-vkCreateSwapchainKHR-swapchain-presentmode-not-fifo", device, error_obj.location,
-                           "%s Swapchain is not being created with presentation mode \"VK_PRESENT_MODE_FIFO_KHR\". "
+                           "{} Swapchain is not being created with presentation mode \"VK_PRESENT_MODE_FIFO_KHR\". "
                            "Prefer using \"VK_PRESENT_MODE_FIFO_KHR\" to avoid unnecessary CPU and GPU load and save power. "
                            "Presentation modes which are not FIFO will present the latest available frame and discard other "
                            "frame(s) if any.",
@@ -152,7 +153,8 @@ bool BestPractices::PreCallValidateCreateSharedSwapchainsKHR(VkDevice device, ui
                                error_obj.location.dot(Field::pCreateInfos, i),
                                "A shared swapchain is being created which specifies a sharing mode of VK_SHARING_MODE_EXCLUSIVE "
                                "while specifying multiple "
-                               "queues (queueFamilyIndexCount of %" PRIu32 ").",
+                               "queues (queueFamilyIndexCount of {}"
+                               ").",
                                pCreateInfos[i].queueFamilyIndexCount);
         }
     }
@@ -169,10 +171,10 @@ void BestPractices::ManualPostCallRecordQueuePresentKHR(VkQueue queue, const VkP
                 "BestPractices-vkCreateSharedSwapchainsKHR-SuboptimalSwapchain", pPresentInfo->pSwapchains[i],
                 record_obj.location.dot(Field::pPresentInfo, i),
                 "VK_SUBOPTIMAL_KHR was returned. VK_SUBOPTIMAL_KHR - Presentation will still succeed, "
-                "subject to the window resize behavior, but the swapchain (%s) is no longer configured optimally for the surface "
+                "subject to the window resize behavior, but the swapchain ({}) is no longer configured optimally for the surface "
                 "it targets.\nApplications should query updated surface information and recreate their swapchain at the next "
                 "convenient opportunity.",
-                FormatHandle(pPresentInfo->pSwapchains[i]).c_str());
+                Handle(pPresentInfo->pSwapchains[i]));
         }
     }
 
@@ -191,11 +193,12 @@ bool bp_state::Instance::PreCallValidateGetPhysicalDeviceSurfaceFormatsKHR(VkPhy
     if (!bp_pd_state || !pSurfaceFormats) return skip;
 
     if (pSurfaceFormatCount && *pSurfaceFormatCount > bp_pd_state->surface_formats_count) {
-        skip |=
-            LogWarning("BestPractices-GetPhysicalDeviceSurfaceFormatsKHR-CountMismatch", physicalDevice,
-                       error_obj.location.dot(Field::pSurfaceFormatCount),
-                       "(%" PRIu32 ") is greater than the value (%" PRIu32 ") that was returned when pSurfaceFormatCount was NULL.",
-                       *pSurfaceFormatCount, bp_pd_state->surface_formats_count);
+        skip |= LogWarning("BestPractices-GetPhysicalDeviceSurfaceFormatsKHR-CountMismatch", physicalDevice,
+                           error_obj.location.dot(Field::pSurfaceFormatCount),
+                           "({}"
+                           ") is greater than the value ({}"
+                           ") that was returned when pSurfaceFormatCount was NULL.",
+                           *pSurfaceFormatCount, bp_pd_state->surface_formats_count);
     }
     return skip;
 }
@@ -208,10 +211,10 @@ bool BestPractices::PreCallValidateQueuePresentKHR(VkQueue queue, const VkPresen
         auto num = num_queue_submissions_.load();
         if (num > kNumberOfSubmissionWarningLimitAMD) {
             skip |= LogPerformanceWarning("BestPractices-Submission-ReduceNumberOfSubmissions", device, error_obj.location,
-                                          "%s command buffers submitted %" PRId32
+                                          "{} command buffers submitted {}"
                                           " times this frame. Submitting command buffers has a CPU "
                                           "and GPU overhead. Submit fewer times to incur less overhead.",
-                                          VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), num);
+                                          VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), static_cast<int>(num));
         }
     }
 

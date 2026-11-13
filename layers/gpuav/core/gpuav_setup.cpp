@@ -454,7 +454,7 @@ void Validator::InternalVmaError(LogObjectList objlist, VkResult result, const c
     const char* layer_name = gpuav_settings.debug_printf_only ? "DebugPrintf" : "GPU-AV";
     const char* vuid = gpuav_settings.debug_printf_only ? "UNASSIGNED-DEBUG-PRINTF" : "UNASSIGNED-GPU-Assisted-Validation";
 
-    LogError(vuid, objlist, Location(vvl::Func::Empty), "Internal VMA Error (%s), %s is being disabled. Details:\n%s",
+    LogError(vuid, objlist, Location(vvl::Func::Empty), "Internal VMA Error ({}), {} is being disabled. Details:\n{}",
              string_VkResult(result), layer_name, error_message.c_str());
 
     // Once we encounter an internal issue disconnect everything.

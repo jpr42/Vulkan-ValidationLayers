@@ -59,7 +59,9 @@ bool Device::manual_PreCallValidateCreateFramebuffer(VkDevice device, const VkFr
                 framebuffer_attachments_create_info->attachmentImageInfoCount != pCreateInfo->attachmentCount) {
                 skip |= LogError("VUID-VkFramebufferCreateInfo-flags-03191", device,
                                  create_info_loc.pNext(Struct::VkFramebufferAttachmentsCreateInfo, Field::attachmentImageInfoCount),
-                                 "is %" PRIu32 " which is not equal to pCreateInfo->attachmentCount (%" PRIu32 ").",
+                                 "is {}"
+                                 " which is not equal to pCreateInfo->attachmentCount ({}"
+                                 ").",
                                  framebuffer_attachments_create_info->attachmentImageInfoCount, pCreateInfo->attachmentCount);
             }
         }
@@ -78,18 +80,24 @@ bool Device::manual_PreCallValidateCreateFramebuffer(VkDevice device, const VkFr
 
     if (pCreateInfo->width > phys_dev_props.limits.maxFramebufferWidth) {
         skip |= LogError("VUID-VkFramebufferCreateInfo-width-00886", device, create_info_loc.dot(Field::width),
-                         "(%" PRIu32 ") is greater than maxFramebufferWidth (%" PRIu32 ").", pCreateInfo->width,
-                         phys_dev_props.limits.maxFramebufferWidth);
+                         "({}"
+                         ") is greater than maxFramebufferWidth ({}"
+                         ").",
+                         pCreateInfo->width, phys_dev_props.limits.maxFramebufferWidth);
     }
     if (pCreateInfo->height > phys_dev_props.limits.maxFramebufferHeight) {
         skip |= LogError("VUID-VkFramebufferCreateInfo-height-00888", device, create_info_loc.dot(Field::height),
-                         "(%" PRIu32 ") is greater than maxFramebufferHeight (%" PRIu32 ").", pCreateInfo->height,
-                         phys_dev_props.limits.maxFramebufferHeight);
+                         "({}"
+                         ") is greater than maxFramebufferHeight ({}"
+                         ").",
+                         pCreateInfo->height, phys_dev_props.limits.maxFramebufferHeight);
     }
     if (pCreateInfo->layers > phys_dev_props.limits.maxFramebufferLayers) {
         skip |= LogError("VUID-VkFramebufferCreateInfo-layers-00890", device, create_info_loc.dot(Field::layers),
-                         "(%" PRIu32 ") is greater than maxFramebufferLayers (%" PRIu32 ").", pCreateInfo->layers,
-                         phys_dev_props.limits.maxFramebufferLayers);
+                         "({}"
+                         ") is greater than maxFramebufferLayers ({}"
+                         ").",
+                         pCreateInfo->layers, phys_dev_props.limits.maxFramebufferLayers);
     }
 
     return skip;

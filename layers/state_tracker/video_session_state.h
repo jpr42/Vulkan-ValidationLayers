@@ -450,8 +450,12 @@ struct VideoEncodeRateControlLayerState {
 struct VideoEncodeRateControlState {
     bool default_state{true};
     VkVideoEncodeRateControlInfoKHR base;
+    // Zero-initialized: for codecs other than H.264, H.265 and AV1 the constructor writes none of these, and the
+    // object is still copied. Initializing h264 covers the whole union only while it is the largest member.
+    static_assert(sizeof(VkVideoEncodeH264RateControlInfoKHR) >= sizeof(VkVideoEncodeH265RateControlInfoKHR) &&
+                  sizeof(VkVideoEncodeH264RateControlInfoKHR) >= sizeof(VkVideoEncodeAV1RateControlInfoKHR));
     union {
-        VkVideoEncodeH264RateControlInfoKHR h264;
+        VkVideoEncodeH264RateControlInfoKHR h264{};
         VkVideoEncodeH265RateControlInfoKHR h265;
         VkVideoEncodeAV1RateControlInfoKHR av1;
     };

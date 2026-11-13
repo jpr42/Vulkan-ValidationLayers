@@ -100,7 +100,7 @@ class Context {
                 skip |= log.LogError(struct_vuid, error_obj.handle, loc, "is NULL.");
             }
         } else if (value->sType != sType) {
-            skip |= log.LogError(stype_vuid, error_obj.handle, loc.dot(Field::sType), "must be %s.", string_VkStructureType(sType));
+            skip |= log.LogError(stype_vuid, error_obj.handle, loc.dot(Field::sType), "must be {}.", string_VkStructureType(sType));
         }
 
         return skip;
@@ -119,7 +119,7 @@ class Context {
             // Verify that all structs in the array have the correct type
             for (uint32_t i = 0; i < count; ++i) {
                 if (array[i].sType != sType) {
-                    skip |= log.LogError(stype_vuid, error_obj.handle, array_loc.dot(i).dot(Field::sType), "must be %s",
+                    skip |= log.LogError(stype_vuid, error_obj.handle, array_loc.dot(i).dot(Field::sType), "must be {}",
                                          string_VkStructureType(sType));
                 }
             }
@@ -141,7 +141,7 @@ class Context {
             // Verify that all structs in the array have the correct type
             for (uint32_t i = 0; i < count; ++i) {
                 if (array[i]->sType != sType) {
-                    skip |= log.LogError(stype_vuid, error_obj.handle, array_loc.dot(i).dot(Field::sType), "must be %s",
+                    skip |= log.LogError(stype_vuid, error_obj.handle, array_loc.dot(i).dot(Field::sType), "must be {}",
                                          string_VkStructureType(sType));
                 }
             }
@@ -233,14 +233,14 @@ class Context {
 
         if (result == ValidValue::NotFound) {
             skip |= log.LogError(vuid, error_obj.handle, loc,
-                                 "(%" PRIu32
-                                 ") does not fall within the begin..end range of the %s enumeration tokens and is "
+                                 "({}"
+                                 ") does not fall within the begin..end range of the {} enumeration tokens and is "
                                  "not an extension added token.",
-                                 value, String(name));
+                                 static_cast<unsigned int>(value), String(name));
         } else if (result == ValidValue::NoExtension) {
             // If called from an instance function, there is no device to base extension support off of
             auto extensions = GetEnumExtensions(value);
-            skip |= log.LogError(vuid, error_obj.handle, loc, "(%s) requires the extensions %s.", DescribeEnum(value),
+            skip |= log.LogError(vuid, error_obj.handle, loc, "({}) requires the extensions {}.", DescribeEnum(value),
                                  String(extensions).c_str());
         }
 
@@ -261,15 +261,15 @@ class Context {
                 ValidValue result = IsValidEnumValue(array[i]);
                 if (result == ValidValue::NotFound) {
                     skip |= log.LogError(array_required_vuid, error_obj.handle, array_loc.dot(i),
-                                         "(%" PRIu32
-                                         ") does not fall within the begin..end range of the %s enumeration tokens and is "
+                                         "({}"
+                                         ") does not fall within the begin..end range of the {} enumeration tokens and is "
                                          "not an extension added token.",
-                                         array[i], String(name));
+                                         static_cast<unsigned int>(array[i]), String(name));
                 } else if (result == ValidValue::NoExtension) {
                     // If called from an instance function, there is no device to base extension support off of
                     auto extensions = GetEnumExtensions(array[i]);
                     skip |= log.LogError(array_required_vuid, error_obj.handle, array_loc.dot(i),
-                                         "(%s) requires the extensions %s.", DescribeEnum(array[i]), String(extensions).c_str());
+                                         "({}) requires the extensions {}.", DescribeEnum(array[i]), String(extensions).c_str());
                 }
             }
         }

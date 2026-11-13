@@ -136,15 +136,20 @@ bool CoreChecks::ValidateVideoInlineQueryInfo(const vvl::QueryPool& query_pool_s
 
     if (query_info.firstQuery >= query_pool_state.create_info.queryCount) {
         skip |= LogError("VUID-VkVideoInlineQueryInfoKHR-queryPool-08372", query_pool_state.Handle(), loc.dot(Field::firstQuery),
-                         "(%" PRIu32 ") is greater than or equal to the number of queries (%" PRIu32 ") in %s.",
-                         query_info.firstQuery, query_pool_state.create_info.queryCount, FormatHandle(query_pool_state).c_str());
+                         "({}"
+                         ") is greater than or equal to the number of queries ({}"
+                         ") in {}.",
+                         query_info.firstQuery, query_pool_state.create_info.queryCount, Handle(query_pool_state));
     }
 
     if (query_info.firstQuery + query_info.queryCount > query_pool_state.create_info.queryCount) {
         skip |= LogError("VUID-VkVideoInlineQueryInfoKHR-queryPool-08373", query_pool_state.Handle(), loc.dot(Field::firstQuery),
-                         "(%" PRIu32 ") plus queryCount (%" PRIu32 ") is greater than the number of queries (%" PRIu32 ") in %s.",
+                         "({}"
+                         ") plus queryCount ({}"
+                         ") is greater than the number of queries ({}"
+                         ") in {}.",
                          query_info.firstQuery, query_info.queryCount, query_pool_state.create_info.queryCount,
-                         FormatHandle(query_pool_state).c_str());
+                         Handle(query_pool_state));
     }
 
     return skip;
@@ -170,8 +175,9 @@ bool CoreChecks::ValidateVideoEncodeIntraRefreshInfo(const vvl::CommandBuffer& c
         if (encode_info.referenceSlotCount > profile_caps.encode_ext.intra_refresh.maxIntraRefreshActiveReferencePictures) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10838", objlist, encode_info_loc.dot(Field::referenceSlotCount),
-                             "(%" PRIu32 ") exceeds the maxIntraRefreshActiveReferencePictures (%" PRIu32
-                             ") supported by the video profile (%s).",
+                             "({}"
+                             ") exceeds the maxIntraRefreshActiveReferencePictures ({}"
+                             ") supported by the video profile ({}).",
                              encode_info.referenceSlotCount,
                              profile_caps.encode_ext.intra_refresh.maxIntraRefreshActiveReferencePictures,
                              string_VideoProfileDesc(*vs_state.profile).c_str());
@@ -180,14 +186,14 @@ bool CoreChecks::ValidateVideoEncodeIntraRefreshInfo(const vvl::CommandBuffer& c
         if (intra_refresh_info) {
             if (intra_refresh_info->intraRefreshCycleDuration == 0) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10840", cb_state.Handle(), encode_info_loc.dot(Field::flags),
-                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR but %s is zero.",
-                                 encode_info_loc.dot(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration)
-                                     .Fields()
-                                     .c_str());
+                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR but {} is zero.",
+                                 encode_info_loc.dot(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration));
             } else if (intra_refresh_info->intraRefreshIndex >= intra_refresh_info->intraRefreshCycleDuration) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10841", cb_state.Handle(),
                                  encode_info_loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshIndex),
-                                 "(%" PRIu32 ") is greater than or equal to intraRefreshCycleDuration (%" PRIu32 ").",
+                                 "({}"
+                                 ") is greater than or equal to intraRefreshCycleDuration ({}"
+                                 ").",
                                  intra_refresh_info->intraRefreshIndex, intra_refresh_info->intraRefreshCycleDuration);
             }
         } else {
@@ -202,8 +208,9 @@ bool CoreChecks::ValidateVideoEncodeIntraRefreshInfo(const vvl::CommandBuffer& c
         const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-10844", objlist,
                          encode_info_loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration),
-                         "(%" PRIu32 ") is not zero and not between 2 and the maxIntraRefreshCycleDuration (%" PRIu32
-                         ") supported by the video profile (%s).",
+                         "({}"
+                         ") is not zero and not between 2 and the maxIntraRefreshCycleDuration ({}"
+                         ") supported by the video profile ({}).",
                          intra_refresh_info->intraRefreshCycleDuration,
                          profile_caps.encode_ext.intra_refresh.maxIntraRefreshCycleDuration,
                          string_VideoProfileDesc(*vs_state.profile).c_str());
@@ -223,17 +230,19 @@ bool CoreChecks::ValidateVideoEncodeIntraRefreshInfo(const vvl::CommandBuffer& c
                     skip |= LogError(
                         "VUID-vkCmdEncodeVideoKHR-pNext-10843", cb_state.Handle(), reference_info_loc,
                         "specifies dirty intra refresh regions but does not refer to the previously intra refreshed frame, "
-                        "i.e. %s (%" PRIu32 ") does not equal intraRefreshCycleDuration (%" PRIu32
-                        ") minus intraRefreshIndex (%" PRIu32 ") specified in %s.",
-                        dirty_intra_refresh_regions_loc.Fields().c_str(), intra_refresh_reference_info->dirtyIntraRefreshRegions,
+                        "i.e. {} ({}"
+                        ") does not equal intraRefreshCycleDuration ({}"
+                        ") minus intraRefreshIndex ({}"
+                        ") specified in {}.",
+                        dirty_intra_refresh_regions_loc, intra_refresh_reference_info->dirtyIntraRefreshRegions,
                         intra_refresh_info->intraRefreshCycleDuration, intra_refresh_info->intraRefreshIndex,
-                        encode_info_loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR).Fields().c_str());
+                        encode_info_loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR));
                 }
             } else {
-                skip |= LogError(
-                    "VUID-vkCmdEncodeVideoKHR-pNext-10842", cb_state.Handle(), dirty_intra_refresh_regions_loc,
-                    "(%" PRIu32 ") is greater than zero, but %s does not include VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR.",
-                    intra_refresh_reference_info->dirtyIntraRefreshRegions, encode_info_loc.dot(Field::flags).Fields().c_str());
+                skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-10842", cb_state.Handle(), dirty_intra_refresh_regions_loc,
+                                 "({}"
+                                 ") is greater than zero, but {} does not include VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR.",
+                                 intra_refresh_reference_info->dirtyIntraRefreshRegions, encode_info_loc.dot(Field::flags));
             }
         }
     }
@@ -253,20 +262,23 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfo(const VkVideoEncodeRateContr
     if (rc_info.layerCount > profile_caps.encode.maxRateControlLayers) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-layerCount-08245", objlist, rc_info_loc.dot(Field::layerCount),
-                         "(%" PRIu32 ") is greater than the maxRateControlLayers (%" PRIu32
+                         "({}"
+                         ") is greater than the maxRateControlLayers ({}"
                          ") "
-                         "supported by the video profile (%s) %s was created with.",
+                         "supported by the video profile ({}) {} was created with.",
                          rc_info.layerCount, profile_caps.encode.maxRateControlLayers,
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if ((rc_info.rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR ||
          rc_info.rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR) &&
         rc_info.layerCount != 0) {
-        skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08248", cmdbuf,
-                         rc_info_loc.dot(Field::rateControlMode), "is %s, but %s (%" PRIu32 ") is not zero.",
-                         string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_info.rateControlMode),
-                         rc_info_loc.dot(Field::layerCount).Fields().c_str(), rc_info.layerCount);
+        skip |=
+            LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08248", cmdbuf, rc_info_loc.dot(Field::rateControlMode),
+                     "is {}, but {} ({}"
+                     ") is not zero.",
+                     string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_info.rateControlMode), rc_info_loc.dot(Field::layerCount),
+                     rc_info.layerCount);
     }
 
     if (rc_info.rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR ||
@@ -277,9 +289,9 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfo(const VkVideoEncodeRateContr
             }
         } else {
             skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08275", cmdbuf,
-                             rc_info_loc.dot(Field::rateControlMode), "is %s, but %s is zero.",
+                             rc_info_loc.dot(Field::rateControlMode), "is {}, but {} is zero.",
                              string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_info.rateControlMode),
-                             rc_info_loc.dot(Field::layerCount).Fields().c_str());
+                             rc_info_loc.dot(Field::layerCount));
         }
     }
 
@@ -305,25 +317,29 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfo(const VkVideoEncodeRateContr
             const LogObjectList objlist(cmdbuf, vs_state.Handle());
             skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08244", objlist,
                              rc_info_loc.dot(Field::rateControlMode),
-                             "(%s) is not supported by the video profile (%s) %s was created with.",
+                             "({}) is not supported by the video profile ({}) {} was created with.",
                              string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_info.rateControlMode),
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
     }
 
     if (rc_info.layerCount != 0) {
         if (rc_info.virtualBufferSizeInMs == 0) {
             skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-layerCount-08357", cmdbuf,
-                             rc_info_loc.dot(Field::virtualBufferSizeInMs), "must not be zero if %s (%" PRIu32 ") is not zero.",
-                             rc_info_loc.dot(Field::layerCount).Fields().c_str(), rc_info.layerCount);
+                             rc_info_loc.dot(Field::virtualBufferSizeInMs),
+                             "must not be zero if {} ({}"
+                             ") is not zero.",
+                             rc_info_loc.dot(Field::layerCount), rc_info.layerCount);
         }
         if (rc_info.initialVirtualBufferSizeInMs > rc_info.virtualBufferSizeInMs) {
             skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-layerCount-08358", cmdbuf,
                              rc_info_loc.dot(Field::initialVirtualBufferSizeInMs),
-                             "(%" PRIu32 ") must be less than or equal to virtualBufferSizeInMs (%" PRIu32 ") if %s (%" PRIu32
+                             "({}"
+                             ") must be less than or equal to virtualBufferSizeInMs ({}"
+                             ") if {} ({}"
                              ") is not zero.",
                              rc_info.initialVirtualBufferSizeInMs, rc_info.virtualBufferSizeInMs,
-                             rc_info_loc.dot(Field::layerCount).Fields().c_str(), rc_info.layerCount);
+                             rc_info_loc.dot(Field::layerCount), rc_info.layerCount);
         }
     }
 
@@ -347,53 +363,58 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfoH264(const VkVideoEncodeRateC
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-flags-08280", objlist, rc_info_h264_loc.dot(Field::flags),
                          "includes VK_VIDEO_ENCODE_H264_RATE_CONTROL_ATTEMPT_HRD_COMPLIANCE_BIT_KHR but HRD compliance "
-                         "is not supported by the video profile (%s) %s was created with.",
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "is not supported by the video profile ({}) {} was created with.",
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if ((rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REFERENCE_PATTERN_FLAT_BIT_KHR ||
          rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) &&
         (rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REGULAR_GOP_BIT_KHR) == 0) {
         skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-flags-08281", cmdbuf, rc_info_h264_loc.dot(Field::flags),
-                         "(%s) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
-                         string_VkVideoEncodeH264RateControlFlagsKHR(rc_info_h264->flags).c_str());
+                         "({}) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
+                         vvl::Flags::VideoEncodeH264RateControlFlagsKHR(rc_info_h264->flags));
     }
 
     if (rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REFERENCE_PATTERN_FLAT_BIT_KHR &&
         rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) {
         skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-flags-08282", cmdbuf, rc_info_h264_loc.dot(Field::flags),
-                         "(%s) indicates conflicting reference patterns.",
-                         string_VkVideoEncodeH264RateControlFlagsKHR(rc_info_h264->flags).c_str());
+                         "({}) indicates conflicting reference patterns.",
+                         vvl::Flags::VideoEncodeH264RateControlFlagsKHR(rc_info_h264->flags));
     }
 
     if (rc_info_h264->flags & VK_VIDEO_ENCODE_H264_RATE_CONTROL_REGULAR_GOP_BIT_KHR && rc_info_h264->gopFrameCount == 0) {
         skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-flags-08283", cmdbuf, rc_info_h264_loc.dot(Field::flags),
                          "includes VK_VIDEO_ENCODE_H264_RATE_CONTROL_REGULAR_GOP_BIT_KHR but the GOP size "
-                         "specified in %s is zero.",
-                         rc_info_h264_loc.dot(Field::gopFrameCount).Fields().c_str());
+                         "specified in {} is zero.",
+                         rc_info_h264_loc.dot(Field::gopFrameCount));
     }
 
     if (rc_info_h264->idrPeriod != 0 && rc_info_h264->idrPeriod < rc_info_h264->gopFrameCount) {
-        skip |= LogError(
-            "VUID-VkVideoEncodeH264RateControlInfoKHR-idrPeriod-08284", cmdbuf, rc_info_h264_loc.dot(Field::idrPeriod),
-            "(%" PRIu32 ") is not zero and the specified IDR period is smaller than the GOP size specified in %s (%" PRIu32 ").",
-            rc_info_h264->idrPeriod, rc_info_h264_loc.dot(Field::gopFrameCount).Fields().c_str(), rc_info_h264->gopFrameCount);
+        skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-idrPeriod-08284", cmdbuf, rc_info_h264_loc.dot(Field::idrPeriod),
+                         "({}"
+                         ") is not zero and the specified IDR period is smaller than the GOP size specified in {} ({}"
+                         ").",
+                         rc_info_h264->idrPeriod, rc_info_h264_loc.dot(Field::gopFrameCount), rc_info_h264->gopFrameCount);
     }
 
     if (rc_info_h264->consecutiveBFrameCount != 0 && rc_info_h264->consecutiveBFrameCount >= rc_info_h264->gopFrameCount) {
-        skip |= LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-consecutiveBFrameCount-08285", cmdbuf,
-                         rc_info_h264_loc.dot(Field::consecutiveBFrameCount),
-                         "(%" PRIu32 ") is greater than or equal to the GOP size specified in %s (%" PRIu32 ").",
-                         rc_info_h264->consecutiveBFrameCount, rc_info_h264_loc.dot(Field::gopFrameCount).Fields().c_str(),
-                         rc_info_h264->gopFrameCount);
+        skip |=
+            LogError("VUID-VkVideoEncodeH264RateControlInfoKHR-consecutiveBFrameCount-08285", cmdbuf,
+                     rc_info_h264_loc.dot(Field::consecutiveBFrameCount),
+                     "({}"
+                     ") is greater than or equal to the GOP size specified in {} ({}"
+                     ").",
+                     rc_info_h264->consecutiveBFrameCount, rc_info_h264_loc.dot(Field::gopFrameCount), rc_info_h264->gopFrameCount);
     }
 
     if (rc_info.layerCount > 1 && rc_info.layerCount != rc_info_h264->temporalLayerCount) {
-        skip |=
-            LogError("VUID-VkVideoEncodeRateControlInfoKHR-videoCodecOperation-07022", cmdbuf,
-                     rc_info_h264_loc.dot(Field::temporalLayerCount), "(%" PRIu32 ") does not match %s (%" PRIu32 ").",
-                     rc_info_h264->temporalLayerCount,
-                     loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount).Fields().c_str(), rc_info.layerCount);
+        skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-videoCodecOperation-07022", cmdbuf,
+                         rc_info_h264_loc.dot(Field::temporalLayerCount),
+                         "({}"
+                         ") does not match {} ({}"
+                         ").",
+                         rc_info_h264->temporalLayerCount, loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount),
+                         rc_info.layerCount);
     }
 
     return skip;
@@ -416,52 +437,57 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfoH265(const VkVideoEncodeRateC
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-flags-08291", objlist, rc_info_h265_loc.dot(Field::flags),
                          "includes VK_VIDEO_ENCODE_H265_RATE_CONTROL_ATTEMPT_HRD_COMPLIANCE_BIT_KHR but HRD compliance "
-                         "is not supported by the video profile (%s) %s was created with.",
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "is not supported by the video profile ({}) {} was created with.",
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if ((rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REFERENCE_PATTERN_FLAT_BIT_KHR ||
          rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) &&
         (rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REGULAR_GOP_BIT_KHR) == 0) {
         skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-flags-08292", cmdbuf, rc_info_h265_loc.dot(Field::flags),
-                         "(%s) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
-                         string_VkVideoEncodeH265RateControlFlagsKHR(rc_info_h265->flags).c_str());
+                         "({}) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
+                         vvl::Flags::VideoEncodeH265RateControlFlagsKHR(rc_info_h265->flags));
     }
 
     if (rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REFERENCE_PATTERN_FLAT_BIT_KHR &&
         rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) {
         skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-flags-08293", cmdbuf, rc_info_h265_loc.dot(Field::flags),
-                         "(%s) indicates conflicting reference patterns.",
-                         string_VkVideoEncodeH265RateControlFlagsKHR(rc_info_h265->flags).c_str());
+                         "({}) indicates conflicting reference patterns.",
+                         vvl::Flags::VideoEncodeH265RateControlFlagsKHR(rc_info_h265->flags));
     }
 
     if (rc_info_h265->flags & VK_VIDEO_ENCODE_H265_RATE_CONTROL_REGULAR_GOP_BIT_KHR && rc_info_h265->gopFrameCount == 0) {
         skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-flags-08294", cmdbuf, rc_info_h265_loc.dot(Field::flags),
                          "includes VK_VIDEO_ENCODE_H265_RATE_CONTROL_REGULAR_GOP_BIT_KHR but the GOP size "
-                         "specified in %s is zero.",
-                         rc_info_h265_loc.dot(Field::gopFrameCount).Fields().c_str());
+                         "specified in {} is zero.",
+                         rc_info_h265_loc.dot(Field::gopFrameCount));
     }
 
     if (rc_info_h265->idrPeriod != 0 && rc_info_h265->idrPeriod < rc_info_h265->gopFrameCount) {
-        skip |= LogError(
-            "VUID-VkVideoEncodeH265RateControlInfoKHR-idrPeriod-08295", cmdbuf, rc_info_h265_loc.dot(Field::idrPeriod),
-            "(%" PRIu32 ") is not zero and the specified IDR period is smaller than the GOP size specified in %s (%" PRIu32 ").",
-            rc_info_h265->idrPeriod, rc_info_h265_loc.dot(Field::gopFrameCount).Fields().c_str(), rc_info_h265->gopFrameCount);
+        skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-idrPeriod-08295", cmdbuf, rc_info_h265_loc.dot(Field::idrPeriod),
+                         "({}"
+                         ") is not zero and the specified IDR period is smaller than the GOP size specified in {} ({}"
+                         ").",
+                         rc_info_h265->idrPeriod, rc_info_h265_loc.dot(Field::gopFrameCount), rc_info_h265->gopFrameCount);
     }
 
     if (rc_info_h265->consecutiveBFrameCount != 0 && rc_info_h265->consecutiveBFrameCount >= rc_info_h265->gopFrameCount) {
-        skip |= LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-consecutiveBFrameCount-08296", cmdbuf,
-                         rc_info_h265_loc.dot(Field::consecutiveBFrameCount),
-                         "(%" PRIu32 ") is greater than or equal to the GOP size specified in %s (%" PRIu32 ").",
-                         rc_info_h265->consecutiveBFrameCount, rc_info_h265_loc.dot(Field::gopFrameCount).Fields().c_str(),
-                         rc_info_h265->gopFrameCount);
+        skip |=
+            LogError("VUID-VkVideoEncodeH265RateControlInfoKHR-consecutiveBFrameCount-08296", cmdbuf,
+                     rc_info_h265_loc.dot(Field::consecutiveBFrameCount),
+                     "({}"
+                     ") is greater than or equal to the GOP size specified in {} ({}"
+                     ").",
+                     rc_info_h265->consecutiveBFrameCount, rc_info_h265_loc.dot(Field::gopFrameCount), rc_info_h265->gopFrameCount);
     }
 
     if (rc_info.layerCount > 1 && rc_info.layerCount != rc_info_h265->subLayerCount) {
         skip |= LogError(
             "VUID-VkVideoEncodeRateControlInfoKHR-videoCodecOperation-07025", cmdbuf, rc_info_h265_loc.dot(Field::subLayerCount),
-            "(%" PRIu32 ") does not match %s (%" PRIu32 ").", rc_info_h265->subLayerCount,
-            loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount).Fields().c_str(), rc_info.layerCount);
+            "({}"
+            ") does not match {} ({}"
+            ").",
+            rc_info_h265->subLayerCount, loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount), rc_info.layerCount);
     }
 
     return skip;
@@ -483,57 +509,63 @@ bool CoreChecks::ValidateVideoEncodeRateControlInfoAV1(const VkVideoEncodeRateCo
          rc_info_av1->flags & VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) &&
         (rc_info_av1->flags & VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REGULAR_GOP_BIT_KHR) == 0) {
         skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-flags-10294", cmdbuf, rc_info_av1_loc.dot(Field::flags),
-                         "(%s) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
-                         string_VkVideoEncodeAV1RateControlFlagsKHR(rc_info_av1->flags).c_str());
+                         "({}) specifies a reference pattern but does not indicate the use of a regular GOP structure.",
+                         vvl::Flags::VideoEncodeAV1RateControlFlagsKHR(rc_info_av1->flags));
     }
 
     if (rc_info_av1->flags & VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REFERENCE_PATTERN_FLAT_BIT_KHR &&
         rc_info_av1->flags & VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REFERENCE_PATTERN_DYADIC_BIT_KHR) {
         skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-flags-10295", cmdbuf, rc_info_av1_loc.dot(Field::flags),
-                         "(%s) indicates conflicting reference patterns.",
-                         string_VkVideoEncodeAV1RateControlFlagsKHR(rc_info_av1->flags).c_str());
+                         "({}) indicates conflicting reference patterns.",
+                         vvl::Flags::VideoEncodeAV1RateControlFlagsKHR(rc_info_av1->flags));
     }
 
     if (rc_info_av1->flags & VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REGULAR_GOP_BIT_KHR && rc_info_av1->gopFrameCount == 0) {
         skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-flags-10296", cmdbuf, rc_info_av1_loc.dot(Field::flags),
                          "includes VK_VIDEO_ENCODE_AV1_RATE_CONTROL_REGULAR_GOP_BIT_KHR but the GOP size "
-                         "specified in %s is zero.",
-                         rc_info_av1_loc.dot(Field::gopFrameCount).Fields().c_str());
+                         "specified in {} is zero.",
+                         rc_info_av1_loc.dot(Field::gopFrameCount));
     }
 
     if (rc_info_av1->keyFramePeriod != 0 && rc_info_av1->keyFramePeriod < rc_info_av1->gopFrameCount) {
-        skip |= LogError(
-            "VUID-VkVideoEncodeAV1RateControlInfoKHR-keyFramePeriod-10297", cmdbuf, rc_info_av1_loc.dot(Field::keyFramePeriod),
-            "(%" PRIu32 ") is not zero and the specified key frame period is smaller than the GOP size specified in %s (%" PRIu32
-            ").",
-            rc_info_av1->keyFramePeriod, rc_info_av1_loc.dot(Field::gopFrameCount).Fields().c_str(), rc_info_av1->gopFrameCount);
+        skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-keyFramePeriod-10297", cmdbuf,
+                         rc_info_av1_loc.dot(Field::keyFramePeriod),
+                         "({}"
+                         ") is not zero and the specified key frame period is smaller than the GOP size specified in {} ({}"
+                         ").",
+                         rc_info_av1->keyFramePeriod, rc_info_av1_loc.dot(Field::gopFrameCount), rc_info_av1->gopFrameCount);
     }
 
     if (rc_info_av1->consecutiveBipredictiveFrameCount != 0 &&
         rc_info_av1->consecutiveBipredictiveFrameCount >= rc_info_av1->gopFrameCount) {
         skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-consecutiveBipredictiveFrameCount-10298", cmdbuf,
                          rc_info_av1_loc.dot(Field::consecutiveBipredictiveFrameCount),
-                         "(%" PRIu32 ") is greater than or equal to the GOP size specified in %s (%" PRIu32 ").",
-                         rc_info_av1->consecutiveBipredictiveFrameCount, rc_info_av1_loc.dot(Field::gopFrameCount).Fields().c_str(),
+                         "({}"
+                         ") is greater than or equal to the GOP size specified in {} ({}"
+                         ").",
+                         rc_info_av1->consecutiveBipredictiveFrameCount, rc_info_av1_loc.dot(Field::gopFrameCount),
                          rc_info_av1->gopFrameCount);
     }
 
     if (rc_info_av1->temporalLayerCount > profile_caps.encode_av1.maxTemporalLayerCount) {
         skip |= LogError("VUID-VkVideoEncodeAV1RateControlInfoKHR-temporalLayerCount-10299", cmdbuf,
                          rc_info_av1_loc.dot(Field::temporalLayerCount),
-                         "(%" PRIu32 ") is greater than the VkVideoEncodeAV1Capabilities::maxTemporalLayerCount (%" PRIu32
+                         "({}"
+                         ") is greater than the VkVideoEncodeAV1Capabilities::maxTemporalLayerCount ({}"
                          ") "
-                         "supported by the video profile (%s) the bound video session %s was created with.",
+                         "supported by the video profile ({}) the bound video session {} was created with.",
                          rc_info_av1->temporalLayerCount, profile_caps.encode_av1.maxTemporalLayerCount,
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if (rc_info.layerCount > 1 && rc_info.layerCount != rc_info_av1->temporalLayerCount) {
-        skip |=
-            LogError("VUID-VkVideoEncodeRateControlInfoKHR-videoCodecOperation-10351", cmdbuf,
-                     rc_info_av1_loc.dot(Field::temporalLayerCount), "(%" PRIu32 ") does not match %s (%" PRIu32 ").",
-                     rc_info_av1->temporalLayerCount,
-                     loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount).Fields().c_str(), rc_info.layerCount);
+        skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-videoCodecOperation-10351", cmdbuf,
+                         rc_info_av1_loc.dot(Field::temporalLayerCount),
+                         "({}"
+                         ") does not match {} ({}"
+                         ").",
+                         rc_info_av1->temporalLayerCount, loc.pNext(Struct::VkVideoEncodeRateControlInfoKHR, Field::layerCount),
+                         rc_info.layerCount);
     }
 
     return skip;
@@ -553,37 +585,41 @@ bool CoreChecks::ValidateVideoEncodeRateControlLayerInfo(uint32_t layer_index, c
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |=
             LogError("VUID-VkVideoEncodeRateControlInfoKHR-pLayers-08276", objlist, rc_layer_info_loc.dot(Field::averageBitrate),
-                     "(%" PRIu64 ") must be between 1 and VkVideoEncodeCapabilitiesKHR::maxBitrate (%" PRIu64
-                     ") limit supported by the video profile (%s) %s was created with.",
+                     "({}"
+                     ") must be between 1 and VkVideoEncodeCapabilitiesKHR::maxBitrate ({}"
+                     ") limit supported by the video profile ({}) {} was created with.",
                      rc_layer_info.averageBitrate, profile_caps.encode.maxBitrate,
-                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if (rc_layer_info.maxBitrate < 1 || rc_layer_info.maxBitrate > profile_caps.encode.maxBitrate) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |= LogError("VUID-VkVideoEncodeRateControlInfoKHR-pLayers-08277", objlist, rc_layer_info_loc.dot(Field::maxBitrate),
-                         "(%" PRIu64 ") must be between 1 and VkVideoEncodeCapabilitiesKHR::maxBitrate (%" PRIu64
-                         ") limit supported by the video profile (%s) %s was created with.",
+                         "({}"
+                         ") must be between 1 and VkVideoEncodeCapabilitiesKHR::maxBitrate ({}"
+                         ") limit supported by the video profile ({}) {} was created with.",
                          rc_layer_info.maxBitrate, profile_caps.encode.maxBitrate,
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if (rc_info.rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR &&
         rc_layer_info.averageBitrate != rc_layer_info.maxBitrate) {
         skip |=
             LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08356", cmdbuf, rc_info_loc.dot(Field::rateControlMode),
-                     "is VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR but maxBitrate (%" PRIu64
-                     ") is not equal to averageBitrate (%" PRIu64 ") in %s.",
-                     rc_layer_info.maxBitrate, rc_layer_info.averageBitrate, rc_layer_info_loc.Fields().c_str());
+                     "is VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR but maxBitrate ({}"
+                     ") is not equal to averageBitrate ({}"
+                     ") in {}.",
+                     rc_layer_info.maxBitrate, rc_layer_info.averageBitrate, rc_layer_info_loc);
     }
 
     if (rc_info.rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR &&
         rc_layer_info.averageBitrate > rc_layer_info.maxBitrate) {
         skip |=
             LogError("VUID-VkVideoEncodeRateControlInfoKHR-rateControlMode-08278", cmdbuf, rc_info_loc.dot(Field::rateControlMode),
-                     "is VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR but averageBitrate (%" PRIu64
-                     ") is greater than maxBitrate (%" PRIu64 ") in %s.",
-                     rc_layer_info.averageBitrate, rc_layer_info.maxBitrate, rc_layer_info_loc.Fields().c_str());
+                     "is VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR but averageBitrate ({}"
+                     ") is greater than maxBitrate ({}"
+                     ") in {}.",
+                     rc_layer_info.averageBitrate, rc_layer_info.maxBitrate, rc_layer_info_loc);
     }
 
     if (rc_layer_info.frameRateNumerator == 0) {
@@ -629,20 +665,20 @@ bool CoreChecks::ValidateVideoEncodeRateControlH26xQp(VkCommandBuffer cmdbuf, co
     auto qp_range_error = [&](const char* vuid, const Location& field_loc, int32_t value) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         return LogError(vuid, objlist, field_loc,
-                        "(%d) is outside of the range [%d, %d] supported by the video profile (%s) %s was created with.", value,
-                        min_qp, max_qp, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                        "({}) is outside of the range [{}, {}] supported by the video profile ({}) {} was created with.", value,
+                        min_qp, max_qp, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     };
 
     auto qp_per_pic_type_error = [&](const char* vuid, const Location& struct_loc, int32_t qp_i, int32_t qp_p, int32_t qp_b) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         return LogError(vuid, objlist, struct_loc,
-                        "contains non-matching QP values (qpI = %d, qpP = %d, qpB = %d) but different QP values per "
-                        "picture type are not supported by the video profile (%s) %s was created with.",
-                        qp_i, qp_p, qp_b, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                        "contains non-matching QP values (qpI = {}, qpP = {}, qpB = {}) but different QP values per "
+                        "picture type are not supported by the video profile ({}) {} was created with.",
+                        qp_i, qp_p, qp_b, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     };
 
     auto min_max_qp_compare_error = [&](const char* which, int32_t min_value, int32_t max_value) {
-        return LogError(min_max_qp_compare_vuid, cmdbuf, loc, "minQp.%s (%d) is greater than maxQp.%s (%d).", which, min_value,
+        return LogError(min_max_qp_compare_vuid, cmdbuf, loc, "minQp.{} ({}) is greater than maxQp.{} ({}).", which, min_value,
                         which, max_value);
     };
 
@@ -715,28 +751,32 @@ bool CoreChecks::ValidateVideoEncodeRateControlAV1QIndex(VkCommandBuffer cmdbuf,
     auto q_index_range_error = [&](const char* vuid, const Location& field_loc, uint32_t value) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         return LogError(vuid, objlist, field_loc,
-                        "(%" PRIu32 ") is outside of the range [%" PRIu32 ", %" PRIu32
-                        "] supported by the video profile (%s) %s was created with.",
-                        value, min_q_index, max_q_index, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                        FormatHandle(vs_state).c_str());
+                        "({}"
+                        ") is outside of the range [{}"
+                        ", {}"
+                        "] supported by the video profile ({}) {} was created with.",
+                        value, min_q_index, max_q_index, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     };
 
     auto q_index_per_rc_group_error = [&](const char* vuid, const Location& struct_loc, uint32_t qi_i, uint32_t qi_p,
                                           uint32_t qi_b) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         return LogError(vuid, objlist, struct_loc,
-                        "contains non-matching quantizer index values (intraQIndex = %" PRIu32 ", predictiveQIndex = %" PRIu32
+                        "contains non-matching quantizer index values (intraQIndex = {}"
+                        ", predictiveQIndex = {}"
                         ", "
-                        "bipredictiveQIndex = %" PRIu32
+                        "bipredictiveQIndex = {}"
                         ") but different quantizer index values per rate control "
-                        "group are not supported by the video profile (%s) %s was created with.",
-                        qi_i, qi_p, qi_b, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                        "group are not supported by the video profile ({}) {} was created with.",
+                        qi_i, qi_p, qi_b, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     };
 
     auto min_max_q_index_compare_error = [&](const char* which, uint32_t min_value, uint32_t max_value) {
         return LogError(min_max_q_index_compare_vuid, cmdbuf, loc,
-                        "minQIndex.%s (%" PRIu32 ") is greater than maxQIndex.%s (%" PRIu32 ").", which, min_value, which,
-                        max_value);
+                        "minQIndex.{} ({}"
+                        ") is greater than maxQIndex.{} ({}"
+                        ").",
+                        which, min_value, which, max_value);
     };
 
     if (rc_layer_info.useMinQIndex) {
@@ -902,7 +942,7 @@ bool CoreChecks::ValidateVideoPictureResource(const vvl::VideoPictureResource& p
             const LogObjectList objlist(cmdbuf, vs_state.Handle());
             skip |=
                 LogError(coded_offset_vuid, objlist, loc.dot(Field::codedOffset),
-                         "(%s) is not an integer multiple of the codedOffsetGranularity (%s).",
+                         "({}) is not an integer multiple of the codedOffsetGranularity ({}).",
                          string_VkOffset2D(picture_resource.coded_offset).c_str(), string_VkOffset2D(offset_granularity).c_str());
         }
     }
@@ -911,9 +951,9 @@ bool CoreChecks::ValidateVideoPictureResource(const vvl::VideoPictureResource& p
         !IsBetweenInclusive(picture_resource.coded_extent, profile_caps.base.minCodedExtent, vs_state.create_info.maxCodedExtent)) {
         const LogObjectList objlist(cmdbuf, vs_state.Handle());
         skip |= LogError(
-            coded_extent_vuid, objlist, loc.dot(Field::codedExtent), "(%s) is outside of the range (%s)-(%s) supported by %s.",
+            coded_extent_vuid, objlist, loc.dot(Field::codedExtent), "({}) is outside of the range ({})-({}) supported by {}.",
             string_VkExtent2D(picture_resource.coded_extent).c_str(), string_VkExtent2D(profile_caps.base.minCodedExtent).c_str(),
-            string_VkExtent2D(vs_state.create_info.maxCodedExtent).c_str(), FormatHandle(vs_state).c_str());
+            string_VkExtent2D(vs_state.create_info.maxCodedExtent).c_str(), Handle(vs_state));
     }
 
     if (picture_resource.base_array_layer >= picture_resource.image_view_state->normalized_subresource_range.layerCount) {
@@ -921,11 +961,12 @@ bool CoreChecks::ValidateVideoPictureResource(const vvl::VideoPictureResource& p
                                     picture_resource.image_state->Handle());
         skip |=
             LogError("VUID-VkVideoPictureResourceInfoKHR-baseArrayLayer-07175", objlist, loc.dot(Field::baseArrayLayer),
-                     "(%" PRIu32 ") is greater than or equal to the layerCount (%" PRIu32
+                     "({}"
+                     ") is greater than or equal to the layerCount ({}"
                      ") "
-                     "the %s specified in imageViewBinding was created with.",
+                     "the {} specified in imageViewBinding was created with.",
                      picture_resource.base_array_layer, picture_resource.image_view_state->normalized_subresource_range.layerCount,
-                     FormatHandle(picture_resource.image_view_state->Handle()).c_str());
+                     Handle(picture_resource.image_view_state->Handle()));
     }
 
     return skip;
@@ -938,8 +979,8 @@ bool core::ValidateVideoProfileInfo(const StateObject& state, const VkVideoProfi
 
     bool skip = false;
 
-    const char* profile_pnext_msg = "chain does not contain a %s structure.";
-    const char* codec_feature_not_enabled_msg = "is %s but the %s device feature is not enabled.";
+    constexpr const char* profile_pnext_msg = "chain does not contain a {} structure.";
+    constexpr const char* codec_feature_not_enabled_msg = "is {} but the {} device feature is not enabled.";
     (void)codec_feature_not_enabled_msg;
 
     if (CountSetBits(profile->chromaSubsampling) != 1) {
@@ -1110,7 +1151,7 @@ bool core::ValidateVideoProfileInfo(const StateObject& state, const VkVideoProfi
             }
             skip |= state.LogError(vuid, error_obj.objlist, loc.dot(Field::pNext),
                                    "chain contains a VkVideoEncodeProfileRgbConversionInfoVALVE structure but the "
-                                   "videoEncodeRgbConversion device feature is not enabled.\n%s",
+                                   "videoEncodeRgbConversion device feature is not enabled.\n{}",
                                    PrintPNextChain(vvl::Struct::VkVideoProfileInfoKHR, profile->pNext).c_str());
         }
     }
@@ -1216,8 +1257,9 @@ bool CoreChecks::ValidateDecodeH264ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdSPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-07204", device, loc.function,
-                             "number of H.264 SPS entries to add (%zu) is larger than "
-                             "VkVideoDecodeH264SessionParametersCreateInfoKHR::maxStdSPSCount (%" PRIu32 ").",
+                             "number of H.264 SPS entries to add ({}) is larger than "
+                             "VkVideoDecodeH264SessionParametersCreateInfoKHR::maxStdSPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdSPSCount);
         }
     }
@@ -1245,8 +1287,9 @@ bool CoreChecks::ValidateDecodeH264ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdPPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-07205", device, loc.function,
-                             "number of H.264 PPS entries to add (%zu) is larger than "
-                             "VkVideoDecodeH264SessionParametersCreateInfoKHR::maxStdPPSCount (%" PRIu32 ").",
+                             "number of H.264 PPS entries to add ({}) is larger than "
+                             "VkVideoDecodeH264SessionParametersCreateInfoKHR::maxStdPPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdPPSCount);
         }
     }
@@ -1285,8 +1328,9 @@ bool CoreChecks::ValidateDecodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdVPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-07207", device, loc.function,
-                             "number of H.265 VPS entries to add (%zu) is larger than "
-                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdVPSCount (%" PRIu32 ").",
+                             "number of H.265 VPS entries to add ({}) is larger than "
+                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdVPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdVPSCount);
         }
     }
@@ -1314,8 +1358,9 @@ bool CoreChecks::ValidateDecodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdSPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-07208", device, loc.function,
-                             "number of H.265 SPS entries to add (%zu) is larger than "
-                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdSPSCount (%" PRIu32 ").",
+                             "number of H.265 SPS entries to add ({}) is larger than "
+                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdSPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdSPSCount);
         }
     }
@@ -1343,8 +1388,9 @@ bool CoreChecks::ValidateDecodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdPPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-07209", device, loc.function,
-                             "number of H.265 PPS entries to add (%zu) is larger than "
-                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdPPSCount (%" PRIu32 ").",
+                             "number of H.265 PPS entries to add ({}) is larger than "
+                             "VkVideoDecodeH265SessionParametersCreateInfoKHR::maxStdPPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdPPSCount);
         }
     }
@@ -1383,8 +1429,9 @@ bool CoreChecks::ValidateEncodeH264ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdSPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-04839", device, loc.function,
-                             "number of H.264 SPS entries to add (%zu) is larger than "
-                             "VkVideoEncodeH264SessionParametersCreateInfoKHR::maxStdSPSCount (%" PRIu32 ").",
+                             "number of H.264 SPS entries to add ({}) is larger than "
+                             "VkVideoEncodeH264SessionParametersCreateInfoKHR::maxStdSPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdSPSCount);
         }
     }
@@ -1412,8 +1459,9 @@ bool CoreChecks::ValidateEncodeH264ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdPPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-04840", device, loc.function,
-                             "number of H.264 PPS entries to add (%zu) is larger than "
-                             "VkVideoEncodeH264SessionParametersCreateInfoKHR::maxStdPPSCount (%" PRIu32 ").",
+                             "number of H.264 PPS entries to add ({}) is larger than "
+                             "VkVideoEncodeH264SessionParametersCreateInfoKHR::maxStdPPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdPPSCount);
         }
     }
@@ -1452,8 +1500,9 @@ bool CoreChecks::ValidateEncodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdVPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-04841", device, loc.function,
-                             "number of H.265 VPS entries to add (%zu) is larger than "
-                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdVPSCount (%" PRIu32 ").",
+                             "number of H.265 VPS entries to add ({}) is larger than "
+                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdVPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdVPSCount);
         }
     }
@@ -1481,8 +1530,9 @@ bool CoreChecks::ValidateEncodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdSPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-04842", device, loc.function,
-                             "number of H.265 SPS entries to add (%zu) is larger than "
-                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdSPSCount (%" PRIu32 ").",
+                             "number of H.265 SPS entries to add ({}) is larger than "
+                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdSPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdSPSCount);
         }
     }
@@ -1510,8 +1560,9 @@ bool CoreChecks::ValidateEncodeH265ParametersAddInfo(const vvl::VideoSession& vs
         }
         if (keys.size() > create_info->maxStdPPSCount) {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-04843", device, loc.function,
-                             "number of H.265 PPS entries to add (%zu) is larger than "
-                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdPPSCount (%" PRIu32 ").",
+                             "number of H.265 PPS entries to add ({}) is larger than "
+                             "VkVideoEncodeH265SessionParametersCreateInfoKHR::maxStdPPSCount ({}"
+                             ").",
                              keys.size(), create_info->maxStdPPSCount);
         }
     }
@@ -1531,12 +1582,13 @@ bool CoreChecks::ValidateEncodeH265ParametersAddInfo(const vvl::VideoSession& vs
                     vuid = "VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-08321";
                 }
                 skip |= LogError(vuid, device, loc.function,
-                                 "%s.num_tile_columns_minus1 (%" PRIu32 ") is greater than or equal to the maxTiles.width (%" PRIu32
+                                 "{}.num_tile_columns_minus1 ({}"
+                                 ") is greater than or equal to the maxTiles.width ({}"
                                  ") "
-                                 "supported by the video profile (%s) %s was created with.",
-                                 loc.dot(Field::pStdPPSs, i).Fields().c_str(), add_info->pStdPPSs[i].num_tile_columns_minus1,
+                                 "supported by the video profile ({}) {} was created with.",
+                                 loc.dot(Field::pStdPPSs, i), static_cast<uint32_t>(add_info->pStdPPSs[i].num_tile_columns_minus1),
                                  profile_caps.encode_h265.maxTiles.width, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                 FormatHandle(vs_state).c_str());
+                                 Handle(vs_state));
             }
             if (add_info->pStdPPSs[i].num_tile_rows_minus1 >= profile_caps.encode_h265.maxTiles.height) {
                 const char* vuid = nullptr;
@@ -1548,12 +1600,13 @@ bool CoreChecks::ValidateEncodeH265ParametersAddInfo(const vvl::VideoSession& vs
                     vuid = "VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-08322";
                 }
                 skip |= LogError(vuid, device, loc.function,
-                                 "%s.num_tile_rows_minus1 (%" PRIu32 ") is greater than or equal to the maxTiles.height (%" PRIu32
+                                 "{}.num_tile_rows_minus1 ({}"
+                                 ") is greater than or equal to the maxTiles.height ({}"
                                  ") "
-                                 "supported by the video profile (%s) %s was created with.",
-                                 loc.dot(Field::pStdPPSs, i).Fields().c_str(), add_info->pStdPPSs[i].num_tile_rows_minus1,
+                                 "supported by the video profile ({}) {} was created with.",
+                                 loc.dot(Field::pStdPPSs, i), static_cast<uint32_t>(add_info->pStdPPSs[i].num_tile_rows_minus1),
                                  profile_caps.encode_h265.maxTiles.height, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                 FormatHandle(vs_state).c_str());
+                                 Handle(vs_state));
             }
         }
     }
@@ -1585,7 +1638,7 @@ bool CoreChecks::ValidateEncodeQuantizationMapParametersCreateInfo(
     if (supported_texel_sizes != nullptr && supported_texel_sizes->find(texel_size) == supported_texel_sizes->end()) {
         const LogObjectList objlist(device, vs_state.Handle());
         skip |= LogError(texel_size_vuid, objlist, loc.dot(Field::quantizationMapTexelSize),
-                         "(%s) does not match any of the %s texel sizes supported for the video profile (%s) "
+                         "({}) does not match any of the {} texel sizes supported for the video profile ({}) "
                          "pCreateInfo->videoSession was created with.",
                          string_VkExtent2D(texel_size).c_str(), quant_map_type_name,
                          string_VideoProfileDesc(*vs_state.profile).c_str());
@@ -1598,7 +1651,7 @@ bool CoreChecks::ValidateEncodeQuantizationMapParametersCreateInfo(
         const LogObjectList objlist(device, template_state->Handle());
         skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-10276", objlist,
                          loc.dot(Field::quantizationMapTexelSize),
-                         "(%s) does not match the quantization map texel size (%s) "
+                         "({}) does not match the quantization map texel size ({}) "
                          "pCreateInfo->videoSessionParametersTemplate was created with.",
                          string_VkExtent2D(texel_size).c_str(),
                          string_VkExtent2D(template_state->GetEncodeQuantizationMapTexelSize()).c_str());
@@ -1625,31 +1678,31 @@ bool CoreChecks::ValidateDecodeDistinctOutput(const vvl::CommandBuffer& cb_state
                     (picture_info && picture_info->pStdPictureInfo && picture_info->pStdPictureInfo->flags.apply_grain);
                 if (!vs_state.profile->HasAV1FilmGrainSupport()) {
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07141", objlist, cmd_loc,
-                                     "the video profile (%s) %s was created with does not support "
+                                     "the video profile ({}) {} was created with does not support "
                                      "VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR and does not have "
                                      "VkVideoDecodeAV1ProfileInfoKHR::filmGrainSupport set to VK_TRUE but "
                                      "pDecodeInfo->dstPictureResource and pSetupReferenceSlot->pPictureResource "
                                      "do not match.",
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 } else if (!film_grain_enabled) {
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07141", objlist, cmd_loc,
-                                     "the video profile (%s) %s was created with does not support "
+                                     "the video profile ({}) {} was created with does not support "
                                      "VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR and "
                                      "film grain is not enabled for the decoded picture but "
                                      "pDecodeInfo->dstPictureResource and pSetupReferenceSlot->pPictureResource "
                                      "do not match.",
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
                 break;
             }
 
             default: {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07141", objlist, cmd_loc,
-                                 "the video profile (%s) %s was created with does not support "
+                                 "the video profile ({}) {} was created with does not support "
                                  "VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR but "
                                  "pDecodeInfo->dstPictureResource and pSetupReferenceSlot->pPictureResource "
                                  "do not match.",
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
     }
@@ -1661,7 +1714,7 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                                              const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     const auto& vs_state = *cb_state.bound_video_session;
 
@@ -1680,14 +1733,14 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
     if (needs_bound_session_params && !has_bound_session_params) {
         if (inline_session_params_enabled) {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10400", cb_state.Handle(), loc.function,
-                             "not all H.264 decode parameter sets are specified inline through %s "
+                             "not all H.264 decode parameter sets are specified inline through {} "
                              "but there is no bound video session parameters object.",
-                             loc.pNext(Struct::VkVideoDecodeH264InlineSessionParametersInfoKHR).Fields().c_str());
+                             loc.pNext(Struct::VkVideoDecodeH264InlineSessionParametersInfoKHR));
         } else {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10400", cb_state.Handle(), loc.function,
-                             "%s was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
+                             "{} was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
                              "but there is no bound video session parameters object.",
-                             FormatHandle(vs_state).c_str());
+                             Handle(vs_state));
         }
     }
 
@@ -1703,15 +1756,17 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-07258", objlist, loc.function,
                              "decode output picture is a field but the bound video session "
-                             "%s was not created with interlaced frame support.",
-                             FormatHandle(vs_state).c_str());
+                             "{} was not created with interlaced frame support.",
+                             Handle(vs_state));
         }
 
         for (uint32_t i = 0; i < picture_info->sliceCount; ++i) {
             if (picture_info->pSliceOffsets[i] >= decode_info.srcBufferRange) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pSliceOffsets-07153", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH264PictureInfoKHR, Field::pSliceOffsets, i),
-                                 "(%" PRIu32 ") is greater than or equal to pDecodeInfo->srcBufferRange (%" PRIu64 ").",
+                                 "({}"
+                                 ") is greater than or equal to pDecodeInfo->srcBufferRange ({}"
+                                 ").",
                                  picture_info->pSliceOffsets[i], decode_info.srcBufferRange);
             }
         }
@@ -1720,10 +1775,11 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
             if (inline_session_params->pStdSPS->seq_parameter_set_id != std_picture_info->seq_parameter_set_id) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-10401", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH264InlineSessionParametersInfoKHR, Field::pStdSPS),
-                                 "seq_parameter_set_id (%" PRIu32 ") does not match the seq_parameter_set_id (%" PRIu32
-                                 ") specified in %s.",
-                                 inline_session_params->pStdSPS->seq_parameter_set_id, std_picture_info->seq_parameter_set_id,
-                                 std_picture_info_loc.Fields().c_str());
+                                 "seq_parameter_set_id ({}"
+                                 ") does not match the seq_parameter_set_id ({}"
+                                 ") specified in {}.",
+                                 static_cast<uint32_t>(inline_session_params->pStdSPS->seq_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->seq_parameter_set_id), std_picture_info_loc);
             }
         }
 
@@ -1732,12 +1788,16 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                 inline_session_params->pStdPPS->pic_parameter_set_id != std_picture_info->pic_parameter_set_id) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-10402", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH264InlineSessionParametersInfoKHR, Field::pStdPPS),
-                                 "seq_parameter_set_id (%" PRIu32 ") and pic_parameter_set_id (%" PRIu32
+                                 "seq_parameter_set_id ({}"
+                                 ") and pic_parameter_set_id ({}"
                                  ") do not match the "
-                                 "seq_parameter_set_id (%" PRIu32 ") and pic_parameter_set_id (%" PRIu32 ") specified in %s.",
-                                 inline_session_params->pStdPPS->seq_parameter_set_id,
-                                 inline_session_params->pStdPPS->pic_parameter_set_id, std_picture_info->seq_parameter_set_id,
-                                 std_picture_info->pic_parameter_set_id, std_picture_info_loc.Fields().c_str());
+                                 "seq_parameter_set_id ({}"
+                                 ") and pic_parameter_set_id ({}"
+                                 ") specified in {}.",
+                                 static_cast<uint32_t>(inline_session_params->pStdPPS->seq_parameter_set_id),
+                                 static_cast<uint32_t>(inline_session_params->pStdPPS->pic_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->seq_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->pic_parameter_set_id), std_picture_info_loc);
             }
         }
 
@@ -1753,10 +1813,10 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                         : "and the bound video session was not created with "
                           "VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR";
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH264SequenceParameterSet-07154", objlist, loc.function,
-                                 "no H.264 SPS with seq_parameter_set_id = %" PRIu32
+                                 "no H.264 SPS with seq_parameter_set_id = {}"
                                  " "
-                                 "exists in the bound video session parameters object %s %s.",
-                                 std_picture_info->seq_parameter_set_id, FormatHandle(vsp_state).c_str(), additional_info);
+                                 "exists in the bound video session parameters object {} {}.",
+                                 static_cast<uint32_t>(std_picture_info->seq_parameter_set_id), Handle(vsp_state), additional_info);
             }
 
             if (!has_inline_pps && session_params.GetH264PPS(std_picture_info->seq_parameter_set_id,
@@ -1768,13 +1828,13 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                           "structure in the pNext chain of pDecodeInfo with a non-null pStdPPS"
                         : "and the bound video session was not created with "
                           "VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR";
-                skip |=
-                    LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH264PictureParameterSet-07155", objlist, loc.function,
-                             "no H.264 PPS with seq_parameter_set_id = %" PRIu32
-                             " "
-                             "and pic_parameter_set_id = %" PRIu32 " exists in the bound video session parameters object %s %s.",
-                             std_picture_info->seq_parameter_set_id, std_picture_info->pic_parameter_set_id,
-                             FormatHandle(vsp_state).c_str(), additional_info);
+                skip |= LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH264PictureParameterSet-07155", objlist, loc.function,
+                                 "no H.264 PPS with seq_parameter_set_id = {}"
+                                 " "
+                                 "and pic_parameter_set_id = {}"
+                                 " exists in the bound video session parameters object {} {}.",
+                                 static_cast<uint32_t>(std_picture_info->seq_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->pic_parameter_set_id), Handle(vsp_state), additional_info);
             }
         }
     } else {
@@ -1790,8 +1850,8 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07259", objlist, loc.function,
                                  "reconstructed picture is a field but the bound "
-                                 "video session %s was not created with interlaced frame support.",
-                                 FormatHandle(vs_state).c_str());
+                                 "video session {} was not created with interlaced frame support.",
+                                 Handle(vs_state));
             }
 
             if (picture_info) {
@@ -1830,10 +1890,10 @@ bool CoreChecks::ValidateVideoDecodeInfoH264(const vvl::CommandBuffer& cb_state,
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07260", objlist, loc.function,
                                  "reference picture specified in "
-                                 "pDecodeInfo->pReferenceSlots[%" PRIu32
+                                 "pDecodeInfo->pReferenceSlots[{}"
                                  "] is a field but the bound "
-                                 "video session %s was not created with interlaced frame support.",
-                                 i, FormatHandle(vs_state).c_str());
+                                 "video session {} was not created with interlaced frame support.",
+                                 i, Handle(vs_state));
             }
         } else {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-07157", cb_state.Handle(),
@@ -1848,7 +1908,7 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
                                              const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     const auto& vs_state = *cb_state.bound_video_session;
 
@@ -1869,14 +1929,14 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
     if (needs_bound_session_params && !has_bound_session_params) {
         if (inline_session_params_enabled) {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10403", cb_state.Handle(), loc.function,
-                             "not all H.265 decode parameter sets are specified inline through %s "
+                             "not all H.265 decode parameter sets are specified inline through {} "
                              "but there is no bound video session parameters object.",
-                             loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR).Fields().c_str());
+                             loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR));
         } else {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10403", cb_state.Handle(), loc.function,
-                             "%s was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
+                             "{} was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
                              "but there is no bound video session parameters object.",
-                             FormatHandle(vs_state).c_str());
+                             Handle(vs_state));
         }
     }
 
@@ -1889,7 +1949,9 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
             if (picture_info->pSliceSegmentOffsets[i] >= decode_info.srcBufferRange) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pSliceSegmentOffsets-07159", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH265PictureInfoKHR, Field::pSliceSegmentOffsets, i),
-                                 "(%" PRIu32 ") is greater than or equal to pDecodeInfo->srcBufferRange (%" PRIu64 ").",
+                                 "({}"
+                                 ") is greater than or equal to pDecodeInfo->srcBufferRange ({}"
+                                 ").",
                                  picture_info->pSliceSegmentOffsets[i], decode_info.srcBufferRange);
             }
         }
@@ -1898,25 +1960,29 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
             if (inline_session_params->pStdVPS->vps_video_parameter_set_id != std_picture_info->sps_video_parameter_set_id) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-10404", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR, Field::pStdVPS),
-                                 "vps_video_parameter_set_id (%" PRIu32 ") does not match the sps_video_parameter_set_id (%" PRIu32
-                                 ") specified in %s.",
-                                 inline_session_params->pStdVPS->vps_video_parameter_set_id,
-                                 std_picture_info->sps_video_parameter_set_id, std_picture_info_loc.Fields().c_str());
+                                 "vps_video_parameter_set_id ({}"
+                                 ") does not match the sps_video_parameter_set_id ({}"
+                                 ") specified in {}.",
+                                 static_cast<uint32_t>(inline_session_params->pStdVPS->vps_video_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id), std_picture_info_loc);
             }
         }
 
         if (has_inline_sps) {
             if (inline_session_params->pStdSPS->sps_video_parameter_set_id != std_picture_info->sps_video_parameter_set_id ||
                 inline_session_params->pStdSPS->sps_seq_parameter_set_id != std_picture_info->pps_seq_parameter_set_id) {
-                skip |=
-                    LogError("VUID-vkCmdDecodeVideoKHR-pNext-10405", cb_state.Handle(),
-                             loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR, Field::pStdSPS),
-                             "sps_video_parameter_set_id (%" PRIu32 ") and sps_seq_parameter_set_id (%" PRIu32
-                             ") do not match the "
-                             "sps_video_parameter_set_id (%" PRIu32 ") and pps_seq_parameter_set_id (%" PRIu32 ") specified in %s.",
-                             inline_session_params->pStdSPS->sps_video_parameter_set_id,
-                             inline_session_params->pStdSPS->sps_seq_parameter_set_id, std_picture_info->sps_video_parameter_set_id,
-                             std_picture_info->pps_seq_parameter_set_id, std_picture_info_loc.Fields().c_str());
+                skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-10405", cb_state.Handle(),
+                                 loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR, Field::pStdSPS),
+                                 "sps_video_parameter_set_id ({}"
+                                 ") and sps_seq_parameter_set_id ({}"
+                                 ") do not match the "
+                                 "sps_video_parameter_set_id ({}"
+                                 ") and pps_seq_parameter_set_id ({}"
+                                 ") specified in {}.",
+                                 static_cast<uint32_t>(inline_session_params->pStdSPS->sps_video_parameter_set_id),
+                                 static_cast<uint32_t>(inline_session_params->pStdSPS->sps_seq_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id), std_picture_info_loc);
             }
         }
 
@@ -1926,19 +1992,22 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
                 inline_session_params->pStdPPS->pps_pic_parameter_set_id != std_picture_info->pps_pic_parameter_set_id) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-10406", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeH265InlineSessionParametersInfoKHR, Field::pStdPPS),
-                                 "sps_video_parameter_set_id (%" PRIu32 "), pps_seq_parameter_set_id (%" PRIu32
-                                 ") and pps_pic_parameter_set_id (%" PRIu32
+                                 "sps_video_parameter_set_id ({}"
+                                 "), pps_seq_parameter_set_id ({}"
+                                 ") and pps_pic_parameter_set_id ({}"
                                  ") "
                                  "do not match the "
-                                 "sps_video_parameter_set_id (%" PRIu32 "), pps_seq_parameter_set_id (%" PRIu32
-                                 ") and pps_pic_parameter_set_id (%" PRIu32
+                                 "sps_video_parameter_set_id ({}"
+                                 "), pps_seq_parameter_set_id ({}"
+                                 ") and pps_pic_parameter_set_id ({}"
                                  ") "
-                                 "specified in %s.",
-                                 inline_session_params->pStdPPS->sps_video_parameter_set_id,
-                                 inline_session_params->pStdPPS->pps_seq_parameter_set_id,
-                                 inline_session_params->pStdPPS->pps_pic_parameter_set_id,
-                                 std_picture_info->sps_video_parameter_set_id, std_picture_info->pps_seq_parameter_set_id,
-                                 std_picture_info->pps_pic_parameter_set_id, std_picture_info_loc.Fields().c_str());
+                                 "specified in {}.",
+                                 static_cast<uint32_t>(inline_session_params->pStdPPS->sps_video_parameter_set_id),
+                                 static_cast<uint32_t>(inline_session_params->pStdPPS->pps_seq_parameter_set_id),
+                                 static_cast<uint32_t>(inline_session_params->pStdPPS->pps_pic_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id),
+                                 static_cast<uint32_t>(std_picture_info->pps_pic_parameter_set_id), std_picture_info_loc);
             }
         }
 
@@ -1955,10 +2024,11 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
                         : "and the bound video session was not created with "
                           "VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR";
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH265VideoParameterSet-07160", objlist, loc.function,
-                                 "no H.265 VPS with sps_video_parameter_set_id = %" PRIu32
+                                 "no H.265 VPS with sps_video_parameter_set_id = {}"
                                  " "
-                                 "exists in the bound video session parameters object %s %s.",
-                                 std_picture_info->sps_video_parameter_set_id, FormatHandle(vsp_state).c_str(), additional_info);
+                                 "exists in the bound video session parameters object {} {}.",
+                                 static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id), Handle(vsp_state),
+                                 additional_info);
             }
 
             if (!has_inline_sps && session_params.GetH265SPS(std_picture_info->sps_video_parameter_set_id,
@@ -1970,14 +2040,15 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
                           "structure in the pNext chain of pDecodeInfo with a non-null pStdSPS"
                         : "and the bound video session was not created with "
                           "VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR";
-                skip |= LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH265SequenceParameterSet-07161", objlist, loc.function,
-                                 "no H.265 SPS with sps_video_parameter_set_id = %" PRIu32
-                                 " "
-                                 "and pps_seq_parameter_set_id = %" PRIu32
-                                 " exists in the bound video session "
-                                 "parameters object %s %s.",
-                                 std_picture_info->sps_video_parameter_set_id, std_picture_info->pps_seq_parameter_set_id,
-                                 FormatHandle(vsp_state).c_str(), additional_info);
+                skip |=
+                    LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH265SequenceParameterSet-07161", objlist, loc.function,
+                             "no H.265 SPS with sps_video_parameter_set_id = {}"
+                             " "
+                             "and pps_seq_parameter_set_id = {}"
+                             " exists in the bound video session "
+                             "parameters object {} {}.",
+                             static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id), Handle(vsp_state), additional_info);
             }
 
             if (!has_inline_pps &&
@@ -1990,14 +2061,17 @@ bool CoreChecks::ValidateVideoDecodeInfoH265(const vvl::CommandBuffer& cb_state,
                           "structure in the pNext chain of pDecodeInfo with a non-null pStdPPS"
                         : "and the bound video session was not created with "
                           "VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR";
-                skip |= LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH265PictureParameterSet-07162", objlist, loc.function,
-                                 "no H.265 SPS with sps_video_parameter_set_id = %" PRIu32
-                                 ", "
-                                 "pps_seq_parameter_set_id = %" PRIu32 ", and pps_pic_parameter_set_id = %" PRIu32
-                                 " exists in "
-                                 "the bound video session parameters object %s %s.",
-                                 std_picture_info->sps_video_parameter_set_id, std_picture_info->pps_seq_parameter_set_id,
-                                 std_picture_info->pps_pic_parameter_set_id, FormatHandle(vsp_state).c_str(), additional_info);
+                skip |=
+                    LogError("VUID-vkCmdDecodeVideoKHR-StdVideoH265PictureParameterSet-07162", objlist, loc.function,
+                             "no H.265 SPS with sps_video_parameter_set_id = {}"
+                             ", "
+                             "pps_seq_parameter_set_id = {}"
+                             ", and pps_pic_parameter_set_id = {}"
+                             " exists in "
+                             "the bound video session parameters object {} {}.",
+                             static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_pic_parameter_set_id), Handle(vsp_state), additional_info);
             }
         }
     } else {
@@ -2028,8 +2102,11 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                                             const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
-    const char* src_buffer_range_msg = "(%" PRIu32 ") is greater than or equal to pDecodeInfo->srcBufferRange (%" PRIu64 ").";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
+    constexpr const char* src_buffer_range_msg =
+        "({}"
+        ") is greater than or equal to pDecodeInfo->srcBufferRange ({}"
+        ").";
 
     const auto& vs_state = *cb_state.bound_video_session;
 
@@ -2046,14 +2123,14 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
     if (needs_bound_session_params && !has_bound_session_params) {
         if (inline_session_params_enabled) {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10407", cb_state.Handle(), loc.function,
-                             "no AV1 sequence header was specified through %s "
+                             "no AV1 sequence header was specified through {} "
                              "but there is no bound video session parameters object.",
-                             loc.pNext(Struct::VkVideoDecodeAV1InlineSessionParametersInfoKHR).Fields().c_str());
+                             loc.pNext(Struct::VkVideoDecodeAV1InlineSessionParametersInfoKHR));
         } else {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-10407", cb_state.Handle(), loc.function,
-                             "%s was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
+                             "{} was created without VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR "
                              "but there is no bound video session parameters object.",
-                             FormatHandle(vs_state).c_str());
+                             Handle(vs_state));
         }
     }
 
@@ -2084,8 +2161,8 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             if (!vs_state.profile->HasAV1FilmGrainSupport()) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-filmGrainSupport-09248", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeAV1PictureInfoKHR, Field::pStdPictureInfo),
-                                 "has flags.apply_grain set but %s was created with video profile %s",
-                                 FormatHandle(vs_state).c_str(), string_VideoProfileDesc(*vs_state.profile).c_str());
+                                 "has flags.apply_grain set but {} was created with video profile {}", Handle(vs_state),
+                                 string_VideoProfileDesc(*vs_state.profile).c_str());
             }
 
             if (decode_info.pSetupReferenceSlot != nullptr && decode_info.pSetupReferenceSlot->pPictureResource != nullptr) {
@@ -2106,7 +2183,7 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 if (reference_slot_indices.find(picture_info->referenceNameSlotIndices[i]) == reference_slot_indices.end()) {
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-referenceNameSlotIndices-09262", cb_state.Handle(),
                                      loc.pNext(Struct::VkVideoDecodeAV1PictureInfoKHR, Field::referenceNameSlotIndices, i),
-                                     "(%d) does not match the slotIndex of any of the elements of pDecodeInfo->pReferenceSlots.",
+                                     "({}) does not match the slotIndex of any of the elements of pDecodeInfo->pReferenceSlots.",
                                      picture_info->referenceNameSlotIndices[i]);
                 }
 
@@ -2117,7 +2194,7 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
         for (uint32_t i = 0; i < decode_info.referenceSlotCount; ++i) {
             if (reference_name_slot_indices.find(decode_info.pReferenceSlots[i].slotIndex) == reference_name_slot_indices.end()) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-slotIndex-09263", cb_state.Handle(), loc.dot(Field::pReferenceSlots, i),
-                                 "(%d) does not match any of the elements of "
+                                 "({}) does not match any of the elements of "
                                  "VkVideoDecodeAV1PictureInfoKHR::referenceNameSlotIndices.",
                                  decode_info.pReferenceSlots[i].slotIndex);
             }
@@ -2140,8 +2217,11 @@ bool CoreChecks::ValidateVideoDecodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 decode_info.srcBufferRange) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pTileOffsets-09252", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoDecodeAV1PictureInfoKHR, Field::pTileOffsets, i),
-                                 "(%" PRIu32 ") plus pTileSizes[%" PRIu32 "] (%" PRIu32
-                                 ") is greater than pDecodeInfo->srcBufferRange (%" PRIu64 ").",
+                                 "({}"
+                                 ") plus pTileSizes[{}"
+                                 "] ({}"
+                                 ") is greater than pDecodeInfo->srcBufferRange ({}"
+                                 ").",
                                  picture_info->pTileOffsets[i], i, picture_info->pTileSizes[i], decode_info.srcBufferRange);
             }
         }
@@ -2157,8 +2237,11 @@ bool CoreChecks::ValidateVideoDecodeInfoVP9(const vvl::CommandBuffer& cb_state, 
                                             const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
-    const char* src_buffer_range_msg = "(%" PRIu32 ") is greater than or equal to pDecodeInfo->srcBufferRange (%" PRIu64 ").";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
+    constexpr const char* src_buffer_range_msg =
+        "({}"
+        ") is greater than or equal to pDecodeInfo->srcBufferRange ({}"
+        ").";
 
     vvl::unordered_set<int32_t> reference_slot_indices{};
     for (uint32_t i = 0; i < decode_info.referenceSlotCount; ++i) {
@@ -2191,7 +2274,7 @@ bool CoreChecks::ValidateVideoDecodeInfoVP9(const vvl::CommandBuffer& cb_state, 
                 if (reference_slot_indices.find(picture_info->referenceNameSlotIndices[i]) == reference_slot_indices.end()) {
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-referenceNameSlotIndices-10809", cb_state.Handle(),
                                      loc.pNext(Struct::VkVideoDecodeVP9PictureInfoKHR, Field::referenceNameSlotIndices, i),
-                                     "(%d) does not match the slotIndex of any of the elements of pDecodeInfo->pReferenceSlots.",
+                                     "({}) does not match the slotIndex of any of the elements of pDecodeInfo->pReferenceSlots.",
                                      picture_info->referenceNameSlotIndices[i]);
                 }
 
@@ -2202,7 +2285,7 @@ bool CoreChecks::ValidateVideoDecodeInfoVP9(const vvl::CommandBuffer& cb_state, 
         for (uint32_t i = 0; i < decode_info.referenceSlotCount; ++i) {
             if (reference_name_slot_indices.find(decode_info.pReferenceSlots[i].slotIndex) == reference_name_slot_indices.end()) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-slotIndex-10810", cb_state.Handle(), loc.dot(Field::pReferenceSlots, i),
-                                 "(%d) does not match any of the elements of "
+                                 "({}) does not match any of the elements of "
                                  "VkVideoDecodeVP9PictureInfoKHR::referenceNameSlotIndices.",
                                  decode_info.pReferenceSlots[i].slotIndex);
             }
@@ -2223,17 +2306,17 @@ bool CoreChecks::ValidateVideoEncodeH264PicType(const vvl::VideoSession& vs_stat
 
     if (profile_caps.encode_h264.maxPPictureL0ReferenceCount == 0 && pic_type == STD_VIDEO_H264_PICTURE_TYPE_P) {
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-maxPPictureL0ReferenceCount-08340", vs_state.Handle(), loc,
-                         "%s is STD_VIDEO_H264_PICTURE_TYPE_P but P pictures "
-                         "are not supported by the video profile (%s) %s was created with.",
-                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "{} is STD_VIDEO_H264_PICTURE_TYPE_P but P pictures "
+                         "are not supported by the video profile ({}) {} was created with.",
+                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if (profile_caps.encode_h264.maxBPictureL0ReferenceCount == 0 && profile_caps.encode_h264.maxL1ReferenceCount == 0 &&
         pic_type == STD_VIDEO_H264_PICTURE_TYPE_B) {
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-maxBPictureL0ReferenceCount-08341", vs_state.Handle(), loc,
-                         "%s is STD_VIDEO_H264_PICTURE_TYPE_B but B pictures "
-                         "are not supported by the video profile (%s) %s was created with.",
-                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "{} is STD_VIDEO_H264_PICTURE_TYPE_B but B pictures "
+                         "are not supported by the video profile ({}) {} was created with.",
+                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     return skip;
@@ -2243,7 +2326,7 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                                              const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     const auto& vs_state = *cb_state.bound_video_session;
     const auto& profile_caps = vs_state.profile->GetCapabilities();
@@ -2284,29 +2367,31 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
         if (std_sps == nullptr) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-StdVideoH264SequenceParameterSet-08226", objlist, loc.function,
-                             "no H.264 SPS with seq_parameter_set_id = %" PRIu32
+                             "no H.264 SPS with seq_parameter_set_id = {}"
                              " "
-                             "exists in the bound video session parameters object %s.",
-                             std_picture_info->seq_parameter_set_id, FormatHandle(vsp_state).c_str());
+                             "exists in the bound video session parameters object {}.",
+                             static_cast<uint32_t>(std_picture_info->seq_parameter_set_id), Handle(vsp_state));
         }
 
         if (std_pps == nullptr) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-StdVideoH264PictureParameterSet-08227", objlist, loc.function,
-                             "no H.264 PPS with seq_parameter_set_id = %" PRIu32
+                             "no H.264 PPS with seq_parameter_set_id = {}"
                              " "
-                             "and pic_parameter_set_id = %" PRIu32 " exists in the bound video session parameters object %s.",
-                             std_picture_info->seq_parameter_set_id, std_picture_info->pic_parameter_set_id,
-                             FormatHandle(vsp_state).c_str());
+                             "and pic_parameter_set_id = {}"
+                             " exists in the bound video session parameters object {}.",
+                             static_cast<uint32_t>(std_picture_info->seq_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pic_parameter_set_id), Handle(vsp_state));
         }
 
         if (picture_info->naluSliceEntryCount > profile_caps.encode_h264.maxSliceCount) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-VkVideoEncodeH264PictureInfoKHR-naluSliceEntryCount-08301", objlist, slice_count_loc,
-                             "(%" PRIu32 ") exceeds the maxSliceCount (%" PRIu32
-                             ") limit supported by the video profile (%s) %s was created with.",
+                             "({}"
+                             ") exceeds the maxSliceCount ({}"
+                             ") limit supported by the video profile ({}) {} was created with.",
                              picture_info->naluSliceEntryCount, profile_caps.encode_h264.maxSliceCount,
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         VkExtent2D max_coding_block_size = vs_state.profile->GetMaxCodingBlockSize();
@@ -2317,20 +2402,21 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
         if (profile_caps.encode_h264.flags & VK_VIDEO_ENCODE_H264_CAPABILITY_ROW_UNALIGNED_SLICE_BIT_KHR) {
             if (picture_info->naluSliceEntryCount > min_coding_block_extent.width * min_coding_block_extent.height) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-naluSliceEntryCount-08302", cb_state.Handle(), slice_count_loc,
-                                 "(%" PRIu32
-                                 ") is greater than the number of MBs (minCodingBlockExtent = {%s}) "
+                                 "({}"
+                                 ") is greater than the number of MBs (minCodingBlockExtent = {{{}}}) "
                                  "that can be coded for the encode input picture specified in "
-                                 "pEncodeInfo->srcPictureResource (codedExtent = {%s}).",
+                                 "pEncodeInfo->srcPictureResource (codedExtent = {{{}}}).",
                                  picture_info->naluSliceEntryCount, string_VkExtent2D(min_coding_block_extent).c_str(),
                                  string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str());
             }
         } else {
             if (picture_info->naluSliceEntryCount > min_coding_block_extent.height) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-naluSliceEntryCount-08312", cb_state.Handle(), slice_count_loc,
-                                 "(%" PRIu32 ") is greater than the number of MB rows (minCodingBlockExtent.height = %" PRIu32
+                                 "({}"
+                                 ") is greater than the number of MB rows (minCodingBlockExtent.height = {}"
                                  ") "
                                  "that can be coded for the encode input picture specified in "
-                                 "pEncodeInfo->srcPictureResource (codedExtent = {%s}).",
+                                 "pEncodeInfo->srcPictureResource (codedExtent = {{{}}}).",
                                  picture_info->naluSliceEntryCount, min_coding_block_extent.height,
                                  string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str());
             }
@@ -2364,10 +2450,10 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                     slice_info.constantQp > profile_caps.encode_h264.maxQp) {
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08270", objlist, slice_info_loc.dot(Field::constantQp),
-                                     "(%d) is outside of the range [%d, %d] supported by the video "
-                                     "profile (%s) %s was created with.",
+                                     "({}) is outside of the range [{}, {}] supported by the video "
+                                     "profile ({}) {} was created with.",
                                      slice_info.constantQp, profile_caps.encode_h264.minQp, profile_caps.encode_h264.maxQp,
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
 
                 if (slice_info.constantQp != picture_info->pNaluSliceEntries[0].constantQp) {
@@ -2377,9 +2463,9 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                 if (slice_info.constantQp != 0) {
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08269", objlist, slice_info_loc.dot(Field::constantQp),
-                                     "(%d) is not zero but the currently set video encode rate control mode for %s "
-                                     "was specified to be %s when beginning the video coding scope.",
-                                     slice_info.constantQp, FormatHandle(vs_state).c_str(),
+                                     "({}) is not zero but the currently set video encode rate control mode for {} "
+                                     "was specified to be {} when beginning the video coding scope.",
+                                     slice_info.constantQp, Handle(vs_state),
                                      string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_state.base.rateControlMode));
                 }
             }
@@ -2401,11 +2487,11 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                 if (std_slice_header->pWeightTable == nullptr && weighted_pred_error_msg != nullptr) {
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                     skip |= LogError("VUID-VkVideoEncodeH264PictureInfoKHR-flags-08314", objlist, loc.function,
-                                     "%s, and pWeightTable is NULL in %s but "
+                                     "{}, and pWeightTable is NULL in {} but "
                                      "VK_VIDEO_ENCODE_H264_CAPABILITY_PREDICTION_WEIGHT_TABLE_GENERATED_BIT_KHR "
-                                     "is not supported by the video profile (%s) %s was created with.",
-                                     weighted_pred_error_msg, slice_info_loc.dot(Field::pStdSliceHeader).Fields().c_str(),
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     "is not supported by the video profile ({}) {} was created with.",
+                                     weighted_pred_error_msg, slice_info_loc.dot(Field::pStdSliceHeader),
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
             }
         }
@@ -2415,21 +2501,19 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-10850", objlist, loc.function,
                              "pStdSliceHeader->slice_type does not match across the elements "
-                             "of %s but different slice types in a picture are not supported by the video "
-                             "profile (%s) %s was created with.",
-                             slice_list_loc.Fields().c_str(), string_VideoProfileDesc(*vs_state.profile).c_str(),
-                             FormatHandle(vs_state).c_str());
+                             "of {} but different slice types in a picture are not supported by the video "
+                             "profile ({}) {} was created with.",
+                             slice_list_loc, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         if ((profile_caps.encode_h264.flags & VK_VIDEO_ENCODE_H264_CAPABILITY_PER_SLICE_CONSTANT_QP_BIT_KHR) == 0 &&
             different_constant_qp_per_slice) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08271", objlist, loc.function,
-                             "constantQp does not match across the elements of %s "
+                             "constantQp does not match across the elements of {} "
                              "but per-slice constant QP values are not supported by the video "
-                             "profile (%s) %s was created with.",
-                             slice_list_loc.Fields().c_str(), string_VideoProfileDesc(*vs_state.profile).c_str(),
-                             FormatHandle(vs_state).c_str());
+                             "profile ({}) {} was created with.",
+                             slice_list_loc, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         skip |= ValidateVideoEncodeH264PicType(vs_state, std_picture_info->primary_pic_type, loc.function,
@@ -2458,17 +2542,18 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-08342", objlist, loc.function,
                                              "primary_pic_type for L0 reference is "
                                              "STD_VIDEO_H264_PICTURE_TYPE_B but B pictures are not supported in the "
-                                             "L0 reference list by the video profile (%s) %s was created with.",
-                                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                             "L0 reference list by the video profile ({}) {} was created with.",
+                                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                         }
                     }
                 } else {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08339", cb_state.Handle(), loc.function,
-                                     "%s->pRefLists->RefPicList0[%" PRIu32 "] (%" PRIu32
+                                     "{}->pRefLists->RefPicList0[{}"
+                                     "] ({}"
                                      ") does not match "
                                      "the slotIndex member of any element of pEncodeInfo->pReferenceSlots.",
-                                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(), i,
-                                     ref_list_entry);
+                                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo),
+                                     static_cast<uint32_t>(i), static_cast<uint32_t>(ref_list_entry));
                 }
                 ref_list_entries.insert(ref_list_entry);
             }
@@ -2493,17 +2578,18 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-08343", objlist, loc.function,
                                              "primary_pic_type for L1 reference is "
                                              "STD_VIDEO_H264_PICTURE_TYPE_B but B pictures are not supported in the "
-                                             "L1 reference list by the video profile (%s) %s was created with.",
-                                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                             "L1 reference list by the video profile ({}) {} was created with.",
+                                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                         }
                     }
                 } else {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08339", cb_state.Handle(), loc.function,
-                                     "%s->pRefLists->RefPicList1[%" PRIu32 "] (%" PRIu32
+                                     "{}->pRefLists->RefPicList1[{}"
+                                     "] ({}"
                                      ") does not match "
                                      "the slotIndex member of any element of pEncodeInfo->pReferenceSlots.",
-                                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(), i,
-                                     ref_list_entry);
+                                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo),
+                                     static_cast<uint32_t>(i), static_cast<uint32_t>(ref_list_entry));
                 }
                 ref_list_entries.insert(ref_list_entry);
             }
@@ -2514,16 +2600,16 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                     ref_list_entries.find((uint8_t)slot_index) == ref_list_entries.end()) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08353", cb_state.Handle(),
                                      loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex),
-                                     "(%d) does not match "
-                                     "any of the elements of RefPicList0 or RefPicList1 in %s->pRefLists.",
-                                     slot_index,
-                                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str());
+                                     "({}) does not match "
+                                     "any of the elements of RefPicList0 or RefPicList1 in {}->pRefLists.",
+                                     slot_index, loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo));
                 }
             }
         } else if (encode_info.referenceSlotCount > 0) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08352", cb_state.Handle(), loc.function,
-                             "%s->pRefLists is NULL but pEncodeInfo->referenceSlotCount (%" PRIu32 ") is not zero.",
-                             loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(),
+                             "{}->pRefLists is NULL but pEncodeInfo->referenceSlotCount ({}"
+                             ") is not zero.",
+                             loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo),
                              encode_info.referenceSlotCount);
         }
 
@@ -2533,8 +2619,8 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
             skip |= LogError("VUID-VkVideoEncodeH264PictureInfoKHR-flags-08304", objlist,
                              loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::generatePrefixNalu),
                              "is VK_TRUE but VK_VIDEO_ENCODE_H264_CAPABILITY_GENERATE_PREFIX_NALU_BIT_KHR "
-                             "is not supported by the video profile (%s) %s was created with.",
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             "is not supported by the video profile ({}) {} was created with.",
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         if (encode_info.flags & VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR) {
@@ -2544,36 +2630,36 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                 skip |=
                     LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10845", cb_state.Handle(),
                              loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::naluSliceEntryCount),
-                             "(%" PRIu32
-                             ") is not 1 but the intra refresh mode (%s) is not "
-                             "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR and the video profile (%s) %s was "
+                             "({}"
+                             ") is not 1 but the intra refresh mode ({}) is not "
+                             "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR and the video profile ({}) {} was "
                              "created with does not support partition independent intra refresh regions.",
                              picture_info->naluSliceEntryCount, string_VkVideoEncodeIntraRefreshModeFlagBitsKHR(intra_refresh_mode),
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if (intra_refresh_mode == VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR && intra_refresh_info &&
                 picture_info->naluSliceEntryCount != intra_refresh_info->intraRefreshCycleDuration) {
-                skip |=
-                    LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10846", cb_state.Handle(),
-                             loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::naluSliceEntryCount),
-                             "(%" PRIu32 ") does not match %s (%" PRIu32
-                             ") but the intra refresh mode is "
-                             "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR.",
-                             picture_info->naluSliceEntryCount,
-                             loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration).Fields().c_str(),
-                             intra_refresh_info->intraRefreshCycleDuration);
+                skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10846", cb_state.Handle(),
+                                 loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::naluSliceEntryCount),
+                                 "({}"
+                                 ") does not match {} ({}"
+                                 ") but the intra refresh mode is "
+                                 "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR.",
+                                 picture_info->naluSliceEntryCount,
+                                 loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration),
+                                 intra_refresh_info->intraRefreshCycleDuration);
             }
 
             if (has_intra_refresh_h264_slice_idx && intra_refresh_h264_slice_idx < picture_info->naluSliceEntryCount &&
                 picture_info->pNaluSliceEntries[intra_refresh_h264_slice_idx].pStdSliceHeader->slice_type !=
                     STD_VIDEO_H264_SLICE_TYPE_I) {
-                skip |= LogError(
-                    "VUID-vkCmdEncodeVideoKHR-intraRefreshH264SliceIndex-10847", cb_state.Handle(),
-                    loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pNaluSliceEntries),
-                    "does not specify STD_VIDEO_H264_SLICE_TYPE_I slice_type for the intra refreshed slice (%s = %" PRIu32 ").",
-                    loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshIndex).Fields().c_str(),
-                    intra_refresh_h264_slice_idx);
+                skip |= LogError("VUID-vkCmdEncodeVideoKHR-intraRefreshH264SliceIndex-10847", cb_state.Handle(),
+                                 loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pNaluSliceEntries),
+                                 "does not specify STD_VIDEO_H264_SLICE_TYPE_I slice_type for the intra refreshed slice ({} = {}"
+                                 ").",
+                                 loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshIndex),
+                                 intra_refresh_h264_slice_idx);
             }
 
             if (intra_refresh_mode == VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR &&
@@ -2582,25 +2668,26 @@ bool CoreChecks::ValidateVideoEncodeInfoH264(const vvl::CommandBuffer& cb_state,
                 skip |= LogError(
                     "VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10848", cb_state.Handle(),
                     loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::naluSliceEntryCount),
-                    "(%" PRIu32 ") is greater than the number of MB rows (minCodingBlockExtent.height = %" PRIu32
+                    "({}"
+                    ") is greater than the number of MB rows (minCodingBlockExtent.height = {}"
                     ") "
                     "that can be coded for the encode input picture specified in "
-                    "pEncodeInfo->srcPictureResource (codedExtent = {%s}) but non-rectangular intra refresh regions are not "
-                    "supported by the video profile (%s) %s was created with.",
+                    "pEncodeInfo->srcPictureResource (codedExtent = {{{}}}) but non-rectangular intra refresh regions are not "
+                    "supported by the video profile ({}) {} was created with.",
                     picture_info->naluSliceEntryCount, min_coding_block_extent.height,
                     string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str(),
-                    string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                    string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if ((profile_caps.encode_h264.flags & VK_VIDEO_ENCODE_H264_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR) == 0 &&
                 picture_info->pStdPictureInfo->primary_pic_type == STD_VIDEO_H264_PICTURE_TYPE_B) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-h264PictureType-10849", objlist, loc.dot(Field::flags),
-                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and %s has primary_pic_type set to "
-                                 "STD_VIDEO_H264_PICTURE_TYPE_B but the video profile (%s) %s was created with does not support "
+                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and {} has primary_pic_type set to "
+                                 "STD_VIDEO_H264_PICTURE_TYPE_B but the video profile ({}) {} was created with does not support "
                                  "VK_VIDEO_ENCODE_H264_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR.",
-                                 loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(),
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 loc.pNext(Struct::VkVideoEncodeH264PictureInfoKHR, Field::pStdPictureInfo),
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
     } else {
@@ -2619,17 +2706,17 @@ bool CoreChecks::ValidateVideoEncodeH265PicType(const vvl::VideoSession& vs_stat
 
     if (profile_caps.encode_h265.maxPPictureL0ReferenceCount == 0 && pic_type == STD_VIDEO_H265_PICTURE_TYPE_P) {
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-maxPPictureL0ReferenceCount-08345", vs_state.Handle(), loc,
-                         "%s is STD_VIDEO_H265_PICTURE_TYPE_P but P pictures "
-                         "are not supported by the video profile (%s) %s was created with.",
-                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "{} is STD_VIDEO_H265_PICTURE_TYPE_P but P pictures "
+                         "are not supported by the video profile ({}) {} was created with.",
+                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     if (profile_caps.encode_h265.maxBPictureL0ReferenceCount == 0 && profile_caps.encode_h265.maxL1ReferenceCount == 0 &&
         pic_type == STD_VIDEO_H265_PICTURE_TYPE_B) {
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-maxBPictureL0ReferenceCount-08346", vs_state.Handle(), loc,
-                         "%s is STD_VIDEO_H265_PICTURE_TYPE_B but B pictures "
-                         "are not supported by the video profile (%s) %s was created with.",
-                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         "{} is STD_VIDEO_H265_PICTURE_TYPE_B but B pictures "
+                         "are not supported by the video profile ({}) {} was created with.",
+                         where, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
     }
 
     return skip;
@@ -2639,7 +2726,7 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                                              const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     const auto& vs_state = *cb_state.bound_video_session;
     const auto& profile_caps = vs_state.profile->GetCapabilities();
@@ -2684,43 +2771,46 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
         if (std_vps == nullptr) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-StdVideoH265VideoParameterSet-08231", objlist, loc.function,
-                             "no H.265 VPS with sps_video_parameter_set_id = %" PRIu32
+                             "no H.265 VPS with sps_video_parameter_set_id = {}"
                              " "
-                             "exists in the bound video session parameters object %s.",
-                             std_picture_info->sps_video_parameter_set_id, FormatHandle(vsp_state).c_str());
+                             "exists in the bound video session parameters object {}.",
+                             static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id), Handle(vsp_state));
         }
 
         if (std_sps == nullptr) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-StdVideoH265SequenceParameterSet-08232", objlist, loc.function,
-                             "no H.265 SPS with sps_video_parameter_set_id = %" PRIu32
+                             "no H.265 SPS with sps_video_parameter_set_id = {}"
                              " "
-                             "and pps_seq_parameter_set_id = %" PRIu32
+                             "and pps_seq_parameter_set_id = {}"
                              " exists in the bound video session "
-                             "parameters object %s.",
-                             std_picture_info->sps_video_parameter_set_id, std_picture_info->pps_seq_parameter_set_id,
-                             FormatHandle(vsp_state).c_str());
+                             "parameters object {}.",
+                             static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id), Handle(vsp_state));
         }
 
         if (std_pps == nullptr) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-StdVideoH265PictureParameterSet-08233", objlist, loc.function,
-                             "no H.265 SPS with sps_video_parameter_set_id = %" PRIu32
+                             "no H.265 SPS with sps_video_parameter_set_id = {}"
                              ", "
-                             "pps_seq_parameter_set_id = %" PRIu32 ", and pps_pic_parameter_set_id = %" PRIu32
+                             "pps_seq_parameter_set_id = {}"
+                             ", and pps_pic_parameter_set_id = {}"
                              " exists in "
-                             "the bound video session parameters object %s.",
-                             std_picture_info->sps_video_parameter_set_id, std_picture_info->pps_seq_parameter_set_id,
-                             std_picture_info->pps_pic_parameter_set_id, FormatHandle(vsp_state).c_str());
+                             "the bound video session parameters object {}.",
+                             static_cast<uint32_t>(std_picture_info->sps_video_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_seq_parameter_set_id),
+                             static_cast<uint32_t>(std_picture_info->pps_pic_parameter_set_id), Handle(vsp_state));
         }
 
         if (picture_info->naluSliceSegmentEntryCount > profile_caps.encode_h265.maxSliceSegmentCount) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-VkVideoEncodeH265PictureInfoKHR-naluSliceSegmentEntryCount-08306", objlist, slice_seg_count_loc,
-                             "(%" PRIu32 ") exceeds the maxSliceSegmentCount (%" PRIu32
-                             ") limit supported by the video profile (%s) %s was created with.",
+                             "({}"
+                             ") exceeds the maxSliceSegmentCount ({}"
+                             ") limit supported by the video profile ({}) {} was created with.",
                              picture_info->naluSliceSegmentEntryCount, profile_caps.encode_h265.maxSliceSegmentCount,
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         VkExtent2D max_coding_block_size = vs_state.profile->GetMaxCodingBlockSize();
@@ -2732,29 +2822,30 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
             if (picture_info->naluSliceSegmentEntryCount > min_coding_block_extent.width * min_coding_block_extent.height) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-naluSliceSegmentEntryCount-08307", objlist, slice_seg_count_loc,
-                                 "(%" PRIu32
-                                 ") is greater than the number of CTBs (minCodingBlockExtent = {%s}) that can "
+                                 "({}"
+                                 ") is greater than the number of CTBs (minCodingBlockExtent = {{{}}}) that can "
                                  "be coded for the encode input picture specified in pEncodeInfo->srcPictureResource "
-                                 "(codedExtent = {%s}) assuming the maximum CTB size (%s) supported by the "
-                                 "video profile (%s) %s was created with.",
+                                 "(codedExtent = {{{}}}) assuming the maximum CTB size ({}) supported by the "
+                                 "video profile ({}) {} was created with.",
                                  picture_info->naluSliceSegmentEntryCount, string_VkExtent2D(min_coding_block_extent).c_str(),
                                  string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str(),
                                  string_VkExtent2D(max_coding_block_size).c_str(),
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         } else {
             if (picture_info->naluSliceSegmentEntryCount > min_coding_block_extent.height) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-naluSliceSegmentEntryCount-08313", objlist, slice_seg_count_loc,
-                                 "(%" PRIu32 ") is greater than the number of CTB rows (minCodingBlockExtent.height = %" PRIu32
+                                 "({}"
+                                 ") is greater than the number of CTB rows (minCodingBlockExtent.height = {}"
                                  ") that can "
                                  "be coded for the encode input picture specified in pEncodeInfo->srcPictureResource "
-                                 "(codedExtent = {%s}) assuming the maximum CTB size (%s) supported by the "
-                                 "video profile (%s) %s was created with.",
+                                 "(codedExtent = {{{}}}) assuming the maximum CTB size ({}) supported by the "
+                                 "video profile ({}) {} was created with.",
                                  picture_info->naluSliceSegmentEntryCount, min_coding_block_extent.height,
                                  string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str(),
                                  string_VkExtent2D(max_coding_block_size).c_str(),
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
 
@@ -2765,30 +2856,36 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                 picture_info->naluSliceSegmentEntryCount < num_tiles) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-VkVideoEncodeH265PictureInfoKHR-flags-08323", objlist, slice_seg_count_loc,
-                                 "(%" PRIu32 ") is less than the number of H.265 tiles (%" PRIu32
+                                 "({}"
+                                 ") is less than the number of H.265 tiles ({}"
                                  ") in the encoded picture "
-                                 "(num_tile_columns_minus1 = %" PRIu32 " and num_tile_rows_minus1 = %" PRIu32
+                                 "(num_tile_columns_minus1 = {}"
+                                 " and num_tile_rows_minus1 = {}"
                                  " in the active H.265 PPS) "
-                                 "but multiple tiles per slice segment are not supported by the video profile (%s)"
-                                 "%s was created with.",
-                                 picture_info->naluSliceSegmentEntryCount, num_tiles, std_pps->num_tile_columns_minus1,
-                                 std_pps->num_tile_rows_minus1, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                 FormatHandle(vs_state).c_str());
+                                 "but multiple tiles per slice segment are not supported by the video profile ({})"
+                                 "{} was created with.",
+                                 picture_info->naluSliceSegmentEntryCount, num_tiles,
+                                 static_cast<uint32_t>(std_pps->num_tile_columns_minus1),
+                                 static_cast<uint32_t>(std_pps->num_tile_rows_minus1),
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if ((profile_caps.encode_h265.flags & VK_VIDEO_ENCODE_H265_CAPABILITY_MULTIPLE_SLICE_SEGMENTS_PER_TILE_BIT_KHR) == 0 &&
                 picture_info->naluSliceSegmentEntryCount > num_tiles) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-VkVideoEncodeH265PictureInfoKHR-flags-08324", objlist, slice_seg_count_loc,
-                                 "(%" PRIu32 ") is greater than the number of H.265 tiles (%" PRIu32
+                                 "({}"
+                                 ") is greater than the number of H.265 tiles ({}"
                                  ") in the encoded picture "
-                                 "(num_tile_columns_minus1 = %" PRIu32 " and num_tile_rows_minus1 = %" PRIu32
+                                 "(num_tile_columns_minus1 = {}"
+                                 " and num_tile_rows_minus1 = {}"
                                  " in the active H.265 PPS) "
-                                 "but multiple slice segments per tile are not supported by the video profile (%s)"
-                                 "%s was created with.",
-                                 picture_info->naluSliceSegmentEntryCount, num_tiles, std_pps->num_tile_columns_minus1,
-                                 std_pps->num_tile_rows_minus1, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                 FormatHandle(vs_state).c_str());
+                                 "but multiple slice segments per tile are not supported by the video profile ({})"
+                                 "{} was created with.",
+                                 picture_info->naluSliceSegmentEntryCount, num_tiles,
+                                 static_cast<uint32_t>(std_pps->num_tile_columns_minus1),
+                                 static_cast<uint32_t>(std_pps->num_tile_rows_minus1),
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
 
@@ -2822,10 +2919,10 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                     skip |=
                         LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08273", objlist, slice_seg_info_loc.dot(Field::constantQp),
-                                 "(%d) is outside of the range [%d, %d] supported by the video "
-                                 "profile %s was created with.",
+                                 "({}) is outside of the range [{}, {}] supported by the video "
+                                 "profile {} was created with.",
                                  slice_segment_info.constantQp, profile_caps.encode_h265.minQp, profile_caps.encode_h265.maxQp,
-                                 FormatHandle(vs_state).c_str());
+                                 Handle(vs_state));
                 }
 
                 if (slice_segment_info.constantQp != picture_info->pNaluSliceSegmentEntries[0].constantQp) {
@@ -2836,9 +2933,9 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                     skip |=
                         LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08272", objlist, slice_seg_info_loc.dot(Field::constantQp),
-                                 "(%d) is not zero but the currently set video encode rate control mode for %s "
-                                 "was specified to be %s when beginning the video coding scope.",
-                                 slice_segment_info.constantQp, FormatHandle(vs_state).c_str(),
+                                 "({}) is not zero but the currently set video encode rate control mode for {} "
+                                 "was specified to be {} when beginning the video coding scope.",
+                                 slice_segment_info.constantQp, Handle(vs_state),
                                  string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_state.base.rateControlMode));
                 }
             }
@@ -2858,13 +2955,12 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
 
                 if (std_slice_segment_header->pWeightTable == nullptr && weighted_pred_error_msg != nullptr) {
                     const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
-                    skip |=
-                        LogError("VUID-VkVideoEncodeH265PictureInfoKHR-flags-08316", objlist, loc.function,
-                                 "%s, and pWeightTable is NULL in %s but "
-                                 "VK_VIDEO_ENCODE_H265_CAPABILITY_PREDICTION_WEIGHT_TABLE_GENERATED_BIT_KHR "
-                                 "is not supported by the video profile (%s) %s was created with.",
-                                 weighted_pred_error_msg, slice_seg_info_loc.dot(Field::pStdSliceSegmentHeader).Fields().c_str(),
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                    skip |= LogError("VUID-VkVideoEncodeH265PictureInfoKHR-flags-08316", objlist, loc.function,
+                                     "{}, and pWeightTable is NULL in {} but "
+                                     "VK_VIDEO_ENCODE_H265_CAPABILITY_PREDICTION_WEIGHT_TABLE_GENERATED_BIT_KHR "
+                                     "is not supported by the video profile ({}) {} was created with.",
+                                     weighted_pred_error_msg, slice_seg_info_loc.dot(Field::pStdSliceSegmentHeader),
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
             }
         }
@@ -2874,21 +2970,19 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-10856", objlist, loc.function,
                              "pStdSliceSegmentHeader->slice_type does not match across the elements "
-                             "of %s but different slice segment types in a picture are not supported by the video "
-                             "profile (%s) %s was created with.",
-                             slice_seg_list_loc.Fields().c_str(), string_VideoProfileDesc(*vs_state.profile).c_str(),
-                             FormatHandle(vs_state).c_str());
+                             "of {} but different slice segment types in a picture are not supported by the video "
+                             "profile ({}) {} was created with.",
+                             slice_seg_list_loc, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         if ((profile_caps.encode_h265.flags & VK_VIDEO_ENCODE_H265_CAPABILITY_PER_SLICE_SEGMENT_CONSTANT_QP_BIT_KHR) == 0 &&
             different_constant_qp_per_slice_segment) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQp-08274", objlist, loc.function,
-                             "constantQp does not match across the elements of %s "
+                             "constantQp does not match across the elements of {} "
                              "but per-slice-segment constant QP values are not supported by the video "
-                             "profile (%s) %s was created with.",
-                             slice_seg_list_loc.Fields().c_str(), string_VideoProfileDesc(*vs_state.profile).c_str(),
-                             FormatHandle(vs_state).c_str());
+                             "profile ({}) {} was created with.",
+                             slice_seg_list_loc, string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         skip |= ValidateVideoEncodeH265PicType(vs_state, std_picture_info->pic_type, loc.function,
@@ -2917,17 +3011,18 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-08347", objlist, loc.function,
                                              "pic_type for L0 reference is "
                                              "STD_VIDEO_H265_PICTURE_TYPE_B but B pictures are not supported in the "
-                                             "L0 reference list by the video profile (%s) %s was created with.",
-                                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                             "L0 reference list by the video profile ({}) {} was created with.",
+                                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                         }
                     }
                 } else {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08344", cb_state.Handle(), loc.function,
-                                     "%s->pRefLists->RefPicList0[%" PRIu32 "] (%" PRIu32
+                                     "{}->pRefLists->RefPicList0[{}"
+                                     "] ({}"
                                      ") does not match "
                                      "the slotIndex member of any element of pEncodeInfo->pReferenceSlots.",
-                                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(), i,
-                                     ref_list_entry);
+                                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo),
+                                     static_cast<uint32_t>(i), static_cast<uint32_t>(ref_list_entry));
                 }
                 ref_list_entries.insert(ref_list_entry);
             }
@@ -2952,17 +3047,18 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-08348", objlist, loc.function,
                                              "pic_type for L1 reference is "
                                              "STD_VIDEO_H265_PICTURE_TYPE_B but B pictures are not supported in the "
-                                             "L1 reference list by the video profile (%s) %s was created with.",
-                                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                             "L1 reference list by the video profile ({}) {} was created with.",
+                                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                         }
                     }
                 } else {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08344", cb_state.Handle(), loc.function,
-                                     "%s->pRefLists->RefPicList1[%" PRIu32 "] (%" PRIu32
+                                     "{}->pRefLists->RefPicList1[{}"
+                                     "] ({}"
                                      ") does not match "
                                      "the slotIndex member of any element of pEncodeInfo->pReferenceSlots.",
-                                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(), i,
-                                     ref_list_entry);
+                                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo),
+                                     static_cast<uint32_t>(i), static_cast<uint32_t>(ref_list_entry));
                 }
                 ref_list_entries.insert(ref_list_entry);
             }
@@ -2973,16 +3069,16 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                     ref_list_entries.find((uint8_t)slot_index) == ref_list_entries.end()) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08355", cb_state.Handle(),
                                      loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex),
-                                     "(%d) does not match "
-                                     "any of the elements of RefPicList0 or RefPicList1 in %s->pRefLists.",
-                                     slot_index,
-                                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str());
+                                     "({}) does not match "
+                                     "any of the elements of RefPicList0 or RefPicList1 in {}->pRefLists.",
+                                     slot_index, loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo));
                 }
             }
         } else if (encode_info.referenceSlotCount > 0) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08354", cb_state.Handle(), loc.function,
-                             "%s->pRefLists is NULL but pEncodeInfo->referenceSlotCount (%" PRIu32 ") is not zero.",
-                             loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(),
+                             "{}->pRefLists is NULL but pEncodeInfo->referenceSlotCount ({}"
+                             ") is not zero.",
+                             loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo),
                              encode_info.referenceSlotCount);
         }
 
@@ -2993,37 +3089,37 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                 skip |= LogError(
                     "VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10851", cb_state.Handle(),
                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::naluSliceSegmentEntryCount),
-                    "(%" PRIu32
-                    ") is not 1 but the intra refresh mode (%s) is not "
-                    "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR and the video profile (%s) %s was "
+                    "({}"
+                    ") is not 1 but the intra refresh mode ({}) is not "
+                    "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR and the video profile ({}) {} was "
                     "created with does not support partition independent intra refresh regions.",
                     picture_info->naluSliceSegmentEntryCount, string_VkVideoEncodeIntraRefreshModeFlagBitsKHR(intra_refresh_mode),
-                    string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                    string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if (intra_refresh_mode == VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR && intra_refresh_info &&
                 picture_info->naluSliceSegmentEntryCount != intra_refresh_info->intraRefreshCycleDuration) {
-                skip |=
-                    LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10852", cb_state.Handle(),
-                             loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::naluSliceSegmentEntryCount),
-                             "(%" PRIu32 ") does not match %s (%" PRIu32
-                             ") but the intra refresh mode is "
-                             "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR.",
-                             picture_info->naluSliceSegmentEntryCount,
-                             loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration).Fields().c_str(),
-                             intra_refresh_info->intraRefreshCycleDuration);
+                skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10852", cb_state.Handle(),
+                                 loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::naluSliceSegmentEntryCount),
+                                 "({}"
+                                 ") does not match {} ({}"
+                                 ") but the intra refresh mode is "
+                                 "VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR.",
+                                 picture_info->naluSliceSegmentEntryCount,
+                                 loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshCycleDuration),
+                                 intra_refresh_info->intraRefreshCycleDuration);
             }
 
             if (has_intra_refresh_h265_slice_seg_idx &&
                 intra_refresh_h265_slice_seg_idx < picture_info->naluSliceSegmentEntryCount &&
                 picture_info->pNaluSliceSegmentEntries[intra_refresh_h265_slice_seg_idx].pStdSliceSegmentHeader->slice_type !=
                     STD_VIDEO_H265_SLICE_TYPE_I) {
-                skip |= LogError(
-                    "VUID-vkCmdEncodeVideoKHR-intraRefreshH265SliceSegmentIndex-10853", cb_state.Handle(),
-                    loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pNaluSliceSegmentEntries),
-                    "does not specify STD_VIDEO_H265_SLICE_TYPE_I slice_type for the intra refreshed slice (%s = %" PRIu32 ").",
-                    loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshIndex).Fields().c_str(),
-                    intra_refresh_h265_slice_seg_idx);
+                skip |= LogError("VUID-vkCmdEncodeVideoKHR-intraRefreshH265SliceSegmentIndex-10853", cb_state.Handle(),
+                                 loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pNaluSliceSegmentEntries),
+                                 "does not specify STD_VIDEO_H265_SLICE_TYPE_I slice_type for the intra refreshed slice ({} = {}"
+                                 ").",
+                                 loc.pNext(Struct::VkVideoEncodeIntraRefreshInfoKHR, Field::intraRefreshIndex),
+                                 intra_refresh_h265_slice_seg_idx);
             }
 
             if (intra_refresh_mode == VK_VIDEO_ENCODE_INTRA_REFRESH_MODE_PER_PICTURE_PARTITION_BIT_KHR &&
@@ -3032,25 +3128,26 @@ bool CoreChecks::ValidateVideoEncodeInfoH265(const vvl::CommandBuffer& cb_state,
                 skip |= LogError(
                     "VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10854", cb_state.Handle(),
                     loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::naluSliceSegmentEntryCount),
-                    "(%" PRIu32 ") is greater than the number of CTB rows (minCodingBlockExtent.height = %" PRIu32
+                    "({}"
+                    ") is greater than the number of CTB rows (minCodingBlockExtent.height = {}"
                     ") "
                     "that can be coded for the encode input picture specified in "
-                    "pEncodeInfo->srcPictureResource (codedExtent = {%s}) but non-rectangular intra refresh regions are not "
-                    "supported by the video profile (%s) %s was created with.",
+                    "pEncodeInfo->srcPictureResource (codedExtent = {{{}}}) but non-rectangular intra refresh regions are not "
+                    "supported by the video profile ({}) {} was created with.",
                     picture_info->naluSliceSegmentEntryCount, min_coding_block_extent.height,
                     string_VkExtent2D(encode_info.srcPictureResource.codedExtent).c_str(),
-                    string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                    string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if ((profile_caps.encode_h265.flags & VK_VIDEO_ENCODE_H265_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR) == 0 &&
                 picture_info->pStdPictureInfo->pic_type == STD_VIDEO_H265_PICTURE_TYPE_B) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-h265PictureType-10855", objlist, loc.dot(Field::flags),
-                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and %s has pic_type set to "
-                                 "STD_VIDEO_H265_PICTURE_TYPE_B but the video profile (%s) %s was created with does not support "
+                                 "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and {} has pic_type set to "
+                                 "STD_VIDEO_H265_PICTURE_TYPE_B but the video profile ({}) {} was created with does not support "
                                  "VK_VIDEO_ENCODE_H265_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR.",
-                                 loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo).Fields().c_str(),
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 loc.pNext(Struct::VkVideoEncodeH265PictureInfoKHR, Field::pStdPictureInfo),
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
     } else {
@@ -3065,7 +3162,7 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                                             const Location& loc) const {
     bool skip = false;
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     const auto& vs_state = *cb_state.bound_video_session;
     const auto& profile_caps = vs_state.profile->GetCapabilities();
@@ -3096,22 +3193,24 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
 
                 if (av1_obu_ext_header->temporal_id >= profile_caps.encode_av1.maxTemporalLayerCount) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pExtensionHeader-10341", cb_state.Handle(), std_reference_info_loc,
-                                     "pExtensionHeader->temporal_id (%" PRIu32
-                                     ") is greater than or equal to the maxTemporalLayer (%" PRIu32
+                                     "pExtensionHeader->temporal_id ({}"
+                                     ") is greater than or equal to the maxTemporalLayer ({}"
                                      ") "
-                                     "limit supported by the video profile (%s) the bound video session %s was created with.",
-                                     av1_obu_ext_header->temporal_id, profile_caps.encode_av1.maxTemporalLayerCount,
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     "limit supported by the video profile ({}) the bound video session {} was created with.",
+                                     static_cast<uint32_t>(av1_obu_ext_header->temporal_id),
+                                     profile_caps.encode_av1.maxTemporalLayerCount,
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
 
                 if (av1_obu_ext_header->spatial_id >= profile_caps.encode_av1.maxSpatialLayerCount) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pExtensionHeader-10342", cb_state.Handle(), std_reference_info_loc,
-                                     "pExtensionHeader->spatial_id (%" PRIu32
-                                     ") is greater than or equal to the maxSpatialLayerCount (%" PRIu32
+                                     "pExtensionHeader->spatial_id ({}"
+                                     ") is greater than or equal to the maxSpatialLayerCount ({}"
                                      ") "
-                                     "limit supported by the video profile (%s) the bound video session %s was created with.",
-                                     av1_obu_ext_header->spatial_id, profile_caps.encode_av1.maxSpatialLayerCount,
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     "limit supported by the video profile ({}) the bound video session {} was created with.",
+                                     static_cast<uint32_t>(av1_obu_ext_header->spatial_id),
+                                     profile_caps.encode_av1.maxSpatialLayerCount,
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
             }
         } else {
@@ -3127,23 +3226,25 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-10323", objlist,
                              loc.dot(Field::srcPictureResource).dot(Field::codedExtent).dot(Field::width),
-                             "(%" PRIu32 ") does not equal max_frame_width_minus_1 (%" PRIu32
+                             "({}"
+                             ") does not equal max_frame_width_minus_1 ({}"
                              ") plus one but "
                              "VK_VIDEO_ENCODE_AV1_CAPABILITY_FRAME_SIZE_OVERRIDE_BIT_KHR is not supported "
-                             "by the video profile (%s) the bound video session %s was created with.",
+                             "by the video profile ({}) the bound video session {} was created with.",
                              encode_info.srcPictureResource.codedExtent.width, std_seq_header->max_frame_width_minus_1,
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
         if (encode_info.srcPictureResource.codedExtent.height != std_seq_header->max_frame_height_minus_1 + 1u) {
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-10324", objlist,
                              loc.dot(Field::srcPictureResource).dot(Field::codedExtent).dot(Field::height),
-                             "(%" PRIu32 ") does not equal max_frame_height_minus_1 (%" PRIu32
+                             "({}"
+                             ") does not equal max_frame_height_minus_1 ({}"
                              ") plus one but "
                              "VK_VIDEO_ENCODE_AV1_CAPABILITY_FRAME_SIZE_OVERRIDE_BIT_KHR is not supported "
-                             "by the video profile (%s) the bound video session %s was created with.",
+                             "by the video profile ({}) the bound video session {} was created with.",
                              encode_info.srcPictureResource.codedExtent.height, std_seq_header->max_frame_height_minus_1,
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
     }
 
@@ -3157,14 +3258,17 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 skip |=
                     LogError("VUID-vkCmdEncodeVideoKHR-flags-10325", objlist,
                              loc.dot(Field::pReferenceSlots, i).dot(Field::pPictureResource).dot(Field::codedExtent),
-                             "(%" PRIu32 ", %" PRIu32 ") does not match %s (%" PRIu32 ", %" PRIu32
+                             "({}"
+                             ", {}"
+                             ") does not match {} ({}"
+                             ", {}"
                              ") but "
                              "VK_VIDEO_ENCODE_AV1_CAPABILITY_MOTION_VECTOR_SCALING_BIT_KHR is not supported "
-                             "by the video profile (%s) the bound video session %s was created with.",
+                             "by the video profile ({}) the bound video session {} was created with.",
                              reference_resource->codedExtent.width, reference_resource->codedExtent.height,
-                             loc.dot(Field::srcPictureResource).dot(Field::codedExtent).Fields().c_str(),
+                             loc.dot(Field::srcPictureResource).dot(Field::codedExtent),
                              encode_info.srcPictureResource.codedExtent.width, encode_info.srcPictureResource.codedExtent.height,
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         }
     }
@@ -3180,20 +3284,22 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQIndex-10321", objlist,
                                  loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::constantQIndex),
-                                 "(%" PRIu32 ") is outside of the range [%" PRIu32 ", %" PRIu32
-                                 "] supported by the video profile (%s) %s was created with.",
+                                 "({}"
+                                 ") is outside of the range [{}"
+                                 ", {}"
+                                 "] supported by the video profile ({}) {} was created with.",
                                  picture_info->constantQIndex, profile_caps.encode_av1.minQIndex, profile_caps.encode_av1.maxQIndex,
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
         } else {
             if (picture_info->constantQIndex != 0) {
                 const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-constantQIndex-10320", objlist,
                                  loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::constantQIndex),
-                                 "(%" PRIu32
-                                 ") is not zero but the currently set video encode rate control mode for %s "
-                                 "was specified to be %s when beginning the video coding scope.",
-                                 picture_info->constantQIndex, FormatHandle(vs_state).c_str(),
+                                 "({}"
+                                 ") is not zero but the currently set video encode rate control mode for {} "
+                                 "was specified to be {} when beginning the video coding scope.",
+                                 picture_info->constantQIndex, Handle(vs_state),
                                  string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_state.base.rateControlMode));
             }
         }
@@ -3202,10 +3308,11 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             picture_info->referenceNameSlotIndices[std_picture_info->primary_ref_frame] < 0) {
             skip |= LogError("VUID-VkVideoEncodeAV1PictureInfoKHR-pStdPictureInfo-10291", cb_state.Handle(),
                              loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::referenceNameSlotIndices),
-                             "contains a negative value (%d) for the primary reference name specified in "
-                             "pStdPictureInfo->primary_ref_frame (%" PRIu32 ").",
+                             "contains a negative value ({}) for the primary reference name specified in "
+                             "pStdPictureInfo->primary_ref_frame ({}"
+                             ").",
                              picture_info->referenceNameSlotIndices[std_picture_info->primary_ref_frame],
-                             std_picture_info->primary_ref_frame);
+                             static_cast<uint32_t>(std_picture_info->primary_ref_frame));
         }
 
         if (picture_info->primaryReferenceCdfOnly == VK_TRUE) {
@@ -3213,8 +3320,8 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 skip |= LogError("VUID-VkVideoEncodeAV1PictureInfoKHR-flags-10289", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::primaryReferenceCdfOnly),
                                  "is VK_TRUE but VK_VIDEO_ENCODE_AV1_CAPABILITY_PRIMARY_REFERENCE_CDF_ONLY_BIT_KHR "
-                                 "is not supported by the video profile (%s) the bound video session %s was created with.",
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 "is not supported by the video profile ({}) the bound video session {} was created with.",
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if (std_picture_info->primary_ref_frame < VK_MAX_VIDEO_AV1_REFERENCES_PER_FRAME_KHR) {
@@ -3223,8 +3330,9 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 skip |= LogError("VUID-VkVideoEncodeAV1PictureInfoKHR-primaryReferenceCdfOnly-10290", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::primaryReferenceCdfOnly),
                                  "is VK_TRUE but the primary reference name specified in pStdPictureInfo->primary_ref_frame "
-                                 "(%" PRIu32 ") is not a valid reference name to use as the CDF only reference.",
-                                 std_picture_info->primary_ref_frame);
+                                 "({}"
+                                 ") is not a valid reference name to use as the CDF only reference.",
+                                 static_cast<uint32_t>(std_picture_info->primary_ref_frame));
             }
         }
 
@@ -3233,8 +3341,8 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 skip |= LogError("VUID-VkVideoEncodeAV1PictureInfoKHR-flags-10292", cb_state.Handle(),
                                  loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::generateObuExtensionHeader),
                                  "is VK_TRUE but VK_VIDEO_ENCODE_AV1_CAPABILITY_GENERATE_OBU_EXTENSION_HEADER_BIT_KHR "
-                                 "is not supported by the video profile (%s) the bound video session %s was created with.",
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 "is not supported by the video profile ({}) the bound video session {} was created with.",
+                                 string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
             }
 
             if (std_picture_info->pExtensionHeader == nullptr) {
@@ -3259,7 +3367,7 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             picture_info->predictionMode != VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_INTRA_ONLY_KHR) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pStdPictureInfo-10327", cb_state.Handle(),
                              loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode),
-                             "is not VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_INTRA_ONLY_KHR (%s) but the AV1 frame type is %s.",
+                             "is not VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_INTRA_ONLY_KHR ({}) but the AV1 frame type is {}.",
                              string_VkVideoEncodeAV1PredictionModeKHR(picture_info->predictionMode),
                              std_picture_info->frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY ? "KEY_FRAME" : "INTRA_ONLY_FRAME");
         }
@@ -3289,15 +3397,16 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                                          loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode),
                                          "is VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_SINGLE_REFERENCE_KHR but "
                                          "referenceNameSlotIndices[] does not contain a non-negative DPB slot index for any of "
-                                         "the supported reference names (singleReferenceNameMask = 0x%02X), except at index "
-                                         "%" PRIu32 ", but that reference is only used for CDF data reference.",
+                                         "the supported reference names (singleReferenceNameMask = 0x{:02X}), except at index "
+                                         "{}"
+                                         ", but that reference is only used for CDF data reference.",
                                          profile_caps.encode_av1.singleReferenceNameMask, *cdf_only_ref_index);
                     } else {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-predictionMode-10329", cb_state.Handle(),
                                          loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode),
                                          "is VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_SINGLE_REFERENCE_KHR but "
                                          "referenceNameSlotIndices[] does not contain a non-negative DPB slot index for any of "
-                                         "the supported reference names (singleReferenceNameMask = 0x%02X).",
+                                         "the supported reference names (singleReferenceNameMask = 0x{:02X}).",
                                          profile_caps.encode_av1.singleReferenceNameMask);
                     }
                 }
@@ -3341,8 +3450,8 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                                      "referenceNameSlotIndices[] does not contain a non-negative DPB slot index for any of "
                                      "the valid pairs of unidirectional compound reference names (allowed options are: "
                                      "LAST_FRAME+LAST2_FRAME, LAST_FRAME+LAST3_FRAME, LAST_FRAME+GOLDEN_FRAME, or "
-                                     "BWDREF_FRAME+ALTREF_FRAME) that are supported by the video profile (%s)"
-                                     "(unidirectionalCompoundReferenceNameMask=0x%02X) and are not used only for CDF reference.",
+                                     "BWDREF_FRAME+ALTREF_FRAME) that are supported by the video profile ({})"
+                                     "(unidirectionalCompoundReferenceNameMask=0x{:02X}) and are not used only for CDF reference.",
                                      string_VideoProfileDesc(*vs_state.profile).c_str(),
                                      profile_caps.encode_av1.unidirectionalCompoundReferenceNameMask);
                 }
@@ -3377,8 +3486,8 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                                      loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode),
                                      "is VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_BIDIRECTIONAL_COMPOUND_KHR but "
                                      "referenceNameSlotIndices[] does not contain a non-negative DPB slot index for at least "
-                                     "one reference name from each group that are supported by the video profile (%s) "
-                                     "(bidirectionalCompoundReferenceNameMask = 0x%02X) and are not used only for CDF reference.",
+                                     "one reference name from each group that are supported by the video profile ({}) "
+                                     "(bidirectionalCompoundReferenceNameMask = 0x{:02X}) and are not used only for CDF reference.",
                                      string_VideoProfileDesc(*vs_state.profile).c_str(),
                                      profile_caps.encode_av1.bidirectionalCompoundReferenceNameMask);
                 }
@@ -3395,7 +3504,7 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 if (reference_slots.find(picture_info->referenceNameSlotIndices[i]) == reference_slots.end()) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-referenceNameSlotIndices-10334", cb_state.Handle(),
                                      loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::referenceNameSlotIndices, i),
-                                     "(%d) does not match the slotIndex of any of the elements of pEncodeInfo->pReferenceSlots.",
+                                     "({}) does not match the slotIndex of any of the elements of pEncodeInfo->pReferenceSlots.",
                                      picture_info->referenceNameSlotIndices[i]);
                 }
 
@@ -3406,7 +3515,7 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
         for (uint32_t i = 0; i < encode_info.referenceSlotCount; ++i) {
             if (reference_name_slot_indices.find(encode_info.pReferenceSlots[i].slotIndex) == reference_name_slot_indices.end()) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-slotIndex-10335", cb_state.Handle(), loc.dot(Field::pReferenceSlots, i),
-                                 "(%d) does not match any of the elements of "
+                                 "({}) does not match any of the elements of "
                                  "VkVideoEncodeAV1PictureInfoKHR::referenceNameSlotIndices.",
                                  encode_info.pReferenceSlots[i].slotIndex);
             }
@@ -3419,22 +3528,24 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
         if (std_picture_info->pExtensionHeader != nullptr) {
             if (std_picture_info->pExtensionHeader->temporal_id >= profile_caps.encode_av1.maxTemporalLayerCount) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pExtensionHeader-10336", cb_state.Handle(), std_picture_info_loc,
-                                 "pExtensionHeader->temporal_id (%" PRIu32
-                                 ") is greater than or equal to the maxTemporalLayer (%" PRIu32
+                                 "pExtensionHeader->temporal_id ({}"
+                                 ") is greater than or equal to the maxTemporalLayer ({}"
                                  ") "
-                                 "limit supported by the video profile (%s) the bound video session %s was created with.",
-                                 std_picture_info->pExtensionHeader->temporal_id, profile_caps.encode_av1.maxTemporalLayerCount,
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 "limit supported by the video profile ({}) the bound video session {} was created with.",
+                                 static_cast<uint32_t>(std_picture_info->pExtensionHeader->temporal_id),
+                                 profile_caps.encode_av1.maxTemporalLayerCount, string_VideoProfileDesc(*vs_state.profile).c_str(),
+                                 Handle(vs_state));
             }
 
             if (std_picture_info->pExtensionHeader->spatial_id >= profile_caps.encode_av1.maxSpatialLayerCount) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pExtensionHeader-10337", cb_state.Handle(), std_picture_info_loc,
-                                 "pExtensionHeader->spatial_id (%" PRIu32
-                                 ") is greater than or equal to the maxSpatialLayerCount (%" PRIu32
+                                 "pExtensionHeader->spatial_id ({}"
+                                 ") is greater than or equal to the maxSpatialLayerCount ({}"
                                  ") "
-                                 "limit supported by the video profile (%s) the bound video session %s was created with.",
-                                 std_picture_info->pExtensionHeader->spatial_id, profile_caps.encode_av1.maxSpatialLayerCount,
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                 "limit supported by the video profile ({}) the bound video session {} was created with.",
+                                 static_cast<uint32_t>(std_picture_info->pExtensionHeader->spatial_id),
+                                 profile_caps.encode_av1.maxSpatialLayerCount, string_VideoProfileDesc(*vs_state.profile).c_str(),
+                                 Handle(vs_state));
             }
 
             if (setup_dpb_slot_info != nullptr) {
@@ -3442,34 +3553,37 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                     auto av1_setup_obu_ext_header = setup_dpb_slot_info->pStdReferenceInfo->pExtensionHeader;
 
                     if (std_picture_info->pExtensionHeader->temporal_id != av1_setup_obu_ext_header->temporal_id) {
-                        skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10339", cb_state.Handle(), std_picture_info_loc,
-                                         "pExtensionHeader->temporal_id (%" PRIu32
-                                         ") does not match the "
-                                         "pExtensionHeader->temporal_id (%" PRIu32 ") specified in %s.",
-                                         std_picture_info->pExtensionHeader->temporal_id, av1_setup_obu_ext_header->temporal_id,
-                                         std_setup_reference_info_loc.Fields().c_str());
+                        skip |=
+                            LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10339", cb_state.Handle(), std_picture_info_loc,
+                                     "pExtensionHeader->temporal_id ({}"
+                                     ") does not match the "
+                                     "pExtensionHeader->temporal_id ({}"
+                                     ") specified in {}.",
+                                     static_cast<uint32_t>(std_picture_info->pExtensionHeader->temporal_id),
+                                     static_cast<uint32_t>(av1_setup_obu_ext_header->temporal_id), std_setup_reference_info_loc);
                     }
 
                     if (std_picture_info->pExtensionHeader->spatial_id != av1_setup_obu_ext_header->spatial_id) {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10340", cb_state.Handle(), std_picture_info_loc,
-                                         "pExtensionHeader->spatial_id (%" PRIu32
+                                         "pExtensionHeader->spatial_id ({}"
                                          ") does not match the "
-                                         "pExtensionHeader->spatial_id (%" PRIu32 ") specified in %s.",
-                                         std_picture_info->pExtensionHeader->spatial_id, av1_setup_obu_ext_header->spatial_id,
-                                         std_setup_reference_info_loc.Fields().c_str());
+                                         "pExtensionHeader->spatial_id ({}"
+                                         ") specified in {}.",
+                                         static_cast<uint32_t>(std_picture_info->pExtensionHeader->spatial_id),
+                                         static_cast<uint32_t>(av1_setup_obu_ext_header->spatial_id), std_setup_reference_info_loc);
                     }
                 } else {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10338", cb_state.Handle(), std_picture_info_loc,
                                      "includes AV1 OBU extension header information (pExtensionHeader != NULL) but "
-                                     "the setup reference info does not (pExtensionHeader == NULL in %s).",
-                                     std_setup_reference_info_loc.Fields().c_str());
+                                     "the setup reference info does not (pExtensionHeader == NULL in {}).",
+                                     std_setup_reference_info_loc);
                 }
             }
         } else if (setup_dpb_slot_info != nullptr && setup_dpb_slot_info->pStdReferenceInfo->pExtensionHeader != nullptr) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10338", cb_state.Handle(), std_setup_reference_info_loc,
                              "includes AV1 OBU extension header information (pExtensionHeader != NULL) but "
-                             "the picture info does not (pExtensionHeader == NULL in %s).",
-                             std_picture_info_loc.Fields().c_str());
+                             "the picture info does not (pExtensionHeader == NULL in {}).",
+                             std_picture_info_loc);
         }
 
         if (std_picture_info->pTileInfo != nullptr) {
@@ -3477,15 +3591,15 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
 
             if (std_picture_info->pTileInfo->TileCols != 0) {
                 if (std_picture_info->pTileInfo->TileCols > profile_caps.encode_av1.maxTiles.width) {
-                    skip |=
-                        LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10345", cb_state.Handle(), std_picture_info_loc,
-                                 "pTileInfo is not NULL but the requested number of tile columns in pTileInfo->TileCols (%" PRIu32
-                                 ") "
-                                 "exceeds the maxTiles.width (%" PRIu32
-                                 ") limit supported by the video profile (%s) the "
-                                 "bound video session %s was created with.",
-                                 std_picture_info->pTileInfo->TileCols, profile_caps.encode_av1.maxTiles.width,
-                                 string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                    skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10345", cb_state.Handle(), std_picture_info_loc,
+                                     "pTileInfo is not NULL but the requested number of tile columns in pTileInfo->TileCols ({}"
+                                     ") "
+                                     "exceeds the maxTiles.width ({}"
+                                     ") limit supported by the video profile ({}) the "
+                                     "bound video session {} was created with.",
+                                     static_cast<uint32_t>(std_picture_info->pTileInfo->TileCols),
+                                     profile_caps.encode_av1.maxTiles.width, string_VideoProfileDesc(*vs_state.profile).c_str(),
+                                     Handle(vs_state));
                 }
 
                 auto tile_width =
@@ -3493,17 +3607,18 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 if (tile_width < profile_caps.encode_av1.minTileSize.width ||
                     tile_width > profile_caps.encode_av1.maxTileSize.width) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10347", cb_state.Handle(), std_picture_info_loc,
-                                     "effective tile width (%" PRIu32
-                                     ") calculated as ceil(pEncodeInfo->srcPictureResource.codedExtent.width [%" PRIu32
+                                     "effective tile width ({}"
+                                     ") calculated as ceil(pEncodeInfo->srcPictureResource.codedExtent.width [{}"
                                      "] / "
-                                     "pTileInfo->TileCols [%" PRIu32 "]) must be between the minTileSize.width (%" PRIu32
-                                     ") and maxTileSize.width (%" PRIu32
+                                     "pTileInfo->TileCols [{}"
+                                     "]) must be between the minTileSize.width ({}"
+                                     ") and maxTileSize.width ({}"
                                      ") "
-                                     "limits supported by the video profile (%s) the bound video session %s was created with.",
+                                     "limits supported by the video profile ({}) the bound video session {} was created with.",
                                      tile_width, encode_info.srcPictureResource.codedExtent.width,
-                                     std_picture_info->pTileInfo->TileCols, profile_caps.encode_av1.minTileSize.width,
-                                     profile_caps.encode_av1.maxTileSize.width, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                     FormatHandle(vs_state).c_str());
+                                     static_cast<uint32_t>(std_picture_info->pTileInfo->TileCols),
+                                     profile_caps.encode_av1.minTileSize.width, profile_caps.encode_av1.maxTileSize.width,
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
             } else {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10343", cb_state.Handle(), std_picture_info_loc,
@@ -3513,13 +3628,14 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             if (std_picture_info->pTileInfo->TileRows != 0) {
                 if (std_picture_info->pTileInfo->TileRows > profile_caps.encode_av1.maxTiles.height) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10346", cb_state.Handle(), std_picture_info_loc,
-                                     "pTileInfo is not NULL but the requested number of tile rows in pTileInfo->TileRows (%" PRIu32
+                                     "pTileInfo is not NULL but the requested number of tile rows in pTileInfo->TileRows ({}"
                                      ") "
-                                     "exceeds the maxTiles.height (%" PRIu32
-                                     ") limit supported by the video profile (%s) the "
-                                     "bound video session %s was created with.",
-                                     std_picture_info->pTileInfo->TileRows, profile_caps.encode_av1.maxTiles.height,
-                                     string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                                     "exceeds the maxTiles.height ({}"
+                                     ") limit supported by the video profile ({}) the "
+                                     "bound video session {} was created with.",
+                                     static_cast<uint32_t>(std_picture_info->pTileInfo->TileRows),
+                                     profile_caps.encode_av1.maxTiles.height, string_VideoProfileDesc(*vs_state.profile).c_str(),
+                                     Handle(vs_state));
                 }
 
                 auto tile_height =
@@ -3527,17 +3643,18 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
                 if (tile_height < profile_caps.encode_av1.minTileSize.height ||
                     tile_height > profile_caps.encode_av1.maxTileSize.height) {
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10348", cb_state.Handle(), std_picture_info_loc,
-                                     "effective tile height (%" PRIu32
-                                     ") calculated as ceil(pEncodeInfo->srcPictureResource.codedExtent.height [%" PRIu32
+                                     "effective tile height ({}"
+                                     ") calculated as ceil(pEncodeInfo->srcPictureResource.codedExtent.height [{}"
                                      "] / "
-                                     "pTileInfo->TileRows [%" PRIu32 "]) must be between the minTileSize.height (%" PRIu32
-                                     ") and maxTileSize.height (%" PRIu32
+                                     "pTileInfo->TileRows [{}"
+                                     "]) must be between the minTileSize.height ({}"
+                                     ") and maxTileSize.height ({}"
                                      ") "
-                                     "limits supported by the video profile (%s) the bound video session %s was created with.",
+                                     "limits supported by the video profile ({}) the bound video session {} was created with.",
                                      tile_height, encode_info.srcPictureResource.codedExtent.height,
-                                     std_picture_info->pTileInfo->TileRows, profile_caps.encode_av1.minTileSize.height,
-                                     profile_caps.encode_av1.maxTileSize.height, string_VideoProfileDesc(*vs_state.profile).c_str(),
-                                     FormatHandle(vs_state).c_str());
+                                     static_cast<uint32_t>(std_picture_info->pTileInfo->TileRows),
+                                     profile_caps.encode_av1.minTileSize.height, profile_caps.encode_av1.maxTileSize.height,
+                                     string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
                 }
             } else {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pTileInfo-10344", cb_state.Handle(), std_picture_info_loc,
@@ -3551,8 +3668,8 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-flags-10322", objlist, std_picture_info_loc,
                              "has flags.frame_size_override_flag set but "
                              "VK_VIDEO_ENCODE_AV1_CAPABILITY_FRAME_SIZE_OVERRIDE_BIT_KHR is not supported "
-                             "by the video profile (%s) the bound video session %s was created with.",
-                             string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                             "by the video profile ({}) the bound video session {} was created with.",
+                             string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
 
         if (std_picture_info->flags.segmentation_enabled != 0) {
@@ -3572,11 +3689,11 @@ bool CoreChecks::ValidateVideoEncodeInfoAV1(const vvl::CommandBuffer& cb_state, 
             const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
             skip |=
                 LogError("VUID-vkCmdEncodeVideoKHR-predictionMode-10857", objlist, loc.dot(Field::flags),
-                         "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and %s is %s but the video profile (%s) %s was created "
+                         "contains VK_VIDEO_ENCODE_INTRA_REFRESH_BIT_KHR and {} is {} but the video profile ({}) {} was created "
                          "with does not support VK_VIDEO_ENCODE_AV1_CAPABILITY_COMPOUND_PREDICTION_INTRA_REFRESH_BIT_KHR.",
-                         loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode).Fields().c_str(),
+                         loc.pNext(Struct::VkVideoEncodeAV1PictureInfoKHR, Field::predictionMode),
                          string_VkVideoEncodeAV1PredictionModeKHR(picture_info->predictionMode),
-                         string_VideoProfileDesc(*vs_state.profile).c_str(), FormatHandle(vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state.profile).c_str(), Handle(vs_state));
         }
     } else {
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-10317", cb_state.Handle(), loc.dot(Field::pNext), pnext_msg,
@@ -3604,8 +3721,8 @@ bool CoreChecks::ValidateVideoEncodeQuantizationMapInfo(const vvl::CommandBuffer
             quantization_map_info.quantizationMapExtent.height != expected_extent.height) {
             const LogObjectList objlist(cb_state.Handle(), vsp_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-10316", objlist, loc.dot(Field::quantizationMapExtent),
-                             "(%s) is not equal to ceil(pEncodeInfo->srcPictureResource.codedExtent (%s) / "
-                             "quantizationMapTexelSize (%s)) (%s).",
+                             "({}) is not equal to ceil(pEncodeInfo->srcPictureResource.codedExtent ({}) / "
+                             "quantizationMapTexelSize ({})) ({}).",
                              string_VkExtent2D(quantization_map_info.quantizationMapExtent).c_str(),
                              string_VkExtent2D(coded_extent).c_str(), string_VkExtent2D(texel_size).c_str(),
                              string_VkExtent2D(expected_extent).c_str());
@@ -3617,24 +3734,24 @@ bool CoreChecks::ValidateVideoEncodeQuantizationMapInfo(const vvl::CommandBuffer
         auto iv_extent = iv_state->image_state->GetEffectiveSubresourceExtent(iv_state->normalized_subresource_range);
         if (iv_extent.width < quantization_map_info.quantizationMapExtent.width) {
             const LogObjectList objlist(cb_state.Handle(), iv_state->Handle(), iv_state->image_state->Handle());
-            skip |=
-                LogError("VUID-VkVideoEncodeQuantizationMapInfoKHR-quantizationMapExtent-10352", objlist,
-                         loc.dot(Field::quantizationMapExtent).dot(Field::width),
-                         "(%" PRIu32 ") exceeds the width (%" PRIu32 ") of the image view specified in %s (%s created from %s).",
-                         quantization_map_info.quantizationMapExtent.width, iv_extent.width,
-                         loc.dot(Field::quantizationMap).Fields().c_str(), FormatHandle(iv_state->Handle()).c_str(),
-                         FormatHandle(iv_state->image_state->Handle()).c_str());
+            skip |= LogError("VUID-VkVideoEncodeQuantizationMapInfoKHR-quantizationMapExtent-10352", objlist,
+                             loc.dot(Field::quantizationMapExtent).dot(Field::width),
+                             "({}"
+                             ") exceeds the width ({}"
+                             ") of the image view specified in {} ({} created from {}).",
+                             quantization_map_info.quantizationMapExtent.width, iv_extent.width, loc.dot(Field::quantizationMap),
+                             Handle(iv_state->Handle()), Handle(iv_state->image_state->Handle()));
         }
 
         if (iv_extent.height < quantization_map_info.quantizationMapExtent.height) {
             const LogObjectList objlist(cb_state.Handle(), iv_state->Handle(), iv_state->image_state->Handle());
-            skip |=
-                LogError("VUID-VkVideoEncodeQuantizationMapInfoKHR-quantizationMapExtent-10353", objlist,
-                         loc.dot(Field::quantizationMapExtent).dot(Field::height),
-                         "(%" PRIu32 ") exceeds the height (%" PRIu32 ") of the image view specified in %s (%s created from %s).",
-                         quantization_map_info.quantizationMapExtent.height, iv_extent.height,
-                         loc.dot(Field::quantizationMap).Fields().c_str(), FormatHandle(iv_state->Handle()).c_str(),
-                         FormatHandle(iv_state->image_state->Handle()).c_str());
+            skip |= LogError("VUID-VkVideoEncodeQuantizationMapInfoKHR-quantizationMapExtent-10353", objlist,
+                             loc.dot(Field::quantizationMapExtent).dot(Field::height),
+                             "({}"
+                             ") exceeds the height ({}"
+                             ") of the image view specified in {} ({} created from {}).",
+                             quantization_map_info.quantizationMapExtent.height, iv_extent.height, loc.dot(Field::quantizationMap),
+                             Handle(iv_state->Handle()), Handle(iv_state->image_state->Handle()));
         }
 
         skip |= ValidateProtectedImage(cb_state, *iv_state->image_state, loc.dot(Field::quantizationMap));
@@ -3647,17 +3764,17 @@ bool CoreChecks::ValidateVideoEncodeQuantizationMapInfo(const vvl::CommandBuffer
             const LogObjectList objlist(cb_state.Handle(), vs_state->Handle(), iv_state->Handle());
             if (iv_state->image_state->create_flags & VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR) {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10310", objlist, loc.dot(Field::quantizationMap),
-                                 "(%s created from %s) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
-                                 "not created with a video format supported by the video profile (%s) "
-                                 "the bound video session %s was created with.",
-                                 FormatHandle(iv_state->Handle()).c_str(), FormatHandle(iv_state->image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(vs_state->Handle()).c_str());
+                                 "({} created from {}) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
+                                 "not created with a video format supported by the video profile ({}) "
+                                 "the bound video session {} was created with.",
+                                 Handle(iv_state->Handle()), Handle(iv_state->image_state->Handle()),
+                                 string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(vs_state->Handle()));
             } else {
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10310", objlist, loc.dot(Field::quantizationMap),
-                                 "(%s created from %s) is not compatible with the video profile (%s) "
-                                 "the bound video session %s was created with.\nSupported video profiles for the image:\n%s",
-                                 FormatHandle(iv_state->Handle()).c_str(), FormatHandle(iv_state->image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(vs_state->Handle()).c_str(),
+                                 "({} created from {}) is not compatible with the video profile ({}) "
+                                 "the bound video session {} was created with.\nSupported video profiles for the image:\n{}",
+                                 Handle(iv_state->Handle()), Handle(iv_state->image_state->Handle()),
+                                 string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(vs_state->Handle()),
                                  string_SupportedVideoProfiles(iv_state->image_state->supported_video_profiles).c_str());
             }
         }
@@ -3691,11 +3808,11 @@ bool CoreChecks::ValidateActiveReferencePictureCount(const vvl::CommandBuffer& c
     if (active_reference_picture_count > vs_state.create_info.maxActiveReferencePictures) {
         const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
         skip |= LogError("VUID-vkCmdDecodeVideoKHR-activeReferencePictureCount-07150", objlist, loc,
-                         "more active reference pictures (%" PRIu32
+                         "more active reference pictures ({}"
                          ") were specified than "
-                         "the maxActiveReferencePictures (%" PRIu32 ") the bound video session %s was created with.",
-                         active_reference_picture_count, vs_state.create_info.maxActiveReferencePictures,
-                         FormatHandle(vs_state).c_str());
+                         "the maxActiveReferencePictures ({}"
+                         ") the bound video session {} was created with.",
+                         active_reference_picture_count, vs_state.create_info.maxActiveReferencePictures, Handle(vs_state));
     }
 
     return skip;
@@ -3712,11 +3829,11 @@ bool CoreChecks::ValidateActiveReferencePictureCount(const vvl::CommandBuffer& c
     if (active_reference_picture_count > vs_state.create_info.maxActiveReferencePictures) {
         const LogObjectList objlist(cb_state.Handle(), vs_state.Handle());
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-activeReferencePictureCount-08216", objlist, loc,
-                         "more active reference pictures (%" PRIu32
+                         "more active reference pictures ({}"
                          ") were specified than "
-                         "the maxActiveReferencePictures (%" PRIu32 ") the bound video session %s was created with.",
-                         active_reference_picture_count, vs_state.create_info.maxActiveReferencePictures,
-                         FormatHandle(vs_state).c_str());
+                         "the maxActiveReferencePictures ({}"
+                         ") the bound video session {} was created with.",
+                         active_reference_picture_count, vs_state.create_info.maxActiveReferencePictures, Handle(vs_state));
     }
 
     return skip;
@@ -3776,7 +3893,7 @@ bool CoreChecks::ValidateReferencePictureUseCount(const vvl::CommandBuffer& cb_s
     for (uint32_t i = 0; i < vs_state.create_info.maxDpbSlots; ++i) {
         if (dpb_frame_use_count[i] > 1) {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-dpbFrameUseCount-07176", cb_state.Handle(), loc,
-                             "frame in DPB slot %" PRIu32
+                             "frame in DPB slot {}"
                              " is referred to multiple times across "
                              "pDecodeInfo->pSetupReferenceSlot and the elements of pDecodeInfo->pReferenceSlots.",
                              i);
@@ -3784,7 +3901,7 @@ bool CoreChecks::ValidateReferencePictureUseCount(const vvl::CommandBuffer& cb_s
         if (interlaced_frame_support) {
             if (dpb_top_field_use_count[i] > 1) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-dpbTopFieldUseCount-07177", cb_state.Handle(), loc,
-                                 "top field in DPB slot %" PRIu32
+                                 "top field in DPB slot {}"
                                  " is referred to multiple "
                                  "times across pDecodeInfo->pSetupReferenceSlot and the elements of "
                                  "pDecodeInfo->pReferenceSlots.",
@@ -3792,7 +3909,7 @@ bool CoreChecks::ValidateReferencePictureUseCount(const vvl::CommandBuffer& cb_s
             }
             if (dpb_bottom_field_use_count[i] > 1) {
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-dpbBottomFieldUseCount-07178", cb_state.Handle(), loc,
-                                 "bottom field in DPB slot %" PRIu32
+                                 "bottom field in DPB slot {}"
                                  " is referred to multiple "
                                  "times across pDecodeInfo->pSetupReferenceSlot and the elements of "
                                  "pDecodeInfo->pReferenceSlots.",
@@ -3826,7 +3943,7 @@ bool CoreChecks::ValidateReferencePictureUseCount(const vvl::CommandBuffer& cb_s
     for (uint32_t i = 0; i < vs_state.create_info.maxDpbSlots; ++i) {
         if (dpb_frame_use_count[i] > 1) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-dpbFrameUseCount-08221", cb_state.Handle(), loc,
-                             "frame in DPB slot %" PRIu32
+                             "frame in DPB slot {}"
                              " is referred to multiple times across "
                              "pEncodeInfo->pSetupReferenceSlot and the elements of pEncodeInfo->pReferenceSlots.",
                              i);
@@ -3851,7 +3968,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoCapabilitiesKHR(VkPhys
 
     skip |= ValidateVideoProfileInfo(*this, pVideoProfile, error_obj, error_obj.location.dot(Field::pVideoProfile));
 
-    const char* caps_pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* caps_pnext_msg = "chain does not contain a {} structure.";
 
     const Location caps_loc = error_obj.location.dot(Field::pCapabilities);
 
@@ -3934,7 +4051,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoCapabilitiesKHR(VkPhys
         skip |= LogError("VUID-vkGetPhysicalDeviceVideoCapabilitiesKHR-pNext-10921", physicalDevice,
                          error_obj.location.dot(Field::pVideoProfile).dot(Field::pNext),
                          "chain contains a VkVideoEncodeProfileRgbConversionInfoVALVE structure but the "
-                         "videoEncodeRgbConversion feature is not supported by the physical device.\n%s",
+                         "videoEncodeRgbConversion feature is not supported by the physical device.\n{}",
                          PrintPNextChain(Struct::VkVideoProfileInfoKHR, pVideoProfile->pNext).c_str());
     }
 
@@ -3962,7 +4079,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoFormatPropertiesKHR(
                                          .dot(Field::pProfiles, i)
                                          .dot(Field::pNext),
                                      "chain contains a VkVideoEncodeProfileRgbConversionInfoVALVE structure but the "
-                                     "videoEncodeRgbConversion feature is not supported by the physical device.\n%s",
+                                     "videoEncodeRgbConversion feature is not supported by the physical device.\n{}",
                                      PrintPNextChain(Struct::VkVideoProfileInfoKHR, video_profiles->pProfiles[i].pNext).c_str());
                     break;
                 }
@@ -3973,7 +4090,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoFormatPropertiesKHR(
                                            "pNext chain of pVideoFormatInfo."
                                          : "no VkVideoProfileListInfoKHR structure found in the pNext chain of pVideoFormatInfo.";
         skip |=
-            LogError("VUID-vkGetPhysicalDeviceVideoFormatPropertiesKHR-pNext-06812", physicalDevice, error_obj.location, "%s", msg);
+            LogError("VUID-vkGetPhysicalDeviceVideoFormatPropertiesKHR-pNext-06812", physicalDevice, error_obj.location, "{}", msg);
     }
 
     return skip;
@@ -3987,7 +4104,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoEncodeQualityLevelProp
     const Location quality_level_info_loc = error_obj.location.dot(Field::pQualityLevelInfo);
     const Location quality_level_props_loc = error_obj.location.dot(Field::pQualityLevelProperties);
 
-    const char* props_pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* props_pnext_msg = "chain does not contain a {} structure.";
 
     skip |= core::ValidateVideoProfileInfo(*this, pQualityLevelInfo->pVideoProfile, error_obj,
                                            quality_level_info_loc.dot(Field::pVideoProfile));
@@ -4004,9 +4121,10 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceVideoEncodeQualityLevelProp
         if (profile_desc.IsEncode() && pQualityLevelInfo->qualityLevel >= profile_caps.encode.maxQualityLevels) {
             skip |= LogError("VUID-VkPhysicalDeviceVideoEncodeQualityLevelInfoKHR-qualityLevel-08261", physicalDevice,
                              quality_level_info_loc.dot(Field::qualityLevel),
-                             "(%" PRIu32 ") must be smaller than the VkVideoEncodeCapabilitiesKHR::maxQualityLevels (%" PRIu32
+                             "({}"
+                             ") must be smaller than the VkVideoEncodeCapabilitiesKHR::maxQualityLevels ({}"
                              ") limit "
-                             "supported by the specified video profile (%s).",
+                             "supported by the specified video profile ({}).",
                              pQualityLevelInfo->qualityLevel, profile_caps.encode.maxQualityLevels,
                              string_VideoProfileDesc(profile_desc).c_str());
         }
@@ -4069,7 +4187,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                 skip |=
                     LogError("VUID-VkVideoSessionCreateInfoKHR-protectedMemory-07189", device, create_info_loc.dot(Field::flags),
                              "has VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR set but the video profile "
-                             "(%s) does not support VK_VIDEO_CAPABILITY_PROTECTED_CONTENT_BIT_KHR.",
+                             "({}) does not support VK_VIDEO_CAPABILITY_PROTECTED_CONTENT_BIT_KHR.",
                              string_VideoProfileDesc(profile_desc).c_str());
             }
         }
@@ -4102,7 +4220,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                     skip |=
                         LogError("VUID-VkVideoSessionCreateInfoKHR-flags-10267", device, create_info_loc.dot(Field::flags),
                                  "has VK_VIDEO_SESSION_CREATE_ALLOW_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR set but the "
-                                 "video profile (%s) does not support VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR.",
+                                 "video profile ({}) does not support VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR.",
                                  string_VideoProfileDesc(profile_desc).c_str());
                 }
 
@@ -4110,14 +4228,14 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                     (profile_caps.encode.flags & VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR) == 0) {
                     skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-flags-10268", device, create_info_loc.dot(Field::flags),
                                      "has VK_VIDEO_SESSION_CREATE_ALLOW_ENCODE_EMPHASIS_MAP_BIT_KHR set but the "
-                                     "video profile (%s) does not support VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR.",
+                                     "video profile ({}) does not support VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR.",
                                      string_VideoProfileDesc(profile_desc).c_str());
                 }
             } else {
                 skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-flags-10265", device, create_info_loc.dot(Field::flags),
                                  "has VK_VIDEO_SESSION_CREATE_ALLOW_ENCODE_EMPHASIS_MAP_BIT_KHR or "
                                  "VK_VIDEO_SESSION_CREATE_ALLOW_ENCODE_QUANTIZATION_MAP_BIT_KHR set but "
-                                 "the video profile (%s) does not specify an encode operation.",
+                                 "the video profile ({}) does not specify an encode operation.",
                                  string_VideoProfileDesc(profile_desc).c_str());
             }
         }
@@ -4131,15 +4249,15 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
         if (pCreateInfo->flags & VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR && !profile_desc.IsDecode()) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-flags-10399", device, create_info_loc.dot(Field::flags),
                              "has VK_VIDEO_SESSION_CREATE_INLINE_SESSION_PARAMETERS_BIT_KHR set but "
-                             "%s does not specify a decode operation.",
-                             create_info_loc.dot(Field::pVideoProfile).Fields().c_str());
+                             "{} does not specify a decode operation.",
+                             create_info_loc.dot(Field::pVideoProfile));
         }
 
         if (!IsBetweenInclusive(pCreateInfo->maxCodedExtent, profile_caps.base.minCodedExtent, profile_caps.base.maxCodedExtent)) {
             skip |= LogError(
                 "VUID-VkVideoSessionCreateInfoKHR-maxCodedExtent-04851", device, create_info_loc.dot(Field::maxCodedExtent),
-                "(%s) is outside of the "
-                "range (%s)-(%s) supported by the video profile (%s).",
+                "({}) is outside of the "
+                "range ({})-({}) supported by the video profile ({}).",
                 string_VkExtent2D(pCreateInfo->maxCodedExtent).c_str(), string_VkExtent2D(profile_caps.base.minCodedExtent).c_str(),
                 string_VkExtent2D(profile_caps.base.maxCodedExtent).c_str(), string_VideoProfileDesc(profile_desc).c_str());
         }
@@ -4147,17 +4265,19 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
         if (pCreateInfo->maxDpbSlots > profile_caps.base.maxDpbSlots) {
             skip |=
                 LogError("VUID-VkVideoSessionCreateInfoKHR-maxDpbSlots-04847", device, create_info_loc.dot(Field::maxDpbSlots),
-                         "(%" PRIu32
+                         "({}"
                          ") is greater than the "
-                         "maxDpbSlots (%" PRIu32 ") supported by the video profile (%s).",
+                         "maxDpbSlots ({}"
+                         ") supported by the video profile ({}).",
                          pCreateInfo->maxDpbSlots, profile_caps.base.maxDpbSlots, string_VideoProfileDesc(profile_desc).c_str());
         }
 
         if (pCreateInfo->maxActiveReferencePictures > profile_caps.base.maxActiveReferencePictures) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-maxActiveReferencePictures-04849", device, error_obj.location,
-                             "pCreateInfo->maxActiveReferencePictures (%" PRIu32
+                             "pCreateInfo->maxActiveReferencePictures ({}"
                              ") is greater "
-                             "than the maxActiveReferencePictures (%" PRIu32 ") supported by the video profile (%s).",
+                             "than the maxActiveReferencePictures ({}"
+                             ") supported by the video profile ({}).",
                              pCreateInfo->maxActiveReferencePictures, profile_caps.base.maxActiveReferencePictures,
                              string_VideoProfileDesc(profile_desc).c_str());
         }
@@ -4165,9 +4285,10 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
         if ((pCreateInfo->maxDpbSlots == 0 && pCreateInfo->maxActiveReferencePictures != 0) ||
             (pCreateInfo->maxDpbSlots != 0 && pCreateInfo->maxActiveReferencePictures == 0)) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-maxDpbSlots-04850", device, error_obj.location,
-                             "if either pCreateInfo->maxDpbSlots (%" PRIu32
+                             "if either pCreateInfo->maxDpbSlots ({}"
                              ") or "
-                             "pCreateInfo->maxActiveReferencePictures (%" PRIu32 ") is zero then both must be zero.",
+                             "pCreateInfo->maxActiveReferencePictures ({}"
+                             ") is zero then both must be zero.",
                              pCreateInfo->maxDpbSlots, pCreateInfo->maxActiveReferencePictures);
         }
 
@@ -4176,8 +4297,8 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                                     pCreateInfo->pVideoProfile)) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-referencePictureFormat-04852", device,
                              create_info_loc.dot(Field::referencePictureFormat),
-                             "(%s) is not a supported "
-                             "decode DPB format for the video profile (%s) specified in pCreateInfo->pVideoProfile.",
+                             "({}) is not a supported "
+                             "decode DPB format for the video profile ({}) specified in pCreateInfo->pVideoProfile.",
                              string_VkFormat(pCreateInfo->referencePictureFormat), string_VideoProfileDesc(profile_desc).c_str());
         }
 
@@ -4186,8 +4307,8 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                                     pCreateInfo->pVideoProfile)) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-referencePictureFormat-06814", device,
                              create_info_loc.dot(Field::referencePictureFormat),
-                             "(%s) is not a supported "
-                             "encode DPB format for the video profile (%s) specified in pCreateInfo->pVideoProfile.",
+                             "({}) is not a supported "
+                             "encode DPB format for the video profile ({}) specified in pCreateInfo->pVideoProfile.",
                              string_VkFormat(pCreateInfo->referencePictureFormat), string_VideoProfileDesc(profile_desc).c_str());
         }
 
@@ -4195,8 +4316,8 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                                                                pCreateInfo->pVideoProfile)) {
             skip |=
                 LogError("VUID-VkVideoSessionCreateInfoKHR-pictureFormat-04853", device, create_info_loc.dot(Field::pictureFormat),
-                         "(%s) is not a supported "
-                         "decode output format for the video profile (%s) specified in pCreateInfo->pVideoProfile.",
+                         "({}) is not a supported "
+                         "decode output format for the video profile ({}) specified in pCreateInfo->pVideoProfile.",
                          string_VkFormat(pCreateInfo->pictureFormat), string_VideoProfileDesc(profile_desc).c_str());
         }
 
@@ -4204,25 +4325,29 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                                                                pCreateInfo->pVideoProfile)) {
             skip |=
                 LogError("VUID-VkVideoSessionCreateInfoKHR-pictureFormat-04854", device, create_info_loc.dot(Field::pictureFormat),
-                         "(%s) is not a supported "
-                         "encode input format for the video profile (%s) specified in pCreateInfo->pVideoProfile.",
+                         "({}) is not a supported "
+                         "encode input format for the video profile ({}) specified in pCreateInfo->pVideoProfile.",
                          string_VkFormat(pCreateInfo->pictureFormat), string_VideoProfileDesc(profile_desc).c_str());
         }
 
         if (strncmp(pCreateInfo->pStdHeaderVersion->extensionName, profile_caps.base.stdHeaderVersion.extensionName,
                     VK_MAX_EXTENSION_NAME_SIZE)) {
-            skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pStdHeaderVersion-07190", device,
-                             create_info_loc.dot(Field::pStdHeaderVersion).dot(Field::extensionName),
-                             "'%.*s' is an unsupported Video Std header name, expected '%.*s'.", VK_MAX_EXTENSION_NAME_SIZE,
-                             pCreateInfo->pStdHeaderVersion->extensionName, VK_MAX_EXTENSION_NAME_SIZE,
-                             profile_caps.base.stdHeaderVersion.extensionName);
+            skip |=
+                LogError("VUID-VkVideoSessionCreateInfoKHR-pStdHeaderVersion-07190", device,
+                         create_info_loc.dot(Field::pStdHeaderVersion).dot(Field::extensionName),
+                         "'{}' is an unsupported Video Std header name, expected '{}'.",
+                         // Like printf's %.*s: at most VK_MAX_EXTENSION_NAME_SIZE characters, terminated or not
+                         std::string_view(pCreateInfo->pStdHeaderVersion->extensionName,
+                                          strnlen(pCreateInfo->pStdHeaderVersion->extensionName, VK_MAX_EXTENSION_NAME_SIZE)),
+                         std::string_view(profile_caps.base.stdHeaderVersion.extensionName,
+                                          strnlen(profile_caps.base.stdHeaderVersion.extensionName, VK_MAX_EXTENSION_NAME_SIZE)));
         }
 
         if (pCreateInfo->pStdHeaderVersion->specVersion > profile_caps.base.stdHeaderVersion.specVersion) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pStdHeaderVersion-07191", device,
                              create_info_loc.dot(Field::pStdHeaderVersion).dot(Field::specVersion),
-                             "(0x%08x) is larger than the supported version (0x%08x).", pCreateInfo->pStdHeaderVersion->specVersion,
-                             profile_caps.base.stdHeaderVersion.specVersion);
+                             "(0x{:08x}) is larger than the supported version (0x{:08x}).",
+                             pCreateInfo->pStdHeaderVersion->specVersion, profile_caps.base.stdHeaderVersion.specVersion);
         }
 
         switch (pCreateInfo->pVideoProfile->videoCodecOperation) {
@@ -4231,9 +4356,11 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                 if (h264_create_info != nullptr && h264_create_info->maxLevelIdc > profile_caps.encode_h264.maxLevelIdc) {
                     skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-08251", device,
                                      create_info_loc.pNext(Struct::VkVideoEncodeH264SessionCreateInfoKHR, Field::maxLevelIdc),
-                                     "(%" PRIu32 ") exceeds the maxLevelIdc (%" PRIu32
-                                     ") supported by the specified video profile (%s).",
-                                     h264_create_info->maxLevelIdc, profile_caps.encode_h264.maxLevelIdc,
+                                     "({}"
+                                     ") exceeds the maxLevelIdc ({}"
+                                     ") supported by the specified video profile ({}).",
+                                     static_cast<unsigned int>(h264_create_info->maxLevelIdc),
+                                     static_cast<unsigned int>(profile_caps.encode_h264.maxLevelIdc),
                                      string_VideoProfileDesc(profile_desc).c_str());
                 }
                 break;
@@ -4244,9 +4371,11 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                 if (h265_create_info != nullptr && h265_create_info->maxLevelIdc > profile_caps.encode_h265.maxLevelIdc) {
                     skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-08252", device,
                                      create_info_loc.pNext(Struct::VkVideoEncodeH265SessionCreateInfoKHR, Field::maxLevelIdc),
-                                     "(%" PRIu32 ") exceeds the maxLevelIdc (%" PRIu32
-                                     ") supported by the specified video profile (%s).",
-                                     h265_create_info->maxLevelIdc, profile_caps.encode_h265.maxLevelIdc,
+                                     "({}"
+                                     ") exceeds the maxLevelIdc ({}"
+                                     ") supported by the specified video profile ({}).",
+                                     static_cast<unsigned int>(h265_create_info->maxLevelIdc),
+                                     static_cast<unsigned int>(profile_caps.encode_h265.maxLevelIdc),
                                      string_VideoProfileDesc(profile_desc).c_str());
                 }
                 break;
@@ -4255,11 +4384,14 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
             case VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR: {
                 auto av1_create_info = vku::FindStructInPNextChain<VkVideoEncodeAV1SessionCreateInfoKHR>(pCreateInfo);
                 if (av1_create_info != nullptr && av1_create_info->maxLevel > profile_caps.encode_av1.maxLevel) {
-                    skip |= LogError(
-                        "VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-10270", device,
-                        create_info_loc.pNext(Struct::VkVideoEncodeAV1SessionCreateInfoKHR, Field::maxLevel),
-                        "(%" PRIu32 ") exceeds the maxLevel (%" PRIu32 ") supported by the specified video profile (%s).",
-                        av1_create_info->maxLevel, profile_caps.encode_av1.maxLevel, string_VideoProfileDesc(profile_desc).c_str());
+                    skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-10270", device,
+                                     create_info_loc.pNext(Struct::VkVideoEncodeAV1SessionCreateInfoKHR, Field::maxLevel),
+                                     "({}"
+                                     ") exceeds the maxLevel ({}"
+                                     ") supported by the specified video profile ({}).",
+                                     static_cast<unsigned int>(av1_create_info->maxLevel),
+                                     static_cast<unsigned int>(profile_caps.encode_av1.maxLevel),
+                                     string_VideoProfileDesc(profile_desc).c_str());
                 }
                 break;
             }
@@ -4271,16 +4403,17 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
         if (pCreateInfo->queueFamilyIndex >= device_state->queue_family_ext_props.size()) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-11759", device,
                              create_info_loc.dot(Field::queueFamilyIndex),
-                             "(%" PRIu32 ") is not the index of a queue family of the physical device (queue family count is %zu).",
+                             "({}"
+                             ") is not the index of a queue family of the physical device (queue family count is {}).",
                              pCreateInfo->queueFamilyIndex, device_state->queue_family_ext_props.size());
         } else if (const auto& qf_ext_props = device_state->queue_family_ext_props[pCreateInfo->queueFamilyIndex];
                    (pCreateInfo->pVideoProfile->videoCodecOperation & qf_ext_props.video_props.videoCodecOperations) == 0) {
             skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-11759", device,
                              create_info_loc.dot(Field::pVideoProfile).dot(Field::videoCodecOperation),
-                             "(%s) is not supported by the queue family index specified to create the video session.\n"
-                             "Supported video codec operations by the queue family: %s.",
+                             "({}) is not supported by the queue family index specified to create the video session.\n"
+                             "Supported video codec operations by the queue family: {}.",
                              string_VkVideoCodecOperationFlagBitsKHR(pCreateInfo->pVideoProfile->videoCodecOperation),
-                             string_VkVideoCodecOperationFlagsKHR(qf_ext_props.video_props.videoCodecOperations).c_str());
+                             vvl::Flags::VideoCodecOperationFlagsKHR(qf_ext_props.video_props.videoCodecOperations));
         }
 
         if (profile_desc.IsEncode()) {
@@ -4291,7 +4424,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                         skip |= LogError(
                             "VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-10835", device,
                             create_info_loc.pNext(Struct::VkVideoEncodeSessionIntraRefreshCreateInfoKHR, Field::intraRefreshMode),
-                            "is %s but the videoEncodeIntraRefresh device feature is not enabled.",
+                            "is {} but the videoEncodeIntraRefresh device feature is not enabled.",
                             string_VkVideoEncodeIntraRefreshModeFlagBitsKHR(ir_create_info->intraRefreshMode));
                     }
 
@@ -4299,7 +4432,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                         skip |= LogError(
                             "VUID-VkVideoSessionCreateInfoKHR-pVideoProfile-10836", device,
                             create_info_loc.pNext(Struct::VkVideoEncodeSessionIntraRefreshCreateInfoKHR, Field::intraRefreshMode),
-                            "(%s) is not supported by the video profile (%s) specified in pCreateInfo->pVideoProfile.",
+                            "({}) is not supported by the video profile ({}) specified in pCreateInfo->pVideoProfile.",
                             string_VkVideoEncodeIntraRefreshModeFlagBitsKHR(ir_create_info->intraRefreshMode),
                             string_VideoProfileDesc(profile_desc).c_str());
                     }
@@ -4314,40 +4447,40 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
                     skip |= LogError(
                         "VUID-VkVideoEncodeSessionRgbConversionCreateInfoVALVE-rgbModel-10930", device,
                         create_info_loc.pNext(Struct::VkVideoEncodeSessionRgbConversionCreateInfoVALVE).dot(Field::rgbModel),
-                        "is %s but the video profile (%s) only supports rgbModels %s.",
+                        "is {} but the video profile ({}) only supports rgbModels {}.",
                         string_VkVideoEncodeRgbModelConversionFlagBitsVALVE(rgb_conversion_info->rgbModel),
                         string_VideoProfileDesc(profile_desc).c_str(),
-                        string_VkVideoEncodeRgbModelConversionFlagsVALVE(rgb_caps.rgbModels).c_str());
+                        vvl::Flags::VideoEncodeRgbModelConversionFlagsVALVE(rgb_caps.rgbModels));
                 }
 
                 if ((rgb_conversion_info->rgbRange & rgb_caps.rgbRanges) == 0) {
                     skip |= LogError(
                         "VUID-VkVideoEncodeSessionRgbConversionCreateInfoVALVE-rgbRange-10931", device,
                         create_info_loc.pNext(Struct::VkVideoEncodeSessionRgbConversionCreateInfoVALVE).dot(Field::rgbRange),
-                        "is %s but the video profile (%s) only supports rgbRanges %s.",
+                        "is {} but the video profile ({}) only supports rgbRanges {}.",
                         string_VkVideoEncodeRgbRangeCompressionFlagBitsVALVE(rgb_conversion_info->rgbRange),
                         string_VideoProfileDesc(profile_desc).c_str(),
-                        string_VkVideoEncodeRgbRangeCompressionFlagsVALVE(rgb_caps.rgbRanges).c_str());
+                        vvl::Flags::VideoEncodeRgbRangeCompressionFlagsVALVE(rgb_caps.rgbRanges));
                 }
 
                 if ((rgb_conversion_info->xChromaOffset & rgb_caps.xChromaOffsets) == 0) {
                     skip |= LogError(
                         "VUID-VkVideoEncodeSessionRgbConversionCreateInfoVALVE-xChromaOffset-10932", device,
                         create_info_loc.pNext(Struct::VkVideoEncodeSessionRgbConversionCreateInfoVALVE).dot(Field::xChromaOffset),
-                        "is %s but the video profile (%s) only supports xChromaOffsets %s.",
+                        "is {} but the video profile ({}) only supports xChromaOffsets {}.",
                         string_VkVideoEncodeRgbChromaOffsetFlagBitsVALVE(rgb_conversion_info->xChromaOffset),
                         string_VideoProfileDesc(profile_desc).c_str(),
-                        string_VkVideoEncodeRgbChromaOffsetFlagsVALVE(rgb_caps.xChromaOffsets).c_str());
+                        vvl::Flags::VideoEncodeRgbChromaOffsetFlagsVALVE(rgb_caps.xChromaOffsets));
                 }
 
                 if ((rgb_conversion_info->yChromaOffset & rgb_caps.yChromaOffsets) == 0) {
                     skip |= LogError(
                         "VUID-VkVideoEncodeSessionRgbConversionCreateInfoVALVE-yChromaOffset-10933", device,
                         create_info_loc.pNext(Struct::VkVideoEncodeSessionRgbConversionCreateInfoVALVE).dot(Field::yChromaOffset),
-                        "is %s but the video profile (%s) only supports yChromaOffsets %s.",
+                        "is {} but the video profile ({}) only supports yChromaOffsets {}.",
                         string_VkVideoEncodeRgbChromaOffsetFlagBitsVALVE(rgb_conversion_info->yChromaOffset),
                         string_VideoProfileDesc(profile_desc).c_str(),
-                        string_VkVideoEncodeRgbChromaOffsetFlagsVALVE(rgb_caps.yChromaOffsets).c_str());
+                        vvl::Flags::VideoEncodeRgbChromaOffsetFlagsVALVE(rgb_caps.yChromaOffsets));
                 }
             }
         }
@@ -4363,7 +4496,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionKHR(VkDevice device, const VkV
         skip |= LogError("VUID-VkVideoSessionCreateInfoKHR-pNext-10924", device, create_info_loc.dot(Field::pNext),
                          "chain does not contain a VkVideoEncodeSessionRgbConversionCreateInfoVALVE structure but "
                          "performEncodeRgbConversion is VK_TRUE in the VkVideoEncodeProfileRgbConversionInfoVALVE structure "
-                         "included in the pNext chain of pVideoProfile.\n%s",
+                         "included in the pNext chain of pVideoProfile.\n{}",
                          PrintPNextChain(Struct::VkVideoSessionCreateInfoKHR, pCreateInfo->pNext).c_str());
     }
 
@@ -4398,7 +4531,9 @@ bool CoreChecks::PreCallValidateBindVideoSessionMemoryKHR(VkDevice device, VkVid
                 if (memory_bind_indices.find(mem_bind_index) != memory_bind_indices.end()) {
                     skip |= LogError("VUID-vkBindVideoSessionMemoryKHR-memoryBindIndex-07196", videoSession,
                                      error_obj.location.dot(Field::pBindSessionMemoryInfos, i).dot(Field::memoryBindIndex),
-                                     "(%" PRIu32 ") is not unique.", mem_bind_index);
+                                     "({}"
+                                     ") is not unique.",
+                                     mem_bind_index);
                     break;
                 }
                 memory_bind_indices.emplace(mem_bind_index);
@@ -4414,63 +4549,73 @@ bool CoreChecks::PreCallValidateBindVideoSessionMemoryKHR(VkDevice device, VkVid
                         const LogObjectList objlist(videoSession, memory_state->Handle());
                         skip |=
                             LogError("VUID-vkBindVideoSessionMemoryKHR-pBindSessionMemoryInfos-07198", objlist, error_obj.location,
-                                     "memoryTypeBits (0x%x) for memory binding "
-                                     "with index %" PRIu32 " of %s are not compatible with the memory type index (%" PRIu32
+                                     "memoryTypeBits (0x{:x}) for memory binding "
+                                     "with index {}"
+                                     " of {} are not compatible with the memory type index ({}"
                                      ") of "
-                                     "%s specified in pBindSessionMemoryInfos[%" PRIu32 "].memory.",
-                                     mem_binding_info->requirements.memoryTypeBits, bind_info.memoryBindIndex,
-                                     FormatHandle(videoSession).c_str(), memory_state->allocate_info.memoryTypeIndex,
-                                     FormatHandle(*memory_state).c_str(), i);
+                                     "{} specified in pBindSessionMemoryInfos[{}"
+                                     "].memory.",
+                                     mem_binding_info->requirements.memoryTypeBits, bind_info.memoryBindIndex, Handle(videoSession),
+                                     memory_state->allocate_info.memoryTypeIndex, Handle(*memory_state), i);
                     }
 
                     if (bind_info.memoryOffset >= memory_state->allocate_info.allocationSize) {
                         const LogObjectList objlist(videoSession, memory_state->Handle());
                         skip |= LogError("VUID-VkBindVideoSessionMemoryInfoKHR-memoryOffset-07201", objlist,
                                          error_obj.location.dot(Field::pBindSessionMemoryInfos, i).dot(Field::memoryOffset),
-                                         "(%" PRIuLEAST64 ") must be less than the size (%" PRIuLEAST64 ") of %s.",
-                                         bind_info.memoryOffset, memory_state->allocate_info.allocationSize,
-                                         FormatHandle(*memory_state).c_str());
+                                         "({}"
+                                         ") must be less than the size ({}"
+                                         ") of {}.",
+                                         bind_info.memoryOffset, memory_state->allocate_info.allocationSize, Handle(*memory_state));
                     } else if (bind_info.memoryOffset + bind_info.memorySize > memory_state->allocate_info.allocationSize) {
                         const LogObjectList objlist(videoSession, memory_state->Handle());
                         skip |= LogError("VUID-VkBindVideoSessionMemoryInfoKHR-memorySize-07202", objlist,
                                          error_obj.location.dot(Field::pBindSessionMemoryInfos, i).dot(Field::memoryOffset),
-                                         "(%" PRIuLEAST64 ") + memory size (%" PRIuLEAST64
-                                         ") must be less than or equal to the size (%" PRIuLEAST64 ") of %s.",
+                                         "({}"
+                                         ") + memory size ({}"
+                                         ") must be less than or equal to the size ({}"
+                                         ") of {}.",
                                          bind_info.memoryOffset, bind_info.memorySize, memory_state->allocate_info.allocationSize,
-                                         FormatHandle(*memory_state).c_str());
+                                         Handle(*memory_state));
                     }
                 }
 
                 if (!IsIntegerMultipleOf(bind_info.memoryOffset, mem_binding_info->requirements.alignment)) {
                     skip |= LogError("VUID-vkBindVideoSessionMemoryKHR-pBindSessionMemoryInfos-07199", videoSession,
                                      error_obj.location.dot(Field::pBindSessionMemoryInfos, i).dot(Field::memoryOffset),
-                                     "(%" PRIuLEAST64 ") but must be an integer multiple of the alignment value %" PRIuLEAST64
-                                     " for the memory binding index %" PRIu32 " of %s.",
+                                     "({}"
+                                     ") but must be an integer multiple of the alignment value {}"
+                                     " for the memory binding index {}"
+                                     " of {}.",
                                      bind_info.memoryOffset, mem_binding_info->requirements.alignment, bind_info.memoryBindIndex,
-                                     FormatHandle(videoSession).c_str());
+                                     Handle(videoSession));
                 }
 
                 if (bind_info.memorySize != mem_binding_info->requirements.size) {
                     skip |= LogError("VUID-vkBindVideoSessionMemoryKHR-pBindSessionMemoryInfos-07200", videoSession,
                                      error_obj.location.dot(Field::pBindSessionMemoryInfos, i).dot(Field::memorySize),
-                                     "(%" PRIuLEAST64 ") does not equal the required size (%" PRIuLEAST64
-                                     ") for the memory binding index %" PRIu32 " of %s.",
+                                     "({}"
+                                     ") does not equal the required size ({}"
+                                     ") for the memory binding index {}"
+                                     " of {}.",
                                      bind_info.memorySize, mem_binding_info->requirements.size, bind_info.memoryBindIndex,
-                                     FormatHandle(videoSession).c_str());
+                                     Handle(videoSession));
                 }
 
                 if (mem_binding_info->bound) {
                     skip |= LogError("VUID-vkBindVideoSessionMemoryKHR-videoSession-07195", videoSession, error_obj.location,
-                                     "memory binding with index %" PRIu32
-                                     " of %s is already "
-                                     "bound but was specified in pBindSessionMemoryInfos[%" PRIu32 "].memoryBindIndex.",
-                                     bind_info.memoryBindIndex, FormatHandle(videoSession).c_str(), i);
+                                     "memory binding with index {}"
+                                     " of {} is already "
+                                     "bound but was specified in pBindSessionMemoryInfos[{}"
+                                     "].memoryBindIndex.",
+                                     bind_info.memoryBindIndex, Handle(videoSession), i);
                 }
             } else {
                 skip |= LogError("VUID-vkBindVideoSessionMemoryKHR-pBindSessionMemoryInfos-07197", videoSession, error_obj.location,
-                                 "%s does not have a memory binding corresponding "
-                                 "to the memoryBindIndex specified in pBindSessionMemoryInfos[%" PRIu32 "].",
-                                 FormatHandle(videoSession).c_str(), i);
+                                 "{} does not have a memory binding corresponding "
+                                 "to the memoryBindIndex specified in pBindSessionMemoryInfos[{}"
+                                 "].",
+                                 Handle(videoSession), i);
             }
         }
     }
@@ -4493,17 +4638,17 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
         if (template_state && (template_state->vs_state->VkHandle() != pCreateInfo->videoSession)) {
             template_state = nullptr;
             const LogObjectList objlist(device, pCreateInfo->videoSessionParametersTemplate, pCreateInfo->videoSession);
-            skip |= LogError(
-                "VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-04855", objlist,
-                create_info_loc.dot(Field::videoSessionParametersTemplate), "(%s) was not created against the same %s.",
-                FormatHandle(pCreateInfo->videoSessionParametersTemplate).c_str(), FormatHandle(pCreateInfo->videoSession).c_str());
+            skip |=
+                LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-04855", objlist,
+                         create_info_loc.dot(Field::videoSessionParametersTemplate), "({}) was not created against the same {}.",
+                         Handle(pCreateInfo->videoSessionParametersTemplate), Handle(pCreateInfo->videoSession));
         }
     }
 
     auto vs_state = Get<vvl::VideoSession>(pCreateInfo->videoSession);
     if (!vs_state) return skip;
 
-    const char* pnext_chain_msg = "does not contain a %s structure.";
+    constexpr const char* pnext_chain_msg = "does not contain a {} structure.";
     switch (vs_state->GetCodecOp()) {
         case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR: {
             auto codec_info = vku::FindStructInPNextChain<VkVideoDecodeH264SessionParametersCreateInfoKHR>(pCreateInfo->pNext);
@@ -4553,7 +4698,7 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
         case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR: {
             skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-10794", device,
                              create_info_loc.dot(Field::videoSession),
-                             "was created with a video profile (%s) but VP9 decode does not use video session parameters.",
+                             "was created with a video profile ({}) but VP9 decode does not use video session parameters.",
                              string_VideoProfileDesc(*vs_state->profile).c_str());
             break;
         }
@@ -4596,11 +4741,12 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
                         "VUID-VkVideoSessionParametersCreateInfoKHR-videoSession-10280", device,
                         create_info_loc.pNext(Struct::VkVideoEncodeAV1SessionParametersCreateInfoKHR,
                                               Field::stdOperatingPointCount),
-                        "(%" PRIu32 ") is greater than the VkVideoEncodeAV1Capabilities::maxOperatingPoints (%" PRIu32
+                        "({}"
+                        ") is greater than the VkVideoEncodeAV1Capabilities::maxOperatingPoints ({}"
                         ") supported by the "
-                        "video profile (%s) VkVideoSessionParametersCreateInfoKHR::videoSession (%s) was created with.",
+                        "video profile ({}) VkVideoSessionParametersCreateInfoKHR::videoSession ({}) was created with.",
                         codec_info->stdOperatingPointCount, vs_state->profile->GetCapabilities().encode_av1.maxOperatingPoints,
-                        string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                        string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
                 }
 
                 if (codec_info->pStdSequenceHeader != nullptr &&
@@ -4637,21 +4783,23 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
             if (encode_quality_level >= max_quality_levels) {
                 skip |= LogError("VUID-VkVideoEncodeQualityLevelInfoKHR-qualityLevel-08311", pCreateInfo->videoSession,
                                  create_info_loc.pNext(Struct::VkVideoEncodeQualityLevelInfoKHR, Field::qualityLevel),
-                                 "(%" PRIu32 ") must be smaller than the maxQualityLevels (%" PRIu32
+                                 "({}"
+                                 ") must be smaller than the maxQualityLevels ({}"
                                  ") supported by the video "
-                                 "profile %s was created with.",
-                                 encode_quality_level, max_quality_levels, FormatHandle(pCreateInfo->videoSession).c_str());
+                                 "profile {} was created with.",
+                                 encode_quality_level, max_quality_levels, Handle(pCreateInfo->videoSession));
             }
         }
 
         if (template_state != nullptr && encode_quality_level != template_state->GetEncodeQualityLevel()) {
             const LogObjectList objlist(device, pCreateInfo->videoSessionParametersTemplate, pCreateInfo->videoSession);
-            skip |=
-                LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-08310", objlist,
-                         create_info_loc.pNext(Struct::VkVideoEncodeQualityLevelInfoKHR, Field::qualityLevel),
-                         "(%" PRIu32 ") does not match the video encode quality level (%" PRIu32 ") template %s was created with.",
-                         encode_quality_level, template_state->GetEncodeQualityLevel(),
-                         FormatHandle(pCreateInfo->videoSessionParametersTemplate).c_str());
+            skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-08310", objlist,
+                             create_info_loc.pNext(Struct::VkVideoEncodeQualityLevelInfoKHR, Field::qualityLevel),
+                             "({}"
+                             ") does not match the video encode quality level ({}"
+                             ") template {} was created with.",
+                             encode_quality_level, template_state->GetEncodeQualityLevel(),
+                             Handle(pCreateInfo->videoSessionParametersTemplate));
         }
 
         if (pCreateInfo->flags & VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR) {
@@ -4661,8 +4809,8 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
                 skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-10275", objlist,
                                  create_info_loc.dot(Field::flags),
                                  "has VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR set but the template "
-                                 "%s was not created with VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR.",
-                                 FormatHandle(pCreateInfo->videoSessionParametersTemplate).c_str());
+                                 "{} was not created with VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR.",
+                                 Handle(pCreateInfo->videoSessionParametersTemplate));
             }
 
             if ((vs_state->create_info.flags & (VK_VIDEO_SESSION_CREATE_ALLOW_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR |
@@ -4696,9 +4844,9 @@ bool CoreChecks::PreCallValidateCreateVideoSessionParametersKHR(VkDevice device,
                 skip |= LogError("VUID-VkVideoSessionParametersCreateInfoKHR-videoSessionParametersTemplate-10277", objlist,
                                  create_info_loc.dot(Field::videoSessionParametersTemplate),
                                  "was created with VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR but "
-                                 "pCreateInfo->flags (%s) does not include "
+                                 "pCreateInfo->flags ({}) does not include "
                                  "VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR.",
-                                 string_VkVideoSessionParametersCreateFlagsKHR(pCreateInfo->flags).c_str());
+                                 vvl::Flags::VideoSessionParametersCreateFlagsKHR(pCreateInfo->flags));
             }
         }
     }
@@ -4720,7 +4868,10 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
 
     if (pUpdateInfo->updateSequenceCount != vsp_data->update_sequence_counter + 1) {
         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-pUpdateInfo-07215", device,
-                         update_info_loc.dot(Field::updateSequenceCount), "(%" PRIu32 ") should be %" PRIu32 ".",
+                         update_info_loc.dot(Field::updateSequenceCount),
+                         "({}"
+                         ") should be {}"
+                         ".",
                          pUpdateInfo->updateSequenceCount, vsp_data->update_sequence_counter + 1);
     }
 
@@ -4737,8 +4888,10 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07216",
                                          videoSessionParameters, error_obj.location,
                                          "H.264 SPS with key "
-                                         "(SPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdSPSs[i].seq_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                                         "(SPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].seq_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4746,11 +4899,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07217", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.264 SPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.264 "
-                                     "SPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.264 "
+                                     "SPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdSPSCount, vsp_data->h264.sps.size(), vsp_data->h264.sps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdPPSCount; ++i) {
@@ -4759,9 +4913,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07218",
                                          videoSessionParameters, error_obj.location,
                                          "H.264 PPS with key "
-                                         "(SPS ID = %" PRIu32 ", PPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdPPSs[i].seq_parameter_set_id, add_info->pStdPPSs[i].pic_parameter_set_id,
-                                         FormatHandle(videoSessionParameters).c_str());
+                                         "(SPS ID = {}"
+                                         ", PPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].seq_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pic_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4769,11 +4926,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07219", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.264 PPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.264 "
-                                     "PPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.264 "
+                                     "PPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdPPSCount, vsp_data->h264.pps.size(), vsp_data->h264.pps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
             }
             break;
@@ -4791,9 +4949,10 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07220",
                                          videoSessionParameters, error_obj.location,
                                          "H.265 VPS with key "
-                                         "(VPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdVPSs[i].vps_video_parameter_set_id,
-                                         FormatHandle(videoSessionParameters).c_str());
+                                         "(VPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdVPSs[i].vps_video_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4801,23 +4960,26 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07221", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 VPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "VPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "VPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdVPSCount, vsp_data->h265.vps.size(), vsp_data->h265.vps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdSPSCount; ++i) {
                     if (vsp_data.GetH265SPS(add_info->pStdSPSs[i].sps_video_parameter_set_id,
                                             add_info->pStdSPSs[i].sps_seq_parameter_set_id)) {
-                        skip |=
-                            LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07222", videoSessionParameters,
-                                     error_obj.location,
-                                     "H.265 SPS with key "
-                                     "(VPS ID = %" PRIu32 ", SPS ID = %" PRIu32 ") already exists in %s.",
-                                     add_info->pStdSPSs[i].sps_video_parameter_set_id,
-                                     add_info->pStdSPSs[i].sps_seq_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                        skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07222",
+                                         videoSessionParameters, error_obj.location,
+                                         "H.265 SPS with key "
+                                         "(VPS ID = {}"
+                                         ", SPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].sps_video_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].sps_seq_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4825,24 +4987,29 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07223", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 SPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "SPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "SPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdSPSCount, vsp_data->h265.sps.size(), vsp_data->h265.sps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdPPSCount; ++i) {
                     if (vsp_data.GetH265PPS(add_info->pStdPPSs[i].sps_video_parameter_set_id,
                                             add_info->pStdPPSs[i].pps_seq_parameter_set_id,
                                             add_info->pStdPPSs[i].pps_pic_parameter_set_id)) {
-                        skip |= LogError(
-                            "VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07224", videoSessionParameters,
-                            error_obj.location,
-                            "H.265 PPS with key "
-                            "(VPS ID = %" PRIu32 ", SPS ID = %" PRIu32 ", PPS ID = %" PRIu32 ") already exists in %s.",
-                            add_info->pStdPPSs[i].sps_video_parameter_set_id, add_info->pStdPPSs[i].pps_seq_parameter_set_id,
-                            add_info->pStdPPSs[i].pps_pic_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                        skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07224",
+                                         videoSessionParameters, error_obj.location,
+                                         "H.265 PPS with key "
+                                         "(VPS ID = {}"
+                                         ", SPS ID = {}"
+                                         ", PPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].sps_video_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pps_seq_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pps_pic_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4850,11 +5017,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07225", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 PPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "PPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "PPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdPPSCount, vsp_data->h265.pps.size(), vsp_data->h265.pps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
             }
             break;
@@ -4884,8 +5052,10 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07226",
                                          videoSessionParameters, error_obj.location,
                                          "H.264 SPS with key "
-                                         "(SPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdSPSs[i].seq_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                                         "(SPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].seq_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4893,11 +5063,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-06441", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.264 SPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.264 "
-                                     "SPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.264 "
+                                     "SPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdSPSCount, vsp_data->h264.sps.size(), vsp_data->h264.sps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdPPSCount; ++i) {
@@ -4906,9 +5077,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07227",
                                          videoSessionParameters, error_obj.location,
                                          "H.264 PPS with key "
-                                         "(SPS ID = %" PRIu32 ", PPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdPPSs[i].seq_parameter_set_id, add_info->pStdPPSs[i].pic_parameter_set_id,
-                                         FormatHandle(videoSessionParameters).c_str());
+                                         "(SPS ID = {}"
+                                         ", PPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].seq_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pic_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4916,11 +5090,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-06442", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.264 PPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.264 "
-                                     "PPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.264 "
+                                     "PPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdPPSCount, vsp_data->h264.pps.size(), vsp_data->h264.pps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
             }
             break;
@@ -4938,9 +5113,10 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                         skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07228",
                                          videoSessionParameters, error_obj.location,
                                          "H.265 VPS with key "
-                                         "(VPS ID = %" PRIu32 ") already exists in %s.",
-                                         add_info->pStdVPSs[i].vps_video_parameter_set_id,
-                                         FormatHandle(videoSessionParameters).c_str());
+                                         "(VPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdVPSs[i].vps_video_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4948,23 +5124,26 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-06443", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 VPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "VPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "VPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdVPSCount, vsp_data->h265.vps.size(), vsp_data->h265.vps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdSPSCount; ++i) {
                     if (vsp_data.GetH265SPS(add_info->pStdSPSs[i].sps_video_parameter_set_id,
                                             add_info->pStdSPSs[i].sps_seq_parameter_set_id)) {
-                        skip |=
-                            LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07229", videoSessionParameters,
-                                     error_obj.location,
-                                     "H.265 SPS with key "
-                                     "(VPS ID = %" PRIu32 ", SPS ID = %" PRIu32 ") already exists in %s.",
-                                     add_info->pStdSPSs[i].sps_video_parameter_set_id,
-                                     add_info->pStdSPSs[i].sps_seq_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                        skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07229",
+                                         videoSessionParameters, error_obj.location,
+                                         "H.265 SPS with key "
+                                         "(VPS ID = {}"
+                                         ", SPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].sps_video_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdSPSs[i].sps_seq_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4972,24 +5151,29 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-06444", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 SPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "SPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "SPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdSPSCount, vsp_data->h265.sps.size(), vsp_data->h265.sps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
 
                 for (uint32_t i = 0; i < add_info->stdPPSCount; ++i) {
                     if (vsp_data.GetH265PPS(add_info->pStdPPSs[i].sps_video_parameter_set_id,
                                             add_info->pStdPPSs[i].pps_seq_parameter_set_id,
                                             add_info->pStdPPSs[i].pps_pic_parameter_set_id)) {
-                        skip |= LogError(
-                            "VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07230", videoSessionParameters,
-                            error_obj.location,
-                            "H.265 PPS with key "
-                            "(VPS ID = %" PRIu32 ", SPS ID = %" PRIu32 ", PPS ID = %" PRIu32 ") already exists in %s.",
-                            add_info->pStdPPSs[i].sps_video_parameter_set_id, add_info->pStdPPSs[i].pps_seq_parameter_set_id,
-                            add_info->pStdPPSs[i].pps_pic_parameter_set_id, FormatHandle(videoSessionParameters).c_str());
+                        skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-07230",
+                                         videoSessionParameters, error_obj.location,
+                                         "H.265 PPS with key "
+                                         "(VPS ID = {}"
+                                         ", SPS ID = {}"
+                                         ", PPS ID = {}"
+                                         ") already exists in {}.",
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].sps_video_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pps_seq_parameter_set_id),
+                                         static_cast<uint32_t>(add_info->pStdPPSs[i].pps_pic_parameter_set_id),
+                                         Handle(videoSessionParameters));
                     }
                 }
 
@@ -4997,11 +5181,12 @@ bool CoreChecks::PreCallValidateUpdateVideoSessionParametersKHR(VkDevice device,
                     skip |= LogError("VUID-vkUpdateVideoSessionParametersKHR-videoSessionParameters-06445", videoSessionParameters,
                                      error_obj.location,
                                      "number of H.265 PPS entries to add "
-                                     "(%" PRIu32
-                                     ") plus the already used capacity (%zu) is greater than the maximum H.265 "
-                                     "PPS capacity (%" PRIu32 ") the %s was created with.",
+                                     "({}"
+                                     ") plus the already used capacity ({}) is greater than the maximum H.265 "
+                                     "PPS capacity ({}"
+                                     ") the {} was created with.",
                                      add_info->stdPPSCount, vsp_data->h265.pps.size(), vsp_data->h265.pps_capacity,
-                                     FormatHandle(videoSessionParameters).c_str());
+                                     Handle(videoSessionParameters));
                 }
             }
             break;
@@ -5045,7 +5230,7 @@ bool CoreChecks::PreCallValidateGetEncodedVideoSessionParametersKHR(
 
     auto vsp_data = vsp_state->Lock();
 
-    const char* pnext_msg = "chain does not contain a %s structure.";
+    constexpr const char* pnext_msg = "chain does not contain a {} structure.";
 
     if (vsp_state->IsEncode()) {
         switch (vsp_state->GetCodecOp()) {
@@ -5064,18 +5249,20 @@ bool CoreChecks::PreCallValidateGetEncodedVideoSessionParametersKHR(
                     if (h264_info->writeStdSPS && vsp_data.GetH264SPS(h264_info->stdSPSId) == nullptr) {
                         skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08263",
                                          pVideoSessionParametersInfo->videoSessionParameters, error_obj.location,
-                                         "%s does not contain an H.264 SPS "
-                                         "matching the stdSPSId (%" PRIu32 ") specified in %s.",
-                                         FormatHandle(*vsp_state).c_str(), h264_info->stdSPSId, h264_info_loc.Fields().c_str());
+                                         "{} does not contain an H.264 SPS "
+                                         "matching the stdSPSId ({}"
+                                         ") specified in {}.",
+                                         Handle(*vsp_state), h264_info->stdSPSId, h264_info_loc);
                     }
 
                     if (h264_info->writeStdPPS && vsp_data.GetH264PPS(h264_info->stdSPSId, h264_info->stdPPSId) == nullptr) {
                         skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08264",
                                          pVideoSessionParametersInfo->videoSessionParameters, error_obj.location,
-                                         "%s does not contain an H.264 PPS "
-                                         "matching the stdSPSId (%" PRIu32 ") and stdPPSId (%" PRIu32 ") specified in %s.",
-                                         FormatHandle(*vsp_state).c_str(), h264_info->stdSPSId, h264_info->stdPPSId,
-                                         h264_info_loc.Fields().c_str());
+                                         "{} does not contain an H.264 PPS "
+                                         "matching the stdSPSId ({}"
+                                         ") and stdPPSId ({}"
+                                         ") specified in {}.",
+                                         Handle(*vsp_state), h264_info->stdSPSId, h264_info->stdPPSId, h264_info_loc);
                     }
                 } else {
                     skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08262",
@@ -5100,29 +5287,33 @@ bool CoreChecks::PreCallValidateGetEncodedVideoSessionParametersKHR(
                     if (h265_info->writeStdVPS && vsp_data.GetH265VPS(h265_info->stdVPSId) == nullptr) {
                         skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08266",
                                          pVideoSessionParametersInfo->videoSessionParameters, error_obj.location,
-                                         "%s does not contain an H.265 VPS "
-                                         "matching the stdVPSId (%" PRIu32 ") specified in %s.",
-                                         FormatHandle(*vsp_state).c_str(), h265_info->stdVPSId, h265_info_loc.Fields().c_str());
+                                         "{} does not contain an H.265 VPS "
+                                         "matching the stdVPSId ({}"
+                                         ") specified in {}.",
+                                         Handle(*vsp_state), h265_info->stdVPSId, h265_info_loc);
                     }
 
                     if (h265_info->writeStdSPS && vsp_data.GetH265SPS(h265_info->stdVPSId, h265_info->stdSPSId) == nullptr) {
                         skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08267",
                                          pVideoSessionParametersInfo->videoSessionParameters, error_obj.location,
-                                         "%s does not contain an H.265 SPS "
-                                         "matching the stdVPSId (%" PRIu32 ") and stdSPSId (%" PRIu32 ") specified in %s.",
-                                         FormatHandle(*vsp_state).c_str(), h265_info->stdVPSId, h265_info->stdSPSId,
-                                         h265_info_loc.Fields().c_str());
+                                         "{} does not contain an H.265 SPS "
+                                         "matching the stdVPSId ({}"
+                                         ") and stdSPSId ({}"
+                                         ") specified in {}.",
+                                         Handle(*vsp_state), h265_info->stdVPSId, h265_info->stdSPSId, h265_info_loc);
                     }
 
                     if (h265_info->writeStdPPS &&
                         vsp_data.GetH265PPS(h265_info->stdVPSId, h265_info->stdSPSId, h265_info->stdPPSId) == nullptr) {
                         skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08268",
                                          pVideoSessionParametersInfo->videoSessionParameters, error_obj.location,
-                                         "%s does not contain an H.265 PPS "
-                                         "matching the stdVPSId(%" PRIu32 "), stdSPSId (%" PRIu32 "), and stdPPSId (%" PRIu32
-                                         ") specified in %s.",
-                                         FormatHandle(*vsp_state).c_str(), h265_info->stdVPSId, h265_info->stdSPSId,
-                                         h265_info->stdPPSId, h265_info_loc.Fields().c_str());
+                                         "{} does not contain an H.265 PPS "
+                                         "matching the stdVPSId({}"
+                                         "), stdSPSId ({}"
+                                         "), and stdPPSId ({}"
+                                         ") specified in {}.",
+                                         Handle(*vsp_state), h265_info->stdVPSId, h265_info->stdSPSId, h265_info->stdPPSId,
+                                         h265_info_loc);
                     }
                 } else {
                     skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08265",
@@ -5142,10 +5333,10 @@ bool CoreChecks::PreCallValidateGetEncodedVideoSessionParametersKHR(
                 break;
         }
     } else {
-        skip |= LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08359",
-                         pVideoSessionParametersInfo->videoSessionParameters, params_info_loc.dot(Field::videoSessionParameters),
-                         "(%s) was not created with an encode operation.",
-                         FormatHandle(pVideoSessionParametersInfo->videoSessionParameters).c_str());
+        skip |=
+            LogError("VUID-vkGetEncodedVideoSessionParametersKHR-pVideoSessionParametersInfo-08359",
+                     pVideoSessionParametersInfo->videoSessionParameters, params_info_loc.dot(Field::videoSessionParameters),
+                     "({}) was not created with an encode operation.", Handle(pVideoSessionParametersInfo->videoSessionParameters));
     }
 
     return skip;
@@ -5160,7 +5351,7 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
 
     if (cb_state->active_queries.size() > 0) {
         skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-None-07232", commandBuffer, error_obj.location.dot(Field::commandBuffer),
-                         "%s has active queries.", FormatHandle(commandBuffer).c_str());
+                         "{} has active queries.", Handle(commandBuffer));
     }
 
     auto vs_state = Get<vvl::VideoSession>(pBeginInfo->videoSession);
@@ -5171,17 +5362,19 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
     if (vs_state->create_info.queueFamilyIndex != cb_state->command_pool.queueFamilyIndex) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession, cb_state->command_pool.Handle());
         skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-commandBuffer-11760", objlist, begin_info_loc.dot(Field::videoSession),
-                         "%s (queue family index %" PRIu32 ") and %s (queue family index %" PRIu32
+                         "{} (queue family index {}"
+                         ") and {} (queue family index {}"
                          ") are not created with the same queue family index.",
-                         FormatHandle(pBeginInfo->videoSession).c_str(), vs_state->create_info.queueFamilyIndex,
-                         FormatHandle(cb_state->command_pool.Handle()).c_str(), cb_state->command_pool.queueFamilyIndex);
+                         Handle(pBeginInfo->videoSession), vs_state->create_info.queueFamilyIndex,
+                         Handle(cb_state->command_pool.Handle()), cb_state->command_pool.queueFamilyIndex);
     }
 
     if (vs_state->GetUnboundMemoryBindingCount() > 0) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
         skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-videoSession-07237", objlist, begin_info_loc.dot(Field::videoSession),
-                         "%s has %" PRIu32 " unbound memory binding indices.", FormatHandle(pBeginInfo->videoSession).c_str(),
-                         vs_state->GetUnboundMemoryBindingCount());
+                         "{} has {}"
+                         " unbound memory binding indices.",
+                         Handle(pBeginInfo->videoSession), vs_state->GetUnboundMemoryBindingCount());
     }
 
     // if driver supports protectedNoFault the operation is valid, just has undefined values
@@ -5189,9 +5382,9 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
         ((vs_state->create_info.flags & VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR) != 0)) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
         skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-commandBuffer-07233", objlist, error_obj.location.dot(Field::commandBuffer),
-                         "%s is unprotected while %s was created with "
+                         "{} is unprotected while {} was created with "
                          "VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR.",
-                         FormatHandle(commandBuffer).c_str(), FormatHandle(pBeginInfo->videoSession).c_str());
+                         Handle(commandBuffer), Handle(pBeginInfo->videoSession));
     }
 
     // if driver supports protectedNoFault the operation is valid, just has undefined values
@@ -5199,9 +5392,9 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
         ((vs_state->create_info.flags & VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR) == 0)) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
         skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-commandBuffer-07234", objlist, error_obj.location.dot(Field::commandBuffer),
-                         "%s is protected while %s was created without "
+                         "{} is protected while {} was created without "
                          "VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR.",
-                         FormatHandle(commandBuffer).c_str(), FormatHandle(pBeginInfo->videoSession).c_str());
+                         Handle(commandBuffer), Handle(pBeginInfo->videoSession));
     }
 
     if (pBeginInfo->pReferenceSlots) {
@@ -5216,10 +5409,9 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
 
             if (slot.slotIndex >= 0 && (uint32_t)slot.slotIndex >= vs_state->create_info.maxDpbSlots) {
                 const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
-                skip |=
-                    LogError("VUID-VkVideoBeginCodingInfoKHR-slotIndex-04856", objlist, reference_slot_loc.dot(Field::slotIndex),
-                             "(%d) is not less than the maxDpbSlots %s was created with.", slot.slotIndex,
-                             FormatHandle(pBeginInfo->videoSession).c_str());
+                skip |= LogError(
+                    "VUID-VkVideoBeginCodingInfoKHR-slotIndex-04856", objlist, reference_slot_loc.dot(Field::slotIndex),
+                    "({}) is not less than the maxDpbSlots {} was created with.", slot.slotIndex, Handle(pBeginInfo->videoSession));
             }
 
             if (slot.pPictureResource != nullptr) {
@@ -5248,20 +5440,19 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                         if (reference_resource.image_state->create_flags & VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR) {
                             skip |= LogError(
                                 "VUID-VkVideoBeginCodingInfoKHR-pPictureResource-07240", objlist, reference_image_view_loc,
-                                "(%s created from %s) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
-                                "not created with a video format supported by the video profile (%s) %s was created with.",
-                                FormatHandle(reference_resource.image_view_state->Handle()).c_str(),
-                                FormatHandle(reference_resource.image_state->Handle()).c_str(),
-                                string_VideoProfileDesc(*vs_state->profile).c_str(),
-                                FormatHandle(pBeginInfo->videoSession).c_str());
+                                "({} created from {}) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
+                                "not created with a video format supported by the video profile ({}) {} was created with.",
+                                Handle(reference_resource.image_view_state->Handle()),
+                                Handle(reference_resource.image_state->Handle()),
+                                string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession));
                         } else {
                             skip |= LogError(
                                 "VUID-VkVideoBeginCodingInfoKHR-pPictureResource-07240", objlist, reference_image_view_loc,
-                                "(%s created from %s) is not compatible with the video profile (%s) "
-                                "%s was created with.\nSupported video profiles for the image:\n%s",
-                                FormatHandle(reference_resource.image_view_state->Handle()).c_str(),
-                                FormatHandle(reference_resource.image_state->Handle()).c_str(),
-                                string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(pBeginInfo->videoSession).c_str(),
+                                "({} created from {}) is not compatible with the video profile ({}) "
+                                "{} was created with.\nSupported video profiles for the image:\n{}",
+                                Handle(reference_resource.image_view_state->Handle()),
+                                Handle(reference_resource.image_state->Handle()),
+                                string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession),
                                 string_SupportedVideoProfiles(reference_resource.image_state->supported_video_profiles).c_str());
                         }
                     }
@@ -5270,14 +5461,13 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession,
                                                     reference_resource.image_view_state->Handle(),
                                                     reference_resource.image_state->Handle());
-                        skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-pPictureResource-07241", objlist, reference_image_view_loc,
-                                         "(%s created from %s) format (%s) "
-                                         "does not match the referencePictureFormat (%s) %s was created with.",
-                                         FormatHandle(reference_resource.image_view_state->Handle()).c_str(),
-                                         FormatHandle(reference_resource.image_state->Handle()).c_str(),
-                                         string_VkFormat(reference_resource.image_view_state->create_info.format),
-                                         string_VkFormat(vs_state->create_info.referencePictureFormat),
-                                         FormatHandle(pBeginInfo->videoSession).c_str());
+                        skip |= LogError(
+                            "VUID-VkVideoBeginCodingInfoKHR-pPictureResource-07241", objlist, reference_image_view_loc,
+                            "({} created from {}) format ({}) "
+                            "does not match the referencePictureFormat ({}) {} was created with.",
+                            Handle(reference_resource.image_view_state->Handle()), Handle(reference_resource.image_state->Handle()),
+                            string_VkFormat(reference_resource.image_view_state->create_info.format),
+                            string_VkFormat(vs_state->create_info.referencePictureFormat), Handle(pBeginInfo->videoSession));
                     }
 
                     auto supported_usage = reference_resource.image_view_state->inherited_usage;
@@ -5287,12 +5477,11 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                                                     reference_resource.image_view_state->Handle(),
                                                     reference_resource.image_state->Handle());
                         skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-slotIndex-07245", objlist, reference_image_view_loc,
-                                         "(%s created from %s) was not created "
+                                         "({} created from {}) was not created "
                                          "with VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR thus it cannot be used as "
-                                         "a reference picture with %s that was created with a decode operation.\n%s",
-                                         FormatHandle(reference_resource.image_view_state->Handle()).c_str(),
-                                         FormatHandle(reference_resource.image_state->Handle()).c_str(),
-                                         FormatHandle(pBeginInfo->videoSession).c_str(),
+                                         "a reference picture with {} that was created with a decode operation.\n{}",
+                                         Handle(reference_resource.image_view_state->Handle()),
+                                         Handle(reference_resource.image_state->Handle()), Handle(pBeginInfo->videoSession),
                                          reference_resource.image_view_state->DescribeImageUsage(*this).c_str());
                     }
 
@@ -5301,12 +5490,11 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                                                     reference_resource.image_view_state->Handle(),
                                                     reference_resource.image_state->Handle());
                         skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-slotIndex-07246", objlist, reference_image_view_loc,
-                                         "(%s created from %s) was not created "
+                                         "({} created from {}) was not created "
                                          "with VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR thus it cannot be used as "
-                                         "a reference picture with %s that was created with an encode operation.\n%s",
-                                         FormatHandle(reference_resource.image_view_state->Handle()).c_str(),
-                                         FormatHandle(reference_resource.image_state->Handle()).c_str(),
-                                         FormatHandle(pBeginInfo->videoSession).c_str(),
+                                         "a reference picture with {} that was created with an encode operation.\n{}",
+                                         Handle(reference_resource.image_view_state->Handle()),
+                                         Handle(reference_resource.image_state->Handle()), Handle(pBeginInfo->videoSession),
                                          reference_resource.image_view_state->DescribeImageUsage(*this).c_str());
                     }
 
@@ -5327,9 +5515,9 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
             const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
             skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-flags-07244", objlist, error_obj.location,
                              "not all elements of pBeginInfo->pReferenceSlots refer "
-                             "to the same image and the video profile (%s) %s was created with does not support "
+                             "to the same image and the video profile ({}) {} was created with does not support "
                              "VK_VIDEO_CAPABILITY_SEPARATE_REFERENCE_IMAGES_BIT_KHR.",
-                             string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(pBeginInfo->videoSession).c_str());
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession));
         }
     }
 
@@ -5337,8 +5525,8 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
     if (vsp_state && vsp_state->vs_state->VkHandle() != vs_state->VkHandle()) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSessionParameters, pBeginInfo->videoSession);
         skip |= LogError("VUID-VkVideoBeginCodingInfoKHR-videoSessionParameters-04857", objlist,
-                         begin_info_loc.dot(Field::videoSessionParameters), "%s was not created for %s.",
-                         FormatHandle(pBeginInfo->videoSessionParameters).c_str(), FormatHandle(pBeginInfo->videoSession).c_str());
+                         begin_info_loc.dot(Field::videoSessionParameters), "{} was not created for {}.",
+                         Handle(pBeginInfo->videoSessionParameters), Handle(pBeginInfo->videoSession));
     }
 
     const char* codec_op_requires_params_vuid = nullptr;
@@ -5384,10 +5572,9 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
     if ((codec_op_requires_params_vuid != nullptr) && (vsp_state == nullptr)) {
         const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
         skip |= LogError(codec_op_requires_params_vuid, objlist, begin_info_loc.dot(Field::videoSession),
-                         "%s was created with %s but no video session parameters object was "
-                         "specified in pBeginInfo->videoSessionParameters.%s",
-                         FormatHandle(pBeginInfo->videoSession).c_str(),
-                         string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()),
+                         "{} was created with {} but no video session parameters object was "
+                         "specified in pBeginInfo->videoSessionParameters.{}",
+                         Handle(pBeginInfo->videoSession), string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()),
                          vs_state->IsDecode() ? "\nHint: This can be allowed if the videoMaintenance2 feature is enabled." : "");
     }
 
@@ -5410,10 +5597,10 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                             const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
                             skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-pBeginInfo-08255", objlist, error_obj.location,
                                              "requiresGopRemainingFrames is VK_TRUE for "
-                                             "the video profile (%s) %s was created with, but %s in the pNext "
+                                             "the video profile ({}) {} was created with, but {} in the pNext "
                                              "chain of pBeginInfo.",
-                                             string_VideoProfileDesc(*vs_state->profile).c_str(),
-                                             FormatHandle(pBeginInfo->videoSession).c_str(), why);
+                                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession),
+                                             why);
                         }
                         break;
                     }
@@ -5429,10 +5616,10 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                             const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
                             skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-pBeginInfo-08256", objlist, error_obj.location,
                                              "requiresGopRemainingFrames is VK_TRUE for "
-                                             "the video profile (%s) %s was created with, but %s in the pNext "
+                                             "the video profile ({}) {} was created with, but {} in the pNext "
                                              "chain of pBeginInfo.",
-                                             string_VideoProfileDesc(*vs_state->profile).c_str(),
-                                             FormatHandle(pBeginInfo->videoSession).c_str(), why);
+                                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession),
+                                             why);
                         }
                         break;
                     }
@@ -5448,10 +5635,10 @@ bool CoreChecks::PreCallValidateCmdBeginVideoCodingKHR(VkCommandBuffer commandBu
                             const LogObjectList objlist(commandBuffer, pBeginInfo->videoSession);
                             skip |= LogError("VUID-vkCmdBeginVideoCodingKHR-pBeginInfo-10282", objlist, error_obj.location,
                                              "requiresGopRemainingFrames is VK_TRUE for "
-                                             "the video profile (%s) %s was created with, but %s in the pNext "
+                                             "the video profile ({}) {} was created with, but {} in the pNext "
                                              "chain of pBeginInfo.",
-                                             string_VideoProfileDesc(*vs_state->profile).c_str(),
-                                             FormatHandle(pBeginInfo->videoSession).c_str(), why);
+                                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(pBeginInfo->videoSession),
+                                             why);
                         }
                         break;
                     }
@@ -5475,7 +5662,7 @@ bool CoreChecks::PreCallValidateCmdEndVideoCodingKHR(VkCommandBuffer commandBuff
 
     if (cb_state->active_queries.size() > 0) {
         skip |= LogError("VUID-vkCmdEndVideoCodingKHR-None-07251", commandBuffer, error_obj.location.dot(Field::commandBuffer),
-                         "%s has active queries.", FormatHandle(commandBuffer).c_str());
+                         "{} has active queries.", Handle(commandBuffer));
     }
 
     return skip;
@@ -5496,8 +5683,8 @@ bool CoreChecks::PreCallValidateCmdControlVideoCodingKHR(VkCommandBuffer command
 
     const auto& profile_caps = vs_state->profile->GetCapabilities();
 
-    const char* flags_pnext_msg = "has %s set but missing %s from the pNext chain of pCodingControlInfo.";
-    const char* flags_require_encode_msg = "has %s set but %s is not a video encode session.";
+    constexpr const char* flags_pnext_msg = "has {} set but missing {} from the pNext chain of pCodingControlInfo.";
+    constexpr const char* flags_require_encode_msg = "has {} set but {} is not a video encode session.";
 
     if (pCodingControlInfo->flags & VK_VIDEO_CODING_CONTROL_ENCODE_RATE_CONTROL_BIT_KHR) {
         if (vs_state->IsEncode()) {
@@ -5527,11 +5714,11 @@ bool CoreChecks::PreCallValidateCmdControlVideoCodingKHR(VkCommandBuffer command
                     const LogObjectList objlist(commandBuffer, vs_state->Handle());
                     skip |= LogError("VUID-VkVideoEncodeQualityLevelInfoKHR-qualityLevel-08311", objlist,
                                      control_info_loc.pNext(Struct::VkVideoEncodeQualityLevelInfoKHR, Field::qualityLevel),
-                                     "(%" PRIu32 ") must be smaller than the maxQualityLevels (%" PRIu32
+                                     "({}"
+                                     ") must be smaller than the maxQualityLevels ({}"
                                      ") supported by the video "
-                                     "profile %s was created with.",
-                                     quality_level_info->qualityLevel, profile_caps.encode.maxQualityLevels,
-                                     FormatHandle(*vs_state).c_str());
+                                     "profile {} was created with.",
+                                     quality_level_info->qualityLevel, profile_caps.encode.maxQualityLevels, Handle(*vs_state));
                 }
             } else {
                 skip |= LogError("VUID-VkVideoCodingControlInfoKHR-flags-08349", commandBuffer, control_info_loc.dot(Field::flags),
@@ -5564,9 +5751,9 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
     if (!vs_state->IsDecode()) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdDecodeVideoKHR-None-08249", objlist, error_obj.location,
-                         "the video codec operation (%s) the bound video session %s "
+                         "the video codec operation ({}) the bound video session {} "
                          "was created with is not a decode operation.",
-                         string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()), FormatHandle(*vs_state).c_str());
+                         string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()), Handle(*vs_state));
         return skip;
     }
 
@@ -5580,18 +5767,17 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
         if ((buffer_state->usage & VK_BUFFER_USAGE_2_VIDEO_DECODE_SRC_BIT_KHR) == 0) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pDecodeInfo->srcBuffer);
             skip |= LogError("VUID-VkVideoDecodeInfoKHR-srcBuffer-07165", objlist, decode_info_loc.dot(Field::srcBuffer),
-                             "(%s) was not created with "
+                             "({}) was not created with "
                              "VK_BUFFER_USAGE_2_VIDEO_DECODE_SRC_BIT_KHR.",
-                             FormatHandle(pDecodeInfo->srcBuffer).c_str());
+                             Handle(pDecodeInfo->srcBuffer));
         }
 
         if (!IsBufferCompatibleWithVideoSession(*buffer_state, *vs_state)) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pDecodeInfo->srcBuffer);
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07135", objlist, decode_info_loc.dot(Field::srcBuffer),
-                             "(%s) is not compatible "
-                             "with the video profile (%s) %s was created with.\nSupported video profiles for the buffer:\n%s",
-                             FormatHandle(pDecodeInfo->srcBuffer).c_str(), string_VideoProfileDesc(*vs_state->profile).c_str(),
-                             FormatHandle(*vs_state).c_str(),
+                             "({}) is not compatible "
+                             "with the video profile ({}) {} was created with.\nSupported video profiles for the buffer:\n{}",
+                             Handle(pDecodeInfo->srcBuffer), string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state),
                              string_SupportedVideoProfiles(buffer_state->supported_video_profiles).c_str());
         }
 
@@ -5599,59 +5785,65 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pDecodeInfo->srcBuffer);
             skip |=
                 LogError("VUID-VkVideoDecodeInfoKHR-srcBufferOffset-07166", objlist, decode_info_loc.dot(Field::srcBufferOffset),
-                         "(%" PRIu64 ") must be less than the size (%" PRIu64 ") of pDecodeInfo->srcBuffer (%s).",
-                         pDecodeInfo->srcBufferOffset, buffer_state->GetSize(), FormatHandle(pDecodeInfo->srcBuffer).c_str());
+                         "({}"
+                         ") must be less than the size ({}"
+                         ") of pDecodeInfo->srcBuffer ({}).",
+                         pDecodeInfo->srcBufferOffset, buffer_state->GetSize(), Handle(pDecodeInfo->srcBuffer));
         }
 
         if (!IsIntegerMultipleOf(pDecodeInfo->srcBufferOffset, profile_caps.base.minBitstreamBufferOffsetAlignment)) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle());
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07138", objlist, decode_info_loc.dot(Field::srcBufferOffset),
-                             "(%" PRIu64 ") is not an integer multiple of the minBitstreamBufferOffsetAlignment (%" PRIu64
-                             ") required by the video profile (%s) %s was created with.",
+                             "({}"
+                             ") is not an integer multiple of the minBitstreamBufferOffsetAlignment ({}"
+                             ") required by the video profile ({}) {} was created with.",
                              pDecodeInfo->srcBufferOffset, profile_caps.base.minBitstreamBufferOffsetAlignment,
-                             string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
         }
 
         if (pDecodeInfo->srcBufferOffset + pDecodeInfo->srcBufferRange > buffer_state->GetSize()) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pDecodeInfo->srcBuffer);
             skip |= LogError("VUID-VkVideoDecodeInfoKHR-srcBufferRange-07167", objlist, decode_info_loc.dot(Field::srcBufferOffset),
-                             "(%" PRIu64 ") plus pDecodeInfo->srcBufferRange (%" PRIu64
-                             ") must be less than or equal to the size (%" PRIu64 ") of pDecodeInfo->srcBuffer (%s).",
+                             "({}"
+                             ") plus pDecodeInfo->srcBufferRange ({}"
+                             ") must be less than or equal to the size ({}"
+                             ") of pDecodeInfo->srcBuffer ({}).",
                              pDecodeInfo->srcBufferOffset, pDecodeInfo->srcBufferRange, buffer_state->GetSize(),
-                             FormatHandle(pDecodeInfo->srcBuffer).c_str());
+                             Handle(pDecodeInfo->srcBuffer));
         }
     }
 
     if (!IsIntegerMultipleOf(pDecodeInfo->srcBufferRange, profile_caps.base.minBitstreamBufferSizeAlignment)) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07139", objlist, decode_info_loc.dot(Field::srcBufferRange),
-                         "(%" PRIu64 ") is not an integer multiple of the minBitstreamBufferSizeAlignment (%" PRIu64
-                         ") required by the video profile (%s) %s was created with.",
+                         "({}"
+                         ") is not an integer multiple of the minBitstreamBufferSizeAlignment ({}"
+                         ") required by the video profile ({}) {} was created with.",
                          pDecodeInfo->srcBufferRange, profile_caps.base.minBitstreamBufferSizeAlignment,
-                         string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
     }
 
     if (vs_state->create_info.maxDpbSlots > 0 && pDecodeInfo->pSetupReferenceSlot == nullptr) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-08376", objlist, decode_info_loc.dot(Field::pSetupReferenceSlot),
-                         "is NULL but the bound video session %s was created with maxDpbSlot %" PRIu32 ".",
-                         FormatHandle(*vs_state).c_str(), vs_state->create_info.maxDpbSlots);
+                         "is NULL but the bound video session {} was created with maxDpbSlot {}"
+                         ".",
+                         Handle(*vs_state), vs_state->create_info.maxDpbSlots);
     }
 
     vvl::VideoPictureResource setup_resource;
     if (pDecodeInfo->pSetupReferenceSlot) {
         if (pDecodeInfo->pSetupReferenceSlot->slotIndex < 0) {
             skip |= LogError("VUID-VkVideoDecodeInfoKHR-pSetupReferenceSlot-07168", commandBuffer,
-                             decode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex), "(%d) must not be negative.",
+                             decode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex), "({}) must not be negative.",
                              pDecodeInfo->pSetupReferenceSlot->slotIndex);
         } else if ((uint32_t)pDecodeInfo->pSetupReferenceSlot->slotIndex >= vs_state->create_info.maxDpbSlots) {
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07170", commandBuffer,
                              decode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex),
-                             "(%d) must be smaller than the maxDpbSlots (%" PRIu32
-                             ") the bound video session %s "
+                             "({}) must be smaller than the maxDpbSlots ({}"
+                             ") the bound video session {} "
                              "was created with.",
-                             pDecodeInfo->pSetupReferenceSlot->slotIndex, vs_state->create_info.maxDpbSlots,
-                             FormatHandle(*vs_state).c_str());
+                             pDecodeInfo->pSetupReferenceSlot->slotIndex, vs_state->create_info.maxDpbSlots, Handle(*vs_state));
         }
 
         if (pDecodeInfo->pSetupReferenceSlot->pPictureResource != nullptr) {
@@ -5691,21 +5883,21 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), dst_resource.image_view_state->Handle(),
                                         dst_resource.image_state->Handle());
             if (dst_resource.image_state->create_flags & VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR) {
-                skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07142", objlist, dst_image_view_loc,
-                                 "(%s created from %s) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
-                                 "not created with a video format supported by the video profile (%s) "
-                                 "the bound video session %s was created with.",
-                                 FormatHandle(pDecodeInfo->dstPictureResource.imageViewBinding).c_str(),
-                                 FormatHandle(dst_resource.image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                skip |=
+                    LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07142", objlist, dst_image_view_loc,
+                             "({} created from {}) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
+                             "not created with a video format supported by the video profile ({}) "
+                             "the bound video session {} was created with.",
+                             Handle(pDecodeInfo->dstPictureResource.imageViewBinding), Handle(dst_resource.image_state->Handle()),
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
             } else {
-                skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07142", objlist, dst_image_view_loc,
-                                 "(%s created from %s) is not compatible with the video profile (%s) "
-                                 "the bound video session %s was created with.\nSupported video profiles for the image:\n%s",
-                                 FormatHandle(pDecodeInfo->dstPictureResource.imageViewBinding).c_str(),
-                                 FormatHandle(dst_resource.image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str(),
-                                 string_SupportedVideoProfiles(dst_resource.image_state->supported_video_profiles).c_str());
+                skip |=
+                    LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07142", objlist, dst_image_view_loc,
+                             "({} created from {}) is not compatible with the video profile ({}) "
+                             "the bound video session {} was created with.\nSupported video profiles for the image:\n{}",
+                             Handle(pDecodeInfo->dstPictureResource.imageViewBinding), Handle(dst_resource.image_state->Handle()),
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state),
+                             string_SupportedVideoProfiles(dst_resource.image_state->supported_video_profiles).c_str());
             }
         }
 
@@ -5713,12 +5905,11 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), dst_resource.image_view_state->Handle(),
                                         dst_resource.image_state->Handle());
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07143", objlist, dst_image_view_loc,
-                             "(%s created from %s) format (%s) does not match the pictureFormat (%s) "
-                             "the bound video session %s was created with.",
-                             FormatHandle(dst_resource.image_view_state->Handle()).c_str(),
-                             FormatHandle(dst_resource.image_state->Handle()).c_str(),
+                             "({} created from {}) format ({}) does not match the pictureFormat ({}) "
+                             "the bound video session {} was created with.",
+                             Handle(dst_resource.image_view_state->Handle()), Handle(dst_resource.image_state->Handle()),
                              string_VkFormat(dst_resource.image_view_state->create_info.format),
-                             string_VkFormat(vs_state->create_info.pictureFormat), FormatHandle(vs_state->Handle()).c_str());
+                             string_VkFormat(vs_state->create_info.pictureFormat), Handle(vs_state->Handle()));
         }
 
         auto supported_usage = dst_resource.image_view_state->inherited_usage;
@@ -5726,12 +5917,11 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), dst_resource.image_view_state->Handle(),
                                         dst_resource.image_state->Handle());
             skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07146", objlist, dst_image_view_loc,
-                             "(%s created from %s) was not created with VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR "
-                             "thus it cannot be used as a decode output picture with the bound video session %s "
-                             "that was created with a decode operation.\n%s",
-                             FormatHandle(dst_resource.image_view_state->Handle()).c_str(),
-                             FormatHandle(dst_resource.image_state->Handle()).c_str(), FormatHandle(*vs_state).c_str(),
-                             dst_resource.image_view_state->DescribeImageUsage(*this).c_str());
+                             "({} created from {}) was not created with VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR "
+                             "thus it cannot be used as a decode output picture with the bound video session {} "
+                             "that was created with a decode operation.\n{}",
+                             Handle(dst_resource.image_view_state->Handle()), Handle(dst_resource.image_state->Handle()),
+                             Handle(*vs_state), dst_resource.image_view_state->DescribeImageUsage(*this).c_str());
         }
 
         bool dst_same_as_setup = (setup_resource == dst_resource);
@@ -5750,11 +5940,11 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
                 dst_same_as_setup) {
                 const LogObjectList objlist(commandBuffer, vs_state->Handle());
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07140", objlist, error_obj.location,
-                                 "the video profile (%s) %s was created with does not support "
+                                 "the video profile ({}) {} was created with does not support "
                                  "VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR but "
                                  "pDecodeInfo->dstPictureResource and "
                                  "pDecodeInfo->pSetupReferenceSlot->pPictureResource match.",
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                                 string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
             }
 
             if (!dst_same_as_setup) {
@@ -5773,17 +5963,16 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
         for (uint32_t i = 0; i < pDecodeInfo->referenceSlotCount; ++i) {
             if (pDecodeInfo->pReferenceSlots[i].slotIndex < 0) {
                 skip |= LogError("VUID-VkVideoDecodeInfoKHR-slotIndex-07171", commandBuffer,
-                                 decode_info_loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex), "(%d) must not be negative.",
+                                 decode_info_loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex), "({}) must not be negative.",
                                  pDecodeInfo->pReferenceSlots[i].slotIndex);
             } else if ((uint32_t)pDecodeInfo->pReferenceSlots[i].slotIndex >= vs_state->create_info.maxDpbSlots) {
                 const LogObjectList objlist(commandBuffer, vs_state->Handle());
                 skip |= LogError("VUID-vkCmdDecodeVideoKHR-slotIndex-07256", objlist,
                                  decode_info_loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex),
-                                 "(%d) must be smaller than the maxDpbSlots (%" PRIu32
-                                 ") the bound video session %s "
+                                 "({}) must be smaller than the maxDpbSlots ({}"
+                                 ") the bound video session {} "
                                  "was created with.",
-                                 pDecodeInfo->pReferenceSlots[i].slotIndex, vs_state->create_info.maxDpbSlots,
-                                 FormatHandle(*vs_state).c_str());
+                                 pDecodeInfo->pReferenceSlots[i].slotIndex, vs_state->create_info.maxDpbSlots, Handle(*vs_state));
             }
 
             if (pDecodeInfo->pReferenceSlots[i].pPictureResource != nullptr) {
@@ -5798,7 +5987,7 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
                     if (it == bound_resources.end()) {
                         skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07151", commandBuffer, error_obj.location,
                                          "the video picture resource specified in "
-                                         "pDecodeInfo->pReferenceSlots[%" PRIu32
+                                         "pDecodeInfo->pReferenceSlots[{}"
                                          "].pPictureResource is not one of the "
                                          "bound video picture resources.",
                                          i);
@@ -5806,10 +5995,11 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
                                pDecodeInfo->pReferenceSlots[i].slotIndex != it->second) {
                         skip |= LogError("VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07151", commandBuffer, error_obj.location,
                                          "the bound video picture resource specified in "
-                                         "pDecodeInfo->pReferenceSlots[%" PRIu32
+                                         "pDecodeInfo->pReferenceSlots[{}"
                                          "].pPictureResource is not currently "
                                          "associated with the DPB slot index specified in "
-                                         "pDecodeInfo->pReferenceSlots[%" PRIu32 "].slotIndex (%d).",
+                                         "pDecodeInfo->pReferenceSlots[{}"
+                                         "].slotIndex ({}).",
                                          i, i, pDecodeInfo->pReferenceSlots[i].slotIndex);
                     }
 
@@ -5839,12 +6029,14 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
     for (const auto& query : cb_state->active_queries) {
         if (query.active_query_index + op_count > query.last_activatable_query_index + 1) {
             auto query_pool_state = Get<vvl::QueryPool>(query.pool);
-            skip |=
-                LogError("VUID-vkCmdDecodeVideoKHR-opCount-07134", commandBuffer, error_obj.location,
-                         "not enough activatable queries for query type %s "
-                         "with opCount %" PRIu32 ", active query index %" PRIu32 ", and last activatable query index %" PRIu32 ".",
-                         string_VkQueryType(query_pool_state->create_info.queryType), op_count, query.active_query_index,
-                         query.last_activatable_query_index);
+            skip |= LogError("VUID-vkCmdDecodeVideoKHR-opCount-07134", commandBuffer, error_obj.location,
+                             "not enough activatable queries for query type {} "
+                             "with opCount {}"
+                             ", active query index {}"
+                             ", and last activatable query index {}"
+                             ".",
+                             string_VkQueryType(query_pool_state->create_info.queryType), op_count, query.active_query_index,
+                             query.last_activatable_query_index);
         }
     }
 
@@ -5857,19 +6049,20 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
 
                 if (inline_query_info->queryCount != op_count) {
                     const LogObjectList objlist(commandBuffer, vs_state->Handle());
-                    skip |=
-                        LogError("VUID-vkCmdDecodeVideoKHR-pNext-08365", objlist,
-                                 decode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryCount),
-                                 "(%" PRIu32 ") is not equal to opCount (%" PRIu32 ").", inline_query_info->queryCount, op_count);
+                    skip |= LogError("VUID-vkCmdDecodeVideoKHR-pNext-08365", objlist,
+                                     decode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryCount),
+                                     "({}"
+                                     ") is not equal to opCount ({}"
+                                     ").",
+                                     inline_query_info->queryCount, op_count);
                 }
 
                 if (query_pool_state->create_info.queryType != VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR) {
                     const LogObjectList objlist(commandBuffer, inline_query_info->queryPool);
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-queryType-08367", objlist,
                                      decode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
-                                     "(%s) has query type (%s) but must be VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR.",
-                                     FormatHandle(*query_pool_state).c_str(),
-                                     string_VkQueryType(query_pool_state->create_info.queryType));
+                                     "({}) has query type ({}) but must be VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR.",
+                                     Handle(*query_pool_state), string_VkQueryType(query_pool_state->create_info.queryType));
                 }
 
                 if (vs_state->profile != query_pool_state->supported_video_profile) {
@@ -5877,10 +6070,10 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
                     if (query_pool_state->supported_video_profile) {
                         skip |= LogError("VUID-vkCmdDecodeVideoKHR-queryPool-08368", objlist,
                                          decode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
-                                         "was created with a video profile (%s) that does not match the "
-                                         "video profile (%s) of the bound video session %s.",
+                                         "was created with a video profile ({}) that does not match the "
+                                         "video profile ({}) of the bound video session {}.",
                                          string_VideoProfileDesc(*query_pool_state->supported_video_profile).c_str(),
-                                         string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                                         string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
                     } else {
                         skip |= LogError("VUID-vkCmdDecodeVideoKHR-queryPool-08368", objlist,
                                          decode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
@@ -5892,10 +6085,10 @@ bool CoreChecks::PreCallValidateCmdDecodeVideoKHR(VkCommandBuffer commandBuffer,
                 if (!qf_ext_props.query_result_status_props.queryResultStatusSupport) {
                     const LogObjectList objlist(commandBuffer, inline_query_info->queryPool);
                     skip |= LogError("VUID-vkCmdDecodeVideoKHR-queryType-08369", objlist, error_obj.location,
-                                     "the command pool's queue family (index %" PRIu32
+                                     "the command pool's queue family (index {}"
                                      ") the command "
-                                     "buffer %s was allocated from does not support result status queries.",
-                                     cb_state->command_pool.queueFamilyIndex, FormatHandle(*cb_state).c_str());
+                                     "buffer {} was allocated from does not support result status queries.",
+                                     cb_state->command_pool.queueFamilyIndex, Handle(*cb_state));
                 }
             }
         }
@@ -5940,9 +6133,9 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
     if (!vs_state->IsEncode()) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-None-08250", objlist, error_obj.location,
-                         "the video codec operation (%s) the bound video session %s "
+                         "the video codec operation ({}) the bound video session {} "
                          "was created with is not an encode operation.",
-                         string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()), FormatHandle(*vs_state).c_str());
+                         string_VkVideoCodecOperationFlagBitsKHR(vs_state->GetCodecOp()), Handle(*vs_state));
         return skip;
     }
 
@@ -5954,11 +6147,12 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
         if (vsp_state->GetEncodeQualityLevel() != cb_state->video_encode_quality_level.value()) {
             const LogObjectList objlist(vs_state->Handle(), vsp_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-None-08318", objlist, error_obj.location,
-                             "the currently configured encode quality level (%" PRIu32
-                             ") for %s "
-                             "does not match the encode quality level (%" PRIu32 ") %s was created with.",
-                             cb_state->video_encode_quality_level.value(), FormatHandle(*vs_state).c_str(),
-                             vsp_state->GetEncodeQualityLevel(), FormatHandle(*vsp_state).c_str());
+                             "the currently configured encode quality level ({}"
+                             ") for {} "
+                             "does not match the encode quality level ({}"
+                             ") {} was created with.",
+                             cb_state->video_encode_quality_level.value(), Handle(*vs_state), vsp_state->GetEncodeQualityLevel(),
+                             Handle(*vsp_state));
         }
     }
 
@@ -5994,8 +6188,8 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
         if ((vs_state->create_info.flags & valid_usage.session_flag) == 0) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle());
             skip |= LogError(valid_usage.session_mismatch_vuid, objlist, encode_info_loc.dot(Field::flags),
-                             "contains %s but the bound video session %s was not created with %s.",
-                             string_VkVideoEncodeFlagBitsKHR(valid_usage.encode_flag), FormatHandle(*vs_state).c_str(),
+                             "contains {} but the bound video session {} was not created with {}.",
+                             string_VkVideoEncodeFlagBitsKHR(valid_usage.encode_flag), Handle(*vs_state),
                              string_VkVideoSessionCreateFlagBitsKHR(valid_usage.session_flag));
         }
 
@@ -6005,13 +6199,13 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
 
             if ((iv_state->inherited_usage & valid_usage.image_usage_flag) == 0) {
                 const LogObjectList objlist(commandBuffer, iv_state->Handle());
-                skip |= LogError(
-                    valid_usage.image_view_mismatch_vuid, objlist, encode_info_loc.dot(Field::flags),
-                    "contains %s but the image view specified in %s (%s created from %s) was not created with %s.\n%s",
-                    string_VkVideoEncodeFlagBitsKHR(valid_usage.encode_flag),
-                    encode_info_loc.pNext(Struct::VkVideoEncodeQuantizationMapInfoKHR, Field::quantizationMap).Fields().c_str(),
-                    FormatHandle(*iv_state).c_str(), FormatHandle(*iv_state->image_state).c_str(),
-                    string_VkImageUsageFlagBits(valid_usage.image_usage_flag), iv_state->DescribeImageUsage(*this).c_str());
+                skip |= LogError(valid_usage.image_view_mismatch_vuid, objlist, encode_info_loc.dot(Field::flags),
+                                 "contains {} but the image view specified in {} ({} created from {}) was not created with {}.\n{}",
+                                 string_VkVideoEncodeFlagBitsKHR(valid_usage.encode_flag),
+                                 encode_info_loc.pNext(Struct::VkVideoEncodeQuantizationMapInfoKHR, Field::quantizationMap),
+                                 Handle(*iv_state), Handle(*iv_state->image_state),
+                                 string_VkImageUsageFlagBits(valid_usage.image_usage_flag),
+                                 iv_state->DescribeImageUsage(*this).c_str());
             }
         }
     }
@@ -6023,9 +6217,9 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                 const LogObjectList objlist(commandBuffer, vsp_state->Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-10315", objlist,
                                  encode_info_loc.pNext(Struct::VkVideoEncodeQuantizationMapInfoKHR, Field::quantizationMap),
-                                 "is not VK_NULL_HANDLE but the bound video session parameters (%s) was not created with "
+                                 "is not VK_NULL_HANDLE but the bound video session parameters ({}) was not created with "
                                  "VK_VIDEO_SESSION_PARAMETERS_CREATE_QUANTIZATION_MAP_COMPATIBLE_BIT_KHR.",
-                                 FormatHandle(*vsp_state).c_str());
+                                 Handle(*vsp_state));
             }
 
             skip |= ValidateVideoEncodeQuantizationMapInfo(*cb_state, pEncodeInfo->srcPictureResource.codedExtent,
@@ -6033,11 +6227,11 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                                                            encode_info_loc.pNext(Struct::VkVideoEncodeQuantizationMapInfoKHR));
         } else {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10309", commandBuffer, encode_info_loc.dot(Field::flags),
-                             "(%s) contains VK_VIDEO_ENCODE_WITH_QUANTIZATION_DELTA_MAP_BIT_KHR or "
+                             "({}) contains VK_VIDEO_ENCODE_WITH_QUANTIZATION_DELTA_MAP_BIT_KHR or "
                              "VK_VIDEO_ENCODE_WITH_EMPHASIS_MAP_BIT_KHR but the pNext chain of pEncodeInfo "
                              "does not contain a VkVideoEncodeQuantizationMapInfoKHR structure specifying a "
                              "valid image view in its quantizationMap member.",
-                             string_VkVideoEncodeFlagsKHR(pEncodeInfo->flags).c_str());
+                             vvl::Flags::VideoEncodeFlagsKHR(pEncodeInfo->flags));
         }
     }
 
@@ -6047,7 +6241,7 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             rc_mode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10308", objlist, encode_info_loc.dot(Field::flags),
-                             "contains VK_VIDEO_ENCODE_WITH_EMPHASIS_MAP_BIT_KHR but the current rate control mode is %s.",
+                             "contains VK_VIDEO_ENCODE_WITH_EMPHASIS_MAP_BIT_KHR but the current rate control mode is {}.",
                              string_VkVideoEncodeRateControlModeFlagBitsKHR(rc_mode));
         }
     }
@@ -6065,18 +6259,17 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
         if ((buffer_state->usage & VK_BUFFER_USAGE_2_VIDEO_ENCODE_DST_BIT_KHR) == 0) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pEncodeInfo->dstBuffer);
             skip |= LogError("VUID-VkVideoEncodeInfoKHR-dstBuffer-08236", objlist, encode_info_loc.dot(Field::dstBuffer),
-                             "(%s) was not created with "
+                             "({}) was not created with "
                              "VK_BUFFER_USAGE_2_VIDEO_ENCODE_DST_BIT_KHR.",
-                             FormatHandle(pEncodeInfo->dstBuffer).c_str());
+                             Handle(pEncodeInfo->dstBuffer));
         }
 
         if (!IsBufferCompatibleWithVideoSession(*buffer_state, *vs_state)) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pEncodeInfo->dstBuffer);
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08201", objlist, encode_info_loc.dot(Field::dstBuffer),
-                             "(%s) is not compatible "
-                             "with the video profile (%s) %s was created with.\nSupported video profiles for the buffer:\n%s",
-                             FormatHandle(pEncodeInfo->dstBuffer).c_str(), string_VideoProfileDesc(*vs_state->profile).c_str(),
-                             FormatHandle(*vs_state).c_str(),
+                             "({}) is not compatible "
+                             "with the video profile ({}) {} was created with.\nSupported video profiles for the buffer:\n{}",
+                             Handle(pEncodeInfo->dstBuffer), string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state),
                              string_SupportedVideoProfiles(buffer_state->supported_video_profiles).c_str());
         }
 
@@ -6084,59 +6277,65 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pEncodeInfo->dstBuffer);
             skip |=
                 LogError("VUID-VkVideoEncodeInfoKHR-dstBufferOffset-08237", objlist, encode_info_loc.dot(Field::dstBufferOffset),
-                         "(%" PRIu64 ") must be less than the size (%" PRIu64 ") of pEncodeInfo->dstBuffer (%s).",
-                         pEncodeInfo->dstBufferOffset, buffer_state->GetSize(), FormatHandle(pEncodeInfo->dstBuffer).c_str());
+                         "({}"
+                         ") must be less than the size ({}"
+                         ") of pEncodeInfo->dstBuffer ({}).",
+                         pEncodeInfo->dstBufferOffset, buffer_state->GetSize(), Handle(pEncodeInfo->dstBuffer));
         }
 
         if (!IsIntegerMultipleOf(pEncodeInfo->dstBufferOffset, profile_caps.base.minBitstreamBufferOffsetAlignment)) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08204", objlist, encode_info_loc.dot(Field::dstBufferOffset),
-                             "(%" PRIu64 ") is not an integer multiple of the minBitstreamBufferOffsetAlignment (%" PRIu64
-                             ") required by the video profile (%s) %s was created with.",
+                             "({}"
+                             ") is not an integer multiple of the minBitstreamBufferOffsetAlignment ({}"
+                             ") required by the video profile ({}) {} was created with.",
                              pEncodeInfo->dstBufferOffset, profile_caps.base.minBitstreamBufferOffsetAlignment,
-                             string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
         }
 
         if (pEncodeInfo->dstBufferOffset + pEncodeInfo->dstBufferRange > buffer_state->GetSize()) {
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), pEncodeInfo->dstBuffer);
             skip |= LogError("VUID-VkVideoEncodeInfoKHR-dstBufferRange-08238", objlist, encode_info_loc.dot(Field::dstBufferOffset),
-                             "(%" PRIu64 ") plus pEncodeInfo->dstBufferRange (%" PRIu64
-                             ") must be less than or equal to the size (%" PRIu64 ") of pEncodeInfo->dstBuffer (%s).",
+                             "({}"
+                             ") plus pEncodeInfo->dstBufferRange ({}"
+                             ") must be less than or equal to the size ({}"
+                             ") of pEncodeInfo->dstBuffer ({}).",
                              pEncodeInfo->dstBufferOffset, pEncodeInfo->dstBufferRange, buffer_state->GetSize(),
-                             FormatHandle(pEncodeInfo->dstBuffer).c_str());
+                             Handle(pEncodeInfo->dstBuffer));
         }
     }
 
     if (!IsIntegerMultipleOf(pEncodeInfo->dstBufferRange, profile_caps.base.minBitstreamBufferSizeAlignment)) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08205", objlist, encode_info_loc.dot(Field::dstBufferRange),
-                         "(%" PRIu64 ") is not an integer multiple of the minBitstreamBufferSizeAlignment (%" PRIu64
-                         ") required by the video profile (%s) %s was created with.",
+                         "({}"
+                         ") is not an integer multiple of the minBitstreamBufferSizeAlignment ({}"
+                         ") required by the video profile ({}) {} was created with.",
                          pEncodeInfo->dstBufferRange, profile_caps.base.minBitstreamBufferSizeAlignment,
-                         string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                         string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
     }
 
     if (vs_state->create_info.maxDpbSlots > 0 && pEncodeInfo->pSetupReferenceSlot == nullptr) {
         const LogObjectList objlist(commandBuffer, vs_state->Handle());
         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08377", objlist, encode_info_loc.dot(Field::pSetupReferenceSlot),
-                         "is NULL but the bound video session %s was created with maxDpbSlot %" PRIu32 ".",
-                         FormatHandle(*vs_state).c_str(), vs_state->create_info.maxDpbSlots);
+                         "is NULL but the bound video session {} was created with maxDpbSlot {}"
+                         ".",
+                         Handle(*vs_state), vs_state->create_info.maxDpbSlots);
     }
 
     vvl::VideoPictureResource setup_resource;
     if (pEncodeInfo->pSetupReferenceSlot) {
         if (pEncodeInfo->pSetupReferenceSlot->slotIndex < 0) {
             skip |= LogError("VUID-VkVideoEncodeInfoKHR-pSetupReferenceSlot-08239", commandBuffer,
-                             encode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex), "(%d) must not be negative.",
+                             encode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex), "({}) must not be negative.",
                              pEncodeInfo->pSetupReferenceSlot->slotIndex);
         } else if ((uint32_t)pEncodeInfo->pSetupReferenceSlot->slotIndex >= vs_state->create_info.maxDpbSlots) {
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08213", commandBuffer,
                              encode_info_loc.dot(Field::pSetupReferenceSlot).dot(Field::slotIndex),
-                             "(%d) must be smaller than the maxDpbSlots (%" PRIu32
-                             ") the bound video session %s "
+                             "({}) must be smaller than the maxDpbSlots ({}"
+                             ") the bound video session {} "
                              "was created with.",
-                             pEncodeInfo->pSetupReferenceSlot->slotIndex, vs_state->create_info.maxDpbSlots,
-                             FormatHandle(*vs_state).c_str());
+                             pEncodeInfo->pSetupReferenceSlot->slotIndex, vs_state->create_info.maxDpbSlots, Handle(*vs_state));
         }
 
         if (pEncodeInfo->pSetupReferenceSlot->pPictureResource != nullptr) {
@@ -6176,21 +6375,21 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), src_resource.image_view_state->Handle(),
                                         src_resource.image_state->Handle());
             if (src_resource.image_state->create_flags & VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR) {
-                skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08206", objlist, src_image_view_loc,
-                                 "(%s created from %s) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
-                                 "not created with a video format supported by the video profile (%s) "
-                                 "the bound video session %s was created with.",
-                                 FormatHandle(pEncodeInfo->srcPictureResource.imageViewBinding).c_str(),
-                                 FormatHandle(src_resource.image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                skip |=
+                    LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08206", objlist, src_image_view_loc,
+                             "({} created from {}) was created with VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR but was "
+                             "not created with a video format supported by the video profile ({}) "
+                             "the bound video session {} was created with.",
+                             Handle(pEncodeInfo->srcPictureResource.imageViewBinding), Handle(src_resource.image_state->Handle()),
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
             } else {
-                skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08206", objlist, src_image_view_loc,
-                                 "(%s created from %s) is not compatible with the video profile (%s) "
-                                 "the bound video session %s was created with.\nSupported video profiles for the image:\n%s",
-                                 FormatHandle(pEncodeInfo->srcPictureResource.imageViewBinding).c_str(),
-                                 FormatHandle(src_resource.image_state->Handle()).c_str(),
-                                 string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str(),
-                                 string_SupportedVideoProfiles(src_resource.image_state->supported_video_profiles).c_str());
+                skip |=
+                    LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08206", objlist, src_image_view_loc,
+                             "({} created from {}) is not compatible with the video profile ({}) "
+                             "the bound video session {} was created with.\nSupported video profiles for the image:\n{}",
+                             Handle(pEncodeInfo->srcPictureResource.imageViewBinding), Handle(src_resource.image_state->Handle()),
+                             string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state),
+                             string_SupportedVideoProfiles(src_resource.image_state->supported_video_profiles).c_str());
             }
         }
 
@@ -6198,12 +6397,11 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), src_resource.image_view_state->Handle(),
                                         src_resource.image_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08207", objlist, src_image_view_loc,
-                             "(%s created from %s) format (%s) does not match the pictureFormat (%s) "
-                             "the bound video session %s was created with.",
-                             FormatHandle(src_resource.image_view_state->Handle()).c_str(),
-                             FormatHandle(src_resource.image_state->Handle()).c_str(),
+                             "({} created from {}) format ({}) does not match the pictureFormat ({}) "
+                             "the bound video session {} was created with.",
+                             Handle(src_resource.image_view_state->Handle()), Handle(src_resource.image_state->Handle()),
                              string_VkFormat(src_resource.image_view_state->create_info.format),
-                             string_VkFormat(vs_state->create_info.pictureFormat), FormatHandle(*vs_state).c_str());
+                             string_VkFormat(vs_state->create_info.pictureFormat), Handle(*vs_state));
         }
 
         auto supported_usage = src_resource.image_view_state->inherited_usage;
@@ -6211,12 +6409,11 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             const LogObjectList objlist(commandBuffer, vs_state->Handle(), src_resource.image_view_state->Handle(),
                                         src_resource.image_state->Handle());
             skip |= LogError("VUID-vkCmdEncodeVideoKHR-pEncodeInfo-08210", objlist, src_image_view_loc,
-                             "(%s created from %s) was not created with VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR "
-                             "thus it cannot be used as an encode input picture with the bound video session %s "
-                             "that was created with an encode operation.\n%s",
-                             FormatHandle(src_resource.image_view_state->Handle()).c_str(),
-                             FormatHandle(src_resource.image_state->Handle()).c_str(), FormatHandle(*vs_state).c_str(),
-                             src_resource.image_view_state->DescribeImageUsage(*this).c_str());
+                             "({} created from {}) was not created with VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR "
+                             "thus it cannot be used as an encode input picture with the bound video session {} "
+                             "that was created with an encode operation.\n{}",
+                             Handle(src_resource.image_view_state->Handle()), Handle(src_resource.image_state->Handle()),
+                             Handle(*vs_state), src_resource.image_view_state->DescribeImageUsage(*this).c_str());
         }
 
         skip |=
@@ -6235,19 +6432,18 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
             if (pEncodeInfo->pReferenceSlots[i].slotIndex < 0) {
                 skip |= LogError("VUID-VkVideoEncodeInfoKHR-slotIndex-08241", commandBuffer,
                                  encode_info_loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex),
-                                 "(%d) "
+                                 "({}) "
                                  "must not be negative.",
                                  pEncodeInfo->pReferenceSlots[i].slotIndex);
             } else if ((uint32_t)pEncodeInfo->pReferenceSlots[i].slotIndex >= vs_state->create_info.maxDpbSlots) {
                 const LogObjectList objlist(commandBuffer, vs_state->Handle());
                 skip |= LogError("VUID-vkCmdEncodeVideoKHR-slotIndex-08217", objlist,
                                  encode_info_loc.dot(Field::pReferenceSlots, i).dot(Field::slotIndex),
-                                 "(%d) "
-                                 "must be smaller than the maxDpbSlots (%" PRIu32
-                                 ") the bound video session %s "
+                                 "({}) "
+                                 "must be smaller than the maxDpbSlots ({}"
+                                 ") the bound video session {} "
                                  "was created with.",
-                                 pEncodeInfo->pReferenceSlots[i].slotIndex, vs_state->create_info.maxDpbSlots,
-                                 FormatHandle(*vs_state).c_str());
+                                 pEncodeInfo->pReferenceSlots[i].slotIndex, vs_state->create_info.maxDpbSlots, Handle(*vs_state));
             }
 
             if (pEncodeInfo->pReferenceSlots[i].pPictureResource != nullptr) {
@@ -6262,7 +6458,7 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                     if (it == bound_resources.end()) {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pPictureResource-08219", commandBuffer, error_obj.location,
                                          "the video picture resource specified in "
-                                         "pEncodeInfo->pReferenceSlots[%" PRIu32
+                                         "pEncodeInfo->pReferenceSlots[{}"
                                          "].pPictureResource is not one of the "
                                          "bound video picture resources.",
                                          i);
@@ -6270,10 +6466,11 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                                pEncodeInfo->pReferenceSlots[i].slotIndex != it->second) {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-pPictureResource-08219", commandBuffer, error_obj.location,
                                          "the bound video picture resource specified in "
-                                         "pEncodeInfo->pReferenceSlots[%" PRIu32
+                                         "pEncodeInfo->pReferenceSlots[{}"
                                          "].pPictureResource is not currently "
                                          "associated with the DPB slot index specified in "
-                                         "pEncodeInfo->pReferenceSlots[%" PRIu32 "].slotIndex (%d).",
+                                         "pEncodeInfo->pReferenceSlots[{}"
+                                         "].slotIndex ({}).",
                                          i, i, pEncodeInfo->pReferenceSlots[i].slotIndex);
                     }
 
@@ -6304,12 +6501,14 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
     for (const auto& query : cb_state->active_queries) {
         if (query.active_query_index + op_count > query.last_activatable_query_index + 1) {
             auto query_pool_state = Get<vvl::QueryPool>(query.pool);
-            skip |=
-                LogError("VUID-vkCmdEncodeVideoKHR-opCount-07174", commandBuffer, error_obj.location,
-                         "not enough activatable queries for query type %s "
-                         "with opCount %" PRIu32 ", active query index %" PRIu32 ", and last activatable query index %" PRIu32 ".",
-                         string_VkQueryType(query_pool_state->create_info.queryType), op_count, query.active_query_index,
-                         query.last_activatable_query_index);
+            skip |= LogError("VUID-vkCmdEncodeVideoKHR-opCount-07174", commandBuffer, error_obj.location,
+                             "not enough activatable queries for query type {} "
+                             "with opCount {}"
+                             ", active query index {}"
+                             ", and last activatable query index {}"
+                             ".",
+                             string_VkQueryType(query_pool_state->create_info.queryType), op_count, query.active_query_index,
+                             query.last_activatable_query_index);
         }
     }
 
@@ -6322,10 +6521,12 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
 
                 if (inline_query_info->queryCount != op_count) {
                     const LogObjectList objlist(commandBuffer, vs_state->Handle());
-                    skip |=
-                        LogError("VUID-vkCmdEncodeVideoKHR-pNext-08360", objlist,
-                                 encode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryCount),
-                                 "(%" PRIu32 ") is not equal to opCount (%" PRIu32 ").", inline_query_info->queryCount, op_count);
+                    skip |= LogError("VUID-vkCmdEncodeVideoKHR-pNext-08360", objlist,
+                                     encode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryCount),
+                                     "({}"
+                                     ") is not equal to opCount ({}"
+                                     ").",
+                                     inline_query_info->queryCount, op_count);
                 }
 
                 if (query_pool_state->create_info.queryType != VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR &&
@@ -6333,10 +6534,9 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                     const LogObjectList objlist(commandBuffer, inline_query_info->queryPool);
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-queryType-08362", objlist,
                                      encode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
-                                     "(%s) has query type (%s) but must be VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR or "
+                                     "({}) has query type ({}) but must be VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR or "
                                      "VK_QUERY_TYPE_VIDEO_ENCODE_FEEDBACK_KHR.",
-                                     FormatHandle(*query_pool_state).c_str(),
-                                     string_VkQueryType(query_pool_state->create_info.queryType));
+                                     Handle(*query_pool_state), string_VkQueryType(query_pool_state->create_info.queryType));
                 }
 
                 if (vs_state->profile != query_pool_state->supported_video_profile) {
@@ -6344,10 +6544,10 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                     if (query_pool_state->supported_video_profile) {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-queryPool-08363", objlist,
                                          encode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
-                                         "was created with a video profile (%s) that does not match the "
-                                         "video profile (%s) of the bound video session %s.",
+                                         "was created with a video profile ({}) that does not match the "
+                                         "video profile ({}) of the bound video session {}.",
                                          string_VideoProfileDesc(*query_pool_state->supported_video_profile).c_str(),
-                                         string_VideoProfileDesc(*vs_state->profile).c_str(), FormatHandle(*vs_state).c_str());
+                                         string_VideoProfileDesc(*vs_state->profile).c_str(), Handle(*vs_state));
                     } else {
                         skip |= LogError("VUID-vkCmdEncodeVideoKHR-queryPool-08363", objlist,
                                          encode_info_loc.pNext(Struct::VkVideoInlineQueryInfoKHR, Field::queryPool),
@@ -6360,10 +6560,10 @@ bool CoreChecks::PreCallValidateCmdEncodeVideoKHR(VkCommandBuffer commandBuffer,
                     !qf_ext_props.query_result_status_props.queryResultStatusSupport) {
                     const LogObjectList objlist(commandBuffer, inline_query_info->queryPool);
                     skip |= LogError("VUID-vkCmdEncodeVideoKHR-queryType-08364", objlist, error_obj.location,
-                                     "the command pool's queue family (index %" PRIu32
+                                     "the command pool's queue family (index {}"
                                      ") the command "
-                                     "buffer %s was allocated from does not support result status queries.",
-                                     cb_state->command_pool.queueFamilyIndex, FormatHandle(*cb_state).c_str());
+                                     "buffer {} was allocated from does not support result status queries.",
+                                     cb_state->command_pool.queueFamilyIndex, Handle(*cb_state));
                 }
             }
         }

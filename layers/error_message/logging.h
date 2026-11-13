@@ -18,10 +18,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
-#include <cstdarg>
 #include <mutex>
+#include <optional>
+#include <shared_mutex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -34,6 +36,9 @@
 #include "containers/small_vector.h"
 #include "generated/vk_object_types.h"
 #include "error_message/log_message_type.h"
+#include "error_message/log_format.h"
+#include "error_message/log_flags.h"
+#include "generated/flags_format_helper.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -186,6 +191,15 @@ class TypedHandleWrapper {
 };
 
 struct Location;
+class DebugReport;
+
+// A handle to format with "{}": the same "<TypeName> 0x<hex>[<name>]" text as DebugReport::FormatHandle(), with the name
+// looked up when the message is formatted, so nothing is allocated for messages that are filtered out
+struct HandleRef {
+    const DebugReport* debug_report;
+    const char* type_name;
+    uint64_t handle;
+};
 
 struct MessageFormatSettings {
     bool json = false;
@@ -193,12 +207,11 @@ struct MessageFormatSettings {
     std::string application_name;
 };
 
-#if defined(__clang__)
-#define DECORATE_PRINTF(_fmt_argnum, _first_param_num) __attribute__((format(printf, _fmt_argnum, _first_param_num)))
-#elif defined(__GNUC__)
-#define DECORATE_PRINTF(_fmt_argnum, _first_param_num) __attribute__((format(gnu_printf, _fmt_argnum, _first_param_num)))
+// Logging is rare in a well-behaved application: keep the delivery path out of line and out of the hot code around it
+#if defined(_MSC_VER) && !defined(__clang__)
+#define VVL_COLD_NOINLINE __declspec(noinline)
 #else
-#define DECORATE_PRINTF(_fmt_num, _first_param_num)
+#define VVL_COLD_NOINLINE __attribute__((cold, noinline))
 #endif
 
 class DebugReport {
@@ -217,8 +230,10 @@ class DebugReport {
 
     void SetUtilsObjectName(const VkDebugUtilsObjectNameInfoEXT *pNameInfo);
     void SetMarkerObjectName(const VkDebugMarkerObjectNameInfoEXT *pNameInfo);
-    std::string GetUtilsObjectNameNoLock(const uint64_t object) const;
-    std::string GetMarkerObjectNameNoLock(const uint64_t object) const;
+    // Copies of the current names, "" when there is none. Takes the name lock, so no other lock may be held by the caller
+    // that the name lock could be waiting on (it is a leaf lock).
+    std::string GetUtilsObjectName(uint64_t object) const;
+    std::string GetMarkerObjectName(uint64_t object) const;
 
     void SetDebugUtilsSeverityFlags(std::vector<VkLayerDbgFunctionState> &callbacks);
     void RemoveDebugUtilsCallback(uint64_t callback);
@@ -236,12 +251,35 @@ class DebugReport {
         return FormatHandle(VkHandleInfo<T>::Typename(), HandleToUint64(handle));
     }
 
-    // Legacy way to log messages with C-style va_list
-    bool LogMessageVaList(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList &objects, const Location &loc,
-                          const char *format, va_list argptr);
-    // Formats messages to be in the proper format, handles VUID logic, any legacy issues, and finally calls the callback
-    bool LogMessage(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList &objects, const Location &loc,
-                    const std::string &main_message);
+    // For the Log* functions: same overloads and same text as FormatHandle, formatted only if the message is delivered
+    HandleRef Handle(const char* handle_type_name, uint64_t handle) const { return HandleRef{this, handle_type_name, handle}; }
+    HandleRef Handle(const VulkanTypedHandle& handle) const { return Handle(string_VulkanObjectType(handle.type), handle.handle); }
+    HandleRef Handle(const TypedHandleWrapper& wrapper) const { return Handle(wrapper.Handle()); }
+    template <typename T, typename std::enable_if_t<!std::is_base_of<TypedHandleWrapper, T>::value, void*> = nullptr>
+    HandleRef Handle(T handle) const {
+        return Handle(VkHandleInfo<T>::Typename(), HandleToUint64(handle));
+    }
+
+    // Calls `use(name)` with the object's debug-utils name, else its marker name, under the name lock; not at all when it
+    // has neither (an empty name counts as none). `use` must not log or take another lock.
+    template <typename UseName>
+    void WithObjectName(uint64_t object, UseName&& use) const {
+        if (!has_object_names.load()) {
+            return;
+        }
+        std::shared_lock<std::shared_mutex> lock(object_name_mutex);
+        if (const std::string* name = FindObjectNameNoLock(object)) {
+            use(*name);
+        }
+    }
+
+    // Formats the main message with the backend, unless the message is filtered out or over the duplicate limit, then
+    // assembles it and calls the callbacks
+    VVL_COLD_NOINLINE bool LogMessage(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects,
+                                      const Location& loc, std::string_view format, vvl::format::format_args args);
+    // Same path for text that is already formatted: it is delivered verbatim, never parsed as a format string
+    VVL_COLD_NOINLINE bool LogMessage(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects,
+                                      const Location& loc, std::string_view main_message);
 
     void EraseObjectName(uint64_t object_handle);
 
@@ -258,23 +296,64 @@ class DebugReport {
     bool HasSeverityLevel(VkDebugUtilsMessageSeverityFlagBitsEXT level) const { return (active_msg_severities & level) != 0; }
 
   private:
-    std::string CreateMessageText(const Location &loc, std::string_view vuid_text, const std::string &main_message,
-                                  bool at_message_limit);
-    std::string CreateMessageJson(VkFlags msg_flags, const Location &loc,
-                                  const std::vector<VkDebugUtilsObjectNameInfoEXT> &object_name_infos, const uint32_t vuid_hash,
-                                  std::string_view vuid_text, const std::string &main_message, bool at_message_limit);
+    // What the filters decided for a message that will be delivered
+    struct PassedFilters {
+        VkDebugUtilsMessageSeverityFlagsEXT severity;
+        VkDebugUtilsMessageTypeFlagsEXT type;
+        uint32_t vuid_hash;
+        bool at_message_limit;
+    };
+    // Severity, type, message-ID filter and duplicate limit; std::nullopt when the message is dropped
+    std::optional<PassedFilters> FilterMessage(VkFlags msg_flags, std::string_view vuid_text);
+    bool DeliverMessage(const PassedFilters& passed, VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects,
+                        const Location& loc, std::string_view main_message);
+
+    // Assembly appends to reused per-thread buffers; `fields` is scratch space for the Location fields
+    void AppendMessageText(std::string& out, const Location& loc, std::string_view vuid_text, std::string_view main_message,
+                           bool at_message_limit) const;
+    void AppendMessageJson(std::string& out, std::string& fields, VkFlags msg_flags, const Location& loc,
+                           const std::vector<VkDebugUtilsObjectNameInfoEXT>& object_name_infos, const uint32_t vuid_hash,
+                           std::string_view vuid_text, std::string_view main_message, bool at_message_limit) const;
+
+    // The caller holds object_name_mutex
+    std::string GetUtilsObjectNameNoLock(const uint64_t object) const;
+    std::string GetMarkerObjectNameNoLock(const uint64_t object) const;
+    // The debug-utils name, else the marker name; nullptr when neither is set or both are empty
+    const std::string* FindObjectNameNoLock(uint64_t object) const;
 
     VkDebugUtilsMessageSeverityFlagsEXT active_msg_severities{0};
     VkDebugUtilsMessageTypeFlagsEXT active_msg_types{0};
+    // Its own lock, so the limit is decided before formatting and outside debug_output_mutex
+    std::mutex duplicate_message_count_mutex;
     vvl::unordered_map<uint32_t, uint32_t> duplicate_message_count_map{};
 
     vvl::unordered_map<VkQueue, std::unique_ptr<LoggingLabelState>> debug_utils_queue_labels;
     vvl::unordered_map<VkCommandBuffer, std::unique_ptr<LoggingLabelState>> debug_utils_cmd_buffer_labels;
+    // Guards both name maps. A leaf lock: nothing else is locked while it is held, and it is never held across callbacks, so
+    // naming objects does not wait on message delivery
+    mutable std::shared_mutex object_name_mutex;
     vvl::unordered_map<uint64_t, std::string> debug_object_name_map;
     vvl::unordered_map<uint64_t, std::string> debug_utils_object_name_map;
     // Destroying an object is a very common thing and not all app will even name anything.
-    // This lets EraseObjectName() return without taking |debug_output_mutex| when there is nothing to erase
+    // This lets EraseObjectName() return without taking |object_name_mutex| when there is nothing to erase
     std::atomic<bool> has_object_names{false};
+};
+
+template <>
+struct VVL_FMT_NS::formatter<HandleRef> {
+    // No format spec: anything before '}' is rejected by the backend's check
+    constexpr auto parse(VVL_FMT_NS::format_parse_context& ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const HandleRef& ref, FormatContext& ctx) const {
+        auto out = VVL_FMT_NS::format_to(ctx.out(), "{} 0x{:x}", ref.type_name, ref.handle);
+        ref.debug_report->WithObjectName(ref.handle, [&out](const std::string& name) {
+            *out++ = '[';
+            out = std::copy(name.begin(), name.end(), out);
+            *out++ = ']';
+        });
+        return out;
+    }
 };
 
 class Logger {
@@ -284,71 +363,58 @@ class Logger {
     std::string FormatHandle(T &&h) const {
         return debug_report->FormatHandle(std::forward<T>(h));
     }
-
-    // Debug Logging Helpers
-    bool DECORATE_PRINTF(5, 6)
-        LogError(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc, const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kErrorBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename T>
+    HandleRef Handle(T&& h) const {
+        return debug_report->Handle(std::forward<T>(h));
     }
 
-    // Currently works like LogError, but allows developer to better categorize the error
-    bool DECORATE_PRINTF(5, 6) LogInternalError(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc,
-                                                const char* format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kWarningBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    // Debug Logging Helpers. The format string is checked at compile time against the arguments. Each is a thin inline
+    // wrapper: the arguments are only type-erased here, and formatted by DebugReport::LogMessage once the message is known
+    // to be delivered.
+
+    template <typename... Args>
+    bool LogError(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc, vvl::LogFormat<Args...> format,
+                  Args&&... args) const {
+        return debug_report->LogMessage(kErrorBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
+    }
+
+    // Reported with the warning bit (not the error bit), but allows developer to better categorize the error
+    template <typename... Args>
+    bool LogInternalError(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc,
+                          vvl::LogFormat<Args...> format, Args&&... args) const {
+        return debug_report->LogMessage(kWarningBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
     }
 
     // Currently works like LogWarning, but allows developer to better categorize the warning
-    bool DECORATE_PRINTF(5, 6) LogUndefinedValue(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc,
-                                                 const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kWarningBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename... Args>
+    bool LogUndefinedValue(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc,
+                           vvl::LogFormat<Args...> format, Args&&... args) const {
+        return debug_report->LogMessage(kWarningBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
     }
 
-    bool DECORATE_PRINTF(5, 6)
-        LogWarning(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc, const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kWarningBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename... Args>
+    bool LogWarning(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc, vvl::LogFormat<Args...> format,
+                    Args&&... args) const {
+        return debug_report->LogMessage(kWarningBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
     }
 
-    bool DECORATE_PRINTF(5, 6) LogPerformanceWarning(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc,
-                                                     const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kPerformanceWarningBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename... Args>
+    bool LogPerformanceWarning(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc,
+                               vvl::LogFormat<Args...> format, Args&&... args) const {
+        return debug_report->LogMessage(kPerformanceWarningBit, vuid_text, objlist, loc, format.text,
+                                        vvl::format::MakeArgs(args...));
     }
 
-    bool DECORATE_PRINTF(5, 6)
-        LogInfo(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc, const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kInformationBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename... Args>
+    bool LogInfo(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc, vvl::LogFormat<Args...> format,
+                 Args&&... args) const {
+        return debug_report->LogMessage(kInformationBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
     }
 
-    bool DECORATE_PRINTF(5, 6)
-        LogVerbose(std::string_view vuid_text, const LogObjectList &objlist, const Location &loc, const char *format, ...) const {
-        va_list argptr;
-        va_start(argptr, format);
-        const bool result = debug_report->LogMessageVaList(kVerboseBit, vuid_text, objlist, loc, format, argptr);
-        va_end(argptr);
-        return result;
+    template <typename... Args>
+    bool LogVerbose(std::string_view vuid_text, const LogObjectList& objlist, const Location& loc, vvl::LogFormat<Args...> format,
+                    Args&&... args) const {
+        return debug_report->LogMessage(kVerboseBit, vuid_text, objlist, loc, format.text, vvl::format::MakeArgs(args...));
     }
 
     DebugReport *debug_report{nullptr};
