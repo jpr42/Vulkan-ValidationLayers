@@ -18,7 +18,7 @@
 cd "$(dirname $0)/../../"
 
 # Use update_deps.py to update source dependencies from /scripts/known_good.json
-scripts/update_deps.py --dir="external" --no-build --optional=fmt
+scripts/update_deps.py --dir="external" --no-build
 
 cat << EOF > .gn
 buildconfig = "//build/config/BUILDCONFIG.gn"
