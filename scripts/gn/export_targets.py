@@ -282,7 +282,11 @@ IGNORED_INCLUDE_PREFIXES = {
 
 IGNORED_DIRECTORIES = {
     '//buildtools/third_party/libc++',
+    '//buildtools/third_party/libc++abi',
+    '//buildtools/third_party/libunwind',
     '//third_party/libc++/src',
+    '//third_party/libc++abi/src',
+    '//third_party/libunwind/src',
     '//third_party/abseil-cpp',
     '//third_party/SwiftShader',
     '//third_party/dawn',
