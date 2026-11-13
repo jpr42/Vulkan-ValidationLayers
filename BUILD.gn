@@ -658,7 +658,12 @@ config("vvl_fmt_config") {
 }
 
 source_set("vvl_fmt") {
-  sources = [ "$vvl_fmt_dir/src/format.cc" ]
+  sources = [
+    "$vvl_fmt_dir/include/fmt/base.h",
+    "$vvl_fmt_dir/include/fmt/format-inl.h",
+    "$vvl_fmt_dir/include/fmt/format.h",
+    "$vvl_fmt_dir/src/format.cc",
+  ]
   public_configs = [ ":vvl_fmt_config" ]
   if (!is_fuchsia) {
     configs -= [ "//build/config/compiler:chromium_code" ]
