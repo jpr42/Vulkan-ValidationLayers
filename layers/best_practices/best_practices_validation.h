@@ -56,11 +56,11 @@ void LogResult(const StateObject& state, Handle handle, const RecordObject& reco
     const auto result_string = string_VkResult(record_obj.result);
 
     if (record_obj.result > VK_SUCCESS) {
-        state.LogVerbose("BestPractices-Verbose-Success-Logging", handle, record_obj.location, "Returned %s.", result_string);
+        state.LogVerbose("BestPractices-Verbose-Success-Logging", handle, record_obj.location, "Returned {}.", result_string);
     } else if (IsValueIn(record_obj.result, common_failure_codes)) {
-        state.LogInfo("BestPractices-Failure-Result", handle, record_obj.location, "Returned error %s.", result_string);
+        state.LogInfo("BestPractices-Failure-Result", handle, record_obj.location, "Returned error {}.", result_string);
     } else {
-        state.LogWarning("BestPractices-Error-Result", handle, record_obj.location, "Returned error %s.", result_string);
+        state.LogWarning("BestPractices-Error-Result", handle, record_obj.location, "Returned error {}.", result_string);
     }
 }
 

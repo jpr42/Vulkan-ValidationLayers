@@ -31,7 +31,7 @@ bool BestPractices::PreCallValidateAllocateDescriptorSets(VkDevice device, const
     if (VendorCheckEnabled(kBPVendorArm) && (pool_state->GetFreedCount() > 0)) {
         skip |= LogPerformanceWarning(
             "BestPractices-Arm-vkAllocateDescriptorSets-suboptimal-reuse", device, error_obj.location,
-            "%s Descriptor set memory was allocated via vkAllocateDescriptorSets() for sets which were previously freed in the "
+            "{} Descriptor set memory was allocated via vkAllocateDescriptorSets() for sets which were previously freed in the "
             "same logical device. On some drivers or architectures it may be most optimal to re-use existing descriptor sets.",
             VendorSpecificTag(kBPVendorArm));
     }
@@ -41,10 +41,11 @@ bool BestPractices::PreCallValidateAllocateDescriptorSets(VkDevice device, const
         if (pool_state->GetAvailableSets() < pAllocateInfo->descriptorSetCount) {
             skip |=
                 LogWarning("BestPractices-vkAllocateDescriptorSets-EmptyDescriptorPool", pool_state->Handle(), error_obj.location,
-                           "Unable to allocate %" PRIu32
-                           " descriptorSets from %s"
-                           ". This pool only has %" PRIu32 " descriptorSets remaining.",
-                           pAllocateInfo->descriptorSetCount, FormatHandle(*pool_state).c_str(), pool_state->GetAvailableSets());
+                           "Unable to allocate {}"
+                           " descriptorSets from {}"
+                           ". This pool only has {}"
+                           " descriptorSets remaining.",
+                           pAllocateInfo->descriptorSetCount, Handle(*pool_state), pool_state->GetAvailableSets());
         }
         auto ads_pool_state = Get<vvl::DescriptorPool>(pAllocateInfo->descriptorPool);
         for (auto it = ads_state_data.required_descriptors_by_type.begin(); it != ads_state_data.required_descriptors_by_type.end();
@@ -54,11 +55,12 @@ bool BestPractices::PreCallValidateAllocateDescriptorSets(VkDevice device, const
             if (ads_state_data.required_descriptors_by_type.at(it->first) > available_count) {
                 skip |= LogWarning(
                     "BestPractices-vkAllocateDescriptorSets-EmptyDescriptorPoolType", ads_pool_state->Handle(), error_obj.location,
-                    "Unable to allocate %" PRIu32
-                    " descriptors of type %s from %s"
-                    ". This pool only has %" PRIu32 " descriptors of this type remaining.\n%s",
+                    "Unable to allocate {}"
+                    " descriptors of type {} from {}"
+                    ". This pool only has {}"
+                    " descriptors of this type remaining.\n{}",
                     ads_state_data.required_descriptors_by_type.at(it->first), string_VkDescriptorType(VkDescriptorType(it->first)),
-                    FormatHandle(*ads_pool_state).c_str(), available_count,
+                    Handle(*ads_pool_state), available_count,
                     device_state->PrintDescriptorAllocation(*pAllocateInfo, *pool_state, VkDescriptorType(it->first)).c_str());
             }
         }
@@ -76,7 +78,7 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
         if ((pCreateInfo->addressModeU != pCreateInfo->addressModeV) || (pCreateInfo->addressModeV != pCreateInfo->addressModeW)) {
             skip |= LogPerformanceWarning(
                 "BestPractices-Arm-vkCreateSampler-different-wrapping-modes", device, error_obj.location,
-                "%s Creating a sampler object with wrapping modes which do not match (U = %s, V = %s, W = %s).\n"
+                "{} Creating a sampler object with wrapping modes which do not match (U = {}, V = {}, W = {}).\n"
                 "This may cause reduced performance even if only U (1D image) or U/V wrapping modes (2D "
                 "image) are actually used. If you need different wrapping modes, disregard this warning.",
                 VendorSpecificTag(kBPVendorArm), string_VkSamplerAddressMode(pCreateInfo->addressModeU),
@@ -86,7 +88,8 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
         if ((pCreateInfo->minLod != 0.0f) || (pCreateInfo->maxLod < VK_LOD_CLAMP_NONE)) {
             skip |= LogPerformanceWarning(
                 "BestPractices-Arm-vkCreateSampler-lod-clamping", device, error_obj.location,
-                "%s Creating a sampler object with LOD clamping (minLod = %f, maxLod = %f).\nThis may cause reduced performance. "
+                "{} Creating a sampler object with LOD clamping (minLod = {:f}, maxLod = {:f}).\nThis may cause reduced "
+                "performance. "
                 "Instead of clamping LOD in the sampler, consider using a VkImageView which restricts the mip-levels, set minLod "
                 "to 0.0, and maxLod to VK_LOD_CLAMP_NONE.",
                 VendorSpecificTag(kBPVendorArm), pCreateInfo->minLod, pCreateInfo->maxLod);
@@ -95,7 +98,7 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
         if (pCreateInfo->mipLodBias != 0.0f) {
             skip |=
                 LogPerformanceWarning("BestPractices-Arm-vkCreateSampler-lod-bias", device, error_obj.location,
-                                      "%s Creating a sampler object with LOD bias != 0.0 (%f). This will lead to less efficient "
+                                      "{} Creating a sampler object with LOD bias != 0.0 ({:f}). This will lead to less efficient "
                                       "descriptors being created and may cause reduced performance.",
                                       VendorSpecificTag(kBPVendorArm), pCreateInfo->mipLodBias);
         }
@@ -106,7 +109,7 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
             (pCreateInfo->borderColor != VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK)) {
             skip |= LogPerformanceWarning(
                 "BestPractices-Arm-vkCreateSampler-border-clamp-color", device, error_obj.location,
-                "%s Creating a sampler object with border clamping and borderColor != VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK. "
+                "{} Creating a sampler object with border clamping and borderColor != VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK. "
                 "This will lead to less efficient descriptors being created and may cause reduced performance. "
                 "If possible, use VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK as the border color.",
                 VendorSpecificTag(kBPVendorArm));
@@ -115,7 +118,7 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
         if (pCreateInfo->unnormalizedCoordinates) {
             skip |= LogPerformanceWarning(
                 "BestPractices-Arm-vkCreateSampler-unnormalized-coordinates", device, error_obj.location,
-                "%s Creating a sampler object with unnormalized coordinates. This will lead to less efficient "
+                "{} Creating a sampler object with unnormalized coordinates. This will lead to less efficient "
                 "descriptors being created and may cause reduced performance.",
                 VendorSpecificTag(kBPVendorArm));
         }
@@ -123,7 +126,7 @@ bool BestPractices::PreCallValidateCreateSampler(VkDevice device, const VkSample
         if (pCreateInfo->anisotropyEnable) {
             skip |= LogPerformanceWarning(
                 "BestPractices-Arm-vkCreateSampler-anisotropy", device, error_obj.location,
-                "%s Creating a sampler object with anisotropy. This will lead to less efficient descriptors being created "
+                "{} Creating a sampler object with anisotropy. This will lead to less efficient descriptors being created "
                 "and may cause reduced performance.",
                 VendorSpecificTag(kBPVendorArm));
         }
@@ -140,7 +143,7 @@ bool BestPractices::PreCallValidateUpdateDescriptorSets(VkDevice device, uint32_
     if (VendorCheckEnabled(kBPVendorAMD)) {
         if (descriptorCopyCount > 0) {
             skip |= LogPerformanceWarning("BestPractices-AMD-UpdateDescriptors-AvoidCopyingDescriptors", device, error_obj.location,
-                                          "%s copying descriptor sets is not recommended", VendorSpecificTag(kBPVendorAMD));
+                                          "{} copying descriptor sets is not recommended", VendorSpecificTag(kBPVendorAMD));
         }
     }
 
@@ -155,7 +158,7 @@ bool BestPractices::PreCallValidateCreateDescriptorUpdateTemplate(VkDevice devic
     bool skip = false;
     if (VendorCheckEnabled(kBPVendorAMD)) {
         skip |= LogPerformanceWarning("BestPractices-AMD-UpdateDescriptors-PreferNonTemplate", device, error_obj.location,
-                                      "%s using DescriptorSetWithTemplate is not recommended. Prefer using "
+                                      "{} using DescriptorSetWithTemplate is not recommended. Prefer using "
                                       "vkUpdateDescriptorSet instead",
                                       VendorSpecificTag(kBPVendorAMD));
     }
@@ -180,8 +183,9 @@ bool BestPractices::PreCallValidateCreateDescriptorPool(VkDevice device, const V
         skip |= LogWarning(
             "BestPractices-MutableDescriptor-TypeListCount", device,
             error_obj.location.pNext(Struct::VkMutableDescriptorTypeCreateInfoEXT, Field::mutableDescriptorTypeListCount),
-            "is %" PRIu32 ", but VkDescriptorPoolCreateInfo::poolSizeCount is only %" PRIu32
-            ". Only %s from VkMutableDescriptorTypeCreateInfoEXT::pMutableDescriptorTypeLists will be used",
+            "is {}"
+            ", but VkDescriptorPoolCreateInfo::poolSizeCount is only {}"
+            ". Only {} from VkMutableDescriptorTypeCreateInfoEXT::pMutableDescriptorTypeLists will be used",
             mutable_descriptor_type_ci->mutableDescriptorTypeListCount, pCreateInfo->poolSizeCount, msg.str().c_str());
     }
 

@@ -47,14 +47,14 @@ static void InstanceExtensionWhitelist(vvl::DispatchInstance* layer_data, const 
         if (extension == vvl::Extension::Empty) {
             layer_data->LogWarning("WARNING-CreateInstance-extension-not-found", layer_data->instance,
                                    loc.dot(vvl::Field::pCreateInfo).dot(vvl::Field::ppEnabledExtensionNames, i),
-                                   "%s is not a known extension string. Please make sure the spelling is correct. (If working on a "
+                                   "{} is not a known extension string. Please make sure the spelling is correct. (If working on a "
                                    "new extension, the validation code generation needs to be ran with the new vk.xml)",
                                    pCreateInfo->ppEnabledExtensionNames[i]);
         } else if (!IsInstanceExtension(extension)) {
             layer_data->LogWarning(
                 "WARNING-CreateInstance-extension-wrong-type", layer_data->instance,
                 loc.dot(vvl::Field::pCreateInfo).dot(vvl::Field::ppEnabledExtensionNames, i),
-                "%s is a device extension, not a instance extension. It should be set later during vkCreateDevice() time. (If you "
+                "{} is a device extension, not a instance extension. It should be set later during vkCreateDevice() time. (If you "
                 "are trying to enable the device extensions because it has some physical device level info, it is valid to query "
                 "the VkPhysicalDevice regardless of the extensions it supports.)",
                 pCreateInfo->ppEnabledExtensionNames[i]);
@@ -70,14 +70,14 @@ static void DeviceExtensionWhitelist(vvl::DispatchDevice* layer_data, const VkDe
         if (extension == vvl::Extension::Empty) {
             layer_data->LogWarning("WARNING-CreateDevice-extension-not-found", layer_data->device,
                                    loc.dot(vvl::Field::pCreateInfo).dot(vvl::Field::ppEnabledExtensionNames, i),
-                                   "%s is not a known extension string. Please make sure the spelling is correct. (If working on a "
+                                   "{} is not a known extension string. Please make sure the spelling is correct. (If working on a "
                                    "new extension, the validation code generation needs to be ran with the new vk.xml)",
                                    pCreateInfo->ppEnabledExtensionNames[i]);
         } else if (!IsDeviceExtension(extension)) {
             layer_data->LogWarning(
                 "WARNING-CreateDevice-extension-wrong-type", layer_data->device,
                 loc.dot(vvl::Field::pCreateInfo).dot(vvl::Field::ppEnabledExtensionNames, i),
-                "%s is a instance extension, not a device extension. It should be set before at vkCreateInstance().",
+                "{} is a instance extension, not a device extension. It should be set before at vkCreateInstance().",
                 pCreateInfo->ppEnabledExtensionNames[i]);
         }
     }
@@ -131,7 +131,7 @@ void OutputLayerStatusInfo(vvl::DispatchInstance* context, const Location& loc) 
         ss << "  - Debug Printf\n";
     }
 
-    context->LogInfo("CURRENT-VALIDATION-ENABLED", context->instance, loc, "%s", ss.str().c_str());
+    context->LogInfo("CURRENT-VALIDATION-ENABLED", context->instance, loc, "{}", ss.str().c_str());
 }
 const vvl::unordered_map<std::string, function_data>& GetNameToFuncPtrMap();
 
@@ -156,7 +156,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
             // Was discussed in https://gitlab.khronos.org/vulkan/vulkan/-/merge_requests/6583
             // This has "valid" behavior to return null, but still worth warning users for this unqiue function
             layer_data->LogWarning("WARNING-vkGetDeviceProcAddr-device", device, loc.dot(vvl::Field::pName),
-                                   "is trying to grab %s which is an instance level function", funcName);
+                                   "is trying to grab {} which is an instance level function", funcName);
             return nullptr;
         } else {
             return reinterpret_cast<PFN_vkVoidFunction>(item->second.funcptr);

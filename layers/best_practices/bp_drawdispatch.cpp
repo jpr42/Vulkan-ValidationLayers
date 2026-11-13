@@ -59,7 +59,9 @@ bool BestPractices::ValidatePushConstants(const bp_state::CommandBufferSubState&
         }
         if (size_not_set > 0) {
             skip |= LogWarning("BestPractices-PushConstants", cb_state.base.Handle(), loc,
-                               "Pipeline uses a push constant range with offset %" PRIu32 " and size %" PRIu32 ", but %" PRIu32
+                               "Pipeline uses a push constant range with offset {}"
+                               " and size {}"
+                               ", but {}"
                                " bytes were never set with vkCmdPushConstants.",
                                push_constant_range.offset, push_constant_range.size, size_not_set);
             break;
@@ -125,12 +127,13 @@ bool BestPractices::PreCallValidateCmdDrawIndexed(VkCommandBuffer commandBuffer,
         (sub_state.small_indexed_draw_call_count == kMaxSmallIndexedDrawcalls - 1) &&
         (VendorCheckEnabled(kBPVendorArm) || VendorCheckEnabled(kBPVendorIMG))) {
         skip |= LogPerformanceWarning("BestPractices-vkCmdDrawIndexed-many-small-indexed-drawcalls", device, error_obj.location,
-                                      "%s: The command buffer contains many small indexed drawcalls "
-                                      "(at least %" PRIu32 " drawcalls with less than %" PRIu32
+                                      "{}: The command buffer contains many small indexed drawcalls "
+                                      "(at least {}"
+                                      " drawcalls with less than {}"
                                       " indices each). This may cause pipeline bubbles. "
                                       "You can try batching drawcalls or instancing when applicable.",
                                       VendorSpecificTag(kBPVendorArm | kBPVendorIMG).c_str(), kMaxSmallIndexedDrawcalls,
-                                      kSmallIndexedDrawcallIndices);
+                                      static_cast<unsigned int>(kSmallIndexedDrawcallIndices));
     }
 
     if (VendorCheckEnabled(kBPVendorArm)) {
@@ -257,14 +260,14 @@ bool BestPractices::ValidateIndexBufferArm(const bp_state::CommandBufferSubState
         if (max_index < min_index || max_index == min_index) return skip;
 
         if (max_index - min_index >= indexCount) {
-            skip |=
-                LogPerformanceWarning("BestPractices-Arm-vkCmdDrawIndexed-sparse-index-buffer", device, loc,
-                                      "%s The indices which were specified for the draw call only utilise approximately %.02f%% of "
-                                      "index buffer value range. Arm Mali architectures before G71 do not have IDVS (Index-Driven "
-                                      "Vertex Shading), meaning all vertices corresponding to indices between the minimum and "
-                                      "maximum would be loaded, and possibly shaded, whether or not they are used.",
-                                      VendorSpecificTag(kBPVendorArm),
-                                      (static_cast<float>(indexCount) / static_cast<float>(max_index - min_index)) * 100.0f);
+            skip |= LogPerformanceWarning(
+                "BestPractices-Arm-vkCmdDrawIndexed-sparse-index-buffer", device, loc,
+                "{} The indices which were specified for the draw call only utilise approximately {:.02f}% of "
+                "index buffer value range. Arm Mali architectures before G71 do not have IDVS (Index-Driven "
+                "Vertex Shading), meaning all vertices corresponding to indices between the minimum and "
+                "maximum would be loaded, and possibly shaded, whether or not they are used.",
+                VendorSpecificTag(kBPVendorArm),
+                (static_cast<float>(indexCount) / static_cast<float>(max_index - min_index)) * 100.0f);
             return skip;
         }
 
@@ -310,16 +313,16 @@ bool BestPractices::ValidateIndexBufferArm(const bp_state::CommandBufferSubState
 
         if (utilization < 0.5f) {
             skip |= LogPerformanceWarning("BestPractices-Arm-vkCmdDrawIndexed-sparse-index-buffer", device, loc,
-                                          "%s The indices which were specified for the draw call only utilise approximately "
-                                          "%.02f%% of the bound vertex buffer.",
+                                          "{} The indices which were specified for the draw call only utilise approximately "
+                                          "{:.02f}% of the bound vertex buffer.",
                                           VendorSpecificTag(kBPVendorArm), utilization);
         }
 
         if (cache_hit_rate <= 0.5f) {
             skip |=
                 LogPerformanceWarning("BestPractices-Arm-vkCmdDrawIndexed-post-transform-cache-thrashing", device, loc,
-                                      "%s The indices which were specified for the draw call are estimated to cause thrashing of "
-                                      "the post-transform vertex cache, with a hit-rate of %.02f%%. "
+                                      "{} The indices which were specified for the draw call are estimated to cause thrashing of "
+                                      "the post-transform vertex cache, with a hit-rate of {:.02f}%. "
                                       "I.e. the ordering of the index buffer may not make optimal use of indices associated with "
                                       "recently shaded vertices.",
                                       VendorSpecificTag(kBPVendorArm), cache_hit_rate * 100.0f);
@@ -652,8 +655,10 @@ bool BestPractices::PreCallValidateCmdDispatch(VkCommandBuffer commandBuffer, ui
 
     if ((groupCountX == 0) || (groupCountY == 0) || (groupCountZ == 0)) {
         skip |= LogWarning("BestPractices-vkCmdDispatch-group-count-zero", device, error_obj.location,
-                           "one or more groupCounts are zero (groupCountX = %" PRIu32 ", groupCountY = %" PRIu32
-                           ", groupCountZ = %" PRIu32 ").",
+                           "one or more groupCounts are zero (groupCountX = {}"
+                           ", groupCountY = {}"
+                           ", groupCountZ = {}"
+                           ").",
                            groupCountX, groupCountY, groupCountZ);
     }
 
@@ -679,8 +684,10 @@ bool BestPractices::PreCallValidateCmdDispatchBase(VkCommandBuffer commandBuffer
 
     if ((groupCountX == 0) || (groupCountY == 0) || (groupCountZ == 0)) {
         skip |= LogWarning("BestPractices-vkCmdDispatchBase-group-count-zero", device, error_obj.location,
-                           "one or more groupCounts are zero (groupCountX = %" PRIu32 ", groupCountY = %" PRIu32
-                           ", groupCountZ = %" PRIu32 ").",
+                           "one or more groupCounts are zero (groupCountX = {}"
+                           ", groupCountY = {}"
+                           ", groupCountZ = {}"
+                           ").",
                            groupCountX, groupCountY, groupCountZ);
     }
     return skip;

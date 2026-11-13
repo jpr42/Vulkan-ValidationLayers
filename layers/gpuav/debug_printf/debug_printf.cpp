@@ -364,7 +364,7 @@ void AnalyzeAndGenerateMessage(Validator& gpuav, VkCommandBuffer command_buffer,
             if (use_stdout) {
                 std::cout << "VVL-DEBUG-PRINTF " << shader_message.str() << '\n' << debug_info_message;
             } else {
-                gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "DebugPrintf:\n%s\n%s", shader_message.str().c_str(),
+                gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "DebugPrintf:\n{}\n{}", shader_message.str().c_str(),
                               debug_info_message.c_str());
             }
 
@@ -372,7 +372,7 @@ void AnalyzeAndGenerateMessage(Validator& gpuav, VkCommandBuffer command_buffer,
             if (use_stdout) {
                 std::cout << shader_message.str();
             } else {
-                gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "DebugPrintf:\n%s", shader_message.str().c_str());
+                gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "DebugPrintf:\n{}", shader_message.str().c_str());
             }
         }
         output_record_i += debug_record->size;
@@ -389,7 +389,7 @@ void AnalyzeAndGenerateMessage(Validator& gpuav, VkCommandBuffer command_buffer,
         if (gpuav.gpuav_settings.debug_printf_to_stdout) {
             std::cout << message.str() << "\n";
         } else {
-            gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "%s", message.str().c_str());
+            gpuav.LogInfo("VVL-DEBUG-PRINTF", buffer_info.objlist, loc, "{}", message.str().c_str());
         }
     }
 

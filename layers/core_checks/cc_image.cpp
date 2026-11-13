@@ -120,19 +120,19 @@ bool CoreChecks::ValidateImageFormatFeatures(const VkImageCreateInfo& create_inf
     if (vkuFormatIsMultiplane(image_format) && ((create_flags & VK_IMAGE_CREATE_DISJOINT_BIT) != 0) &&
         ((tiling_features & VK_FORMAT_FEATURE_2_DISJOINT_BIT) == 0)) {
         skip |= LogError("VUID-VkImageCreateInfo-imageCreateFormatFeatures-02260", device, loc.dot(Field::flags),
-                         "includes VK_IMAGE_CREATE_DISJOINT_BIT, but %s doesn't support "
+                         "includes VK_IMAGE_CREATE_DISJOINT_BIT, but {} doesn't support "
                          "VK_FORMAT_FEATURE_DISJOINT_BIT.\n"
-                         "(supported features: %s)",
-                         string_VkFormat(create_info.format), string_VkFormatFeatureFlags2(tiling_features).c_str());
+                         "(supported features: {})",
+                         string_VkFormat(create_info.format), vvl::Flags::FormatFeatureFlags2(tiling_features));
     }
 
     if (((tiling_features & VK_FORMAT_FEATURE_2_HOST_IMAGE_TRANSFER_BIT) == 0) && (usage & VK_IMAGE_USAGE_HOST_TRANSFER_BIT) &&
         GetExternalFormat(create_info.pNext) == 0) {
         skip |= LogError("VUID-VkImageCreateInfo-imageCreateFormatFeatures-09048", device, loc.dot(Field::usage),
-                         "includes VK_IMAGE_USAGE_HOST_TRANSFER_BIT, but %s doesn't support "
+                         "includes VK_IMAGE_USAGE_HOST_TRANSFER_BIT, but {} doesn't support "
                          "VK_FORMAT_FEATURE_2_HOST_IMAGE_TRANSFER_BIT.\n"
-                         "(supported features: %s)",
-                         string_VkFormat(create_info.format), string_VkFormatFeatureFlags2(tiling_features).c_str());
+                         "(supported features: {})",
+                         string_VkFormat(create_info.format), vvl::Flags::FormatFeatureFlags2(tiling_features));
     }
 
     return skip;
@@ -146,31 +146,35 @@ bool CoreChecks::ValidateImageAlignmentControlCreateInfo(
     if (!enabled_features.imageAlignmentControl) {
         skip |= LogError(
             "VUID-VkImageAlignmentControlCreateInfoMESA-imageAlignmentControl-09657", device, create_info_loc.dot(Field::pNext),
-            "contains a VkImageAlignmentControlCreateInfoMESA struct but the imageAlignmentControl feature was not enabled.\n%s",
+            "contains a VkImageAlignmentControlCreateInfoMESA struct but the imageAlignmentControl feature was not enabled.\n{}",
             PrintPNextChain(Struct::VkImageCreateInfo, create_info.pNext).c_str());
     }
 
     if (vku::FindStructInPNextChain<VkExternalMemoryImageCreateInfo>(create_info.pNext)) {
         skip |= LogError("VUID-VkImageCreateInfo-pNext-09654", device, create_info_loc.dot(Field::pNext),
-                         "contains both a VkImageAlignmentControlCreateInfoMESA and VkExternalMemoryImageCreateInfo struct.\n%s",
+                         "contains both a VkImageAlignmentControlCreateInfoMESA and VkExternalMemoryImageCreateInfo struct.\n{}",
                          PrintPNextChain(Struct::VkImageCreateInfo, create_info.pNext).c_str());
     }
 
     if (create_info.tiling != VK_IMAGE_TILING_OPTIMAL) {
         skip |= LogError("VUID-VkImageCreateInfo-pNext-09653", device, create_info_loc.dot(Field::tiling),
-                         "is %s but needs to be VK_IMAGE_TILING_OPTIMAL", string_VkImageTiling(create_info.tiling));
+                         "is {} but needs to be VK_IMAGE_TILING_OPTIMAL", string_VkImageTiling(create_info.tiling));
     }
 
     if (alignment_control_create_info.maximumRequestedAlignment != 0) {
         if (!IsPowerOfTwo(alignment_control_create_info.maximumRequestedAlignment)) {
             skip |= LogError("VUID-VkImageAlignmentControlCreateInfoMESA-maximumRequestedAlignment-09655", device,
                              create_info_loc.pNext(Struct::VkImageAlignmentControlCreateInfoMESA, Field::maximumRequestedAlignment),
-                             "(%" PRIu32 ") must be a power of two.", alignment_control_create_info.maximumRequestedAlignment);
+                             "({}"
+                             ") must be a power of two.",
+                             alignment_control_create_info.maximumRequestedAlignment);
         } else if ((alignment_control_create_info.maximumRequestedAlignment &
                     phys_dev_ext_props.image_alignment_control_props.supportedImageAlignmentMask) == 0) {
             skip |= LogError("VUID-VkImageAlignmentControlCreateInfoMESA-maximumRequestedAlignment-09656", device,
                              create_info_loc.pNext(Struct::VkImageAlignmentControlCreateInfoMESA, Field::maximumRequestedAlignment),
-                             "(0x%" PRIx32 ") and supportedImageAlignmentMask (0x%" PRIx32 ") don't share any bits.",
+                             "(0x{:x}"
+                             ") and supportedImageAlignmentMask (0x{:x}"
+                             ") don't share any bits.",
                              alignment_control_create_info.maximumRequestedAlignment,
                              phys_dev_ext_props.image_alignment_control_props.supportedImageAlignmentMask);
         }
@@ -186,7 +190,7 @@ bool CoreChecks::ValidateImageTilingControlCreateInfo(const VkImageCreateInfo& c
         if (!enabled_features.imageTilingControl) {
             skip |= LogError("VUID-VkImageTilingControlCreateInfoEXT-tilingControl-12481", device,
                              create_info_loc.pNext(Struct::VkImageTilingControlCreateInfoEXT, Field::tilingControl),
-                             "is %s (not VK_IMAGE_TILING_CONTROL_DEFAULT_EXT) but the imageTilingControl feature was not enabled.",
+                             "is {} (not VK_IMAGE_TILING_CONTROL_DEFAULT_EXT) but the imageTilingControl feature was not enabled.",
                              string_VkImageTilingControlEXT(tiling_control_create_info.tilingControl));
         }
 
@@ -194,7 +198,7 @@ bool CoreChecks::ValidateImageTilingControlCreateInfo(const VkImageCreateInfo& c
             skip |= LogError(
                 "VUID-VkImageTilingControlCreateInfoEXT-tilingControl-12479", device,
                 create_info_loc.pNext(Struct::VkImageTilingControlCreateInfoEXT, Field::tilingControl),
-                "is %s (not VK_IMAGE_TILING_CONTROL_DEFAULT_EXT) but the tiling is VK_IMAGE_TILING_LINEAR.\nHint: The goal of "
+                "is {} (not VK_IMAGE_TILING_CONTROL_DEFAULT_EXT) but the tiling is VK_IMAGE_TILING_LINEAR.\nHint: The goal of "
                 "VK_EXT_image_tiling_control is to control the speed/memory trade off when using VK_IMAGE_TILING_OPTIMAL",
                 string_VkImageTilingControlEXT(tiling_control_create_info.tilingControl));
         }
@@ -203,7 +207,7 @@ bool CoreChecks::ValidateImageTilingControlCreateInfo(const VkImageCreateInfo& c
     if (vku::FindStructInPNextChain<VkImageDrmFormatModifierExplicitCreateInfoEXT>(create_info.pNext)) {
         skip |= LogError(
             "VUID-VkImageCreateInfo-pNext-12480", device, create_info_loc.dot(Field::pNext),
-            "contains both a VkImageTilingControlCreateInfoEXT and a VkImageDrmFormatModifierExplicitCreateInfoEXT struct\n%s\n"
+            "contains both a VkImageTilingControlCreateInfoEXT and a VkImageDrmFormatModifierExplicitCreateInfoEXT struct\n{}\n"
             "Hint: VK_EXT_image_tiling_control with VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT only works for "
             "VkImageDrmFormatModifierListCreateInfoEXT",
             PrintPNextChain(Struct::VkImageCreateInfo, create_info.pNext).c_str());
@@ -234,17 +238,17 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
     if (video_profile_independent && (usage & VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR) &&
         (usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR) == 0) {
         skip |= LogError("VUID-VkImageCreateInfo-flags-08329", device, flags_loc,
-                         "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage (%s) contains "
+                         "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage ({}) contains "
                          "VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR without also containing "
                          "VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR.",
-                         string_VkImageUsageFlags2KHR(usage).c_str());
+                         vvl::Flags::ImageUsageFlags2KHR(usage));
     }
 
     if (video_profile_independent && (usage & VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR)) {
         skip |= LogError("VUID-VkImageCreateInfo-flags-08331", device, flags_loc,
-                         "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage (%s) contains "
+                         "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage ({}) contains "
                          "VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR.",
-                         string_VkImageUsageFlags2KHR(usage).c_str());
+                         vvl::Flags::ImageUsageFlags2KHR(usage));
     }
 
     // There are stronger VUs for the format properties of quantization maps (i.e. no INDEPENDENT, must be 2D, etc.).
@@ -261,17 +265,17 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
 
         if (video_profile_independent) {
             skip |= LogError("VUID-VkImageCreateInfo-flags-08331", device, flags_loc,
-                             "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage (%s) contains "
+                             "has VK_IMAGE_CREATE_VIDEO_PROFILE_INDEPENDENT_BIT_KHR set but usage ({}) contains "
                              "VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
                              "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR.",
-                             string_VkImageUsageFlags2KHR(usage).c_str());
+                             vvl::Flags::ImageUsageFlags2KHR(usage));
             valid_quantization_map_format = false;
         }
 
         if (create_info.imageType != VK_IMAGE_TYPE_2D) {
             skip |= LogError("VUID-VkImageCreateInfo-usage-10252", device, usage_loc,
                              "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but imageType (%s) "
+                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but imageType ({}) "
                              "is not VK_IMAGE_TYPE_2D.",
                              string_VkImageType(create_info.imageType));
             valid_quantization_map_format = false;
@@ -280,7 +284,7 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
         if (create_info.samples != VK_SAMPLE_COUNT_1_BIT) {
             skip |= LogError("VUID-VkImageCreateInfo-usage-10253", device, usage_loc,
                              "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but samples (%s) "
+                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but samples ({}) "
                              "is not VK_SAMPLE_COUNT_1_BIT_KHR.",
                              string_VkSampleCountFlagBits(create_info.samples));
             valid_quantization_map_format = false;
@@ -296,8 +300,9 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
         } else if (video_profiles->profileCount != 1) {
             skip |= LogError("VUID-VkImageCreateInfo-usage-10254", device, usage_loc,
                              "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but %s (%" PRIu32 ") does not equal 1.",
-                             create_info_loc.pNext(Struct::VkVideoProfileListInfoKHR, Field::profileCount).Fields().c_str(),
+                             "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but {} ({}"
+                             ") does not equal 1.",
+                             create_info_loc.pNext(Struct::VkVideoProfileListInfoKHR, Field::profileCount),
                              video_profiles->profileCount);
             valid_quantization_map_format = false;
         } else {
@@ -313,9 +318,9 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
                     (profile_caps.encode.flags & VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR) == 0) {
                     skip |= LogError("VUID-VkImageCreateInfo-usage-10255", device, usage_loc,
                                      "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR set but "
-                                     "the encode profile specified in %s does not support "
+                                     "the encode profile specified in {} does not support "
                                      "VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR.",
-                                     profile_info_loc.Fields().c_str());
+                                     profile_info_loc);
                     valid_quantization_map_format = false;
                 }
 
@@ -323,45 +328,43 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
                     (profile_caps.encode.flags & VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR) == 0) {
                     skip |= LogError("VUID-VkImageCreateInfo-usage-10256", device, usage_loc,
                                      "has VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but "
-                                     "the encode profile specified in %s does not support "
+                                     "the encode profile specified in {} does not support "
                                      "VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR.",
-                                     profile_info_loc.Fields().c_str());
+                                     profile_info_loc);
                     valid_quantization_map_format = false;
                 }
 
                 if (valid_quantization_map_format &&
                     create_info.extent.width > profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.width) {
-                    skip |=
-                        LogError("VUID-VkImageCreateInfo-usage-10257", device, usage_loc,
-                                 "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                                 "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but has extent.width (%" PRIu32
-                                 ") "
-                                 "larger than the maxQuantizationMapExtent.width (%" PRIu32
-                                 ") supported by the "
-                                 "encode profile specified in %s.",
-                                 create_info.extent.width, profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.width,
-                                 profile_info_loc.Fields().c_str());
+                    skip |= LogError("VUID-VkImageCreateInfo-usage-10257", device, usage_loc,
+                                     "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
+                                     "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but has extent.width ({}"
+                                     ") "
+                                     "larger than the maxQuantizationMapExtent.width ({}"
+                                     ") supported by the "
+                                     "encode profile specified in {}.",
+                                     create_info.extent.width,
+                                     profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.width, profile_info_loc);
                 }
 
                 if (valid_quantization_map_format &&
                     create_info.extent.height > profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.height) {
                     skip |= LogError("VUID-VkImageCreateInfo-usage-10258", device, usage_loc,
                                      "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                                     "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but has extent.height (%" PRIu32
+                                     "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but has extent.height ({}"
                                      ") "
-                                     "larger than the maxQuantizationMapExtent.height (%" PRIu32
+                                     "larger than the maxQuantizationMapExtent.height ({}"
                                      ") supported by the "
-                                     "encode profile specified in %s.",
+                                     "encode profile specified in {}.",
                                      create_info.extent.height,
-                                     profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.height,
-                                     profile_info_loc.Fields().c_str());
+                                     profile_caps.encode_ext.quantization_map.maxQuantizationMapExtent.height, profile_info_loc);
                 }
             } else {
                 skip |= LogError("VUID-VkImageCreateInfo-usage-10254", device, usage_loc,
                                  "has VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR or "
-                                 "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but %s does not specify a "
-                                 "video encode operation (videoCodecOperation is %s).",
-                                 profile_info_loc.Fields().c_str(),
+                                 "VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR set but {} does not specify a "
+                                 "video encode operation (videoCodecOperation is {}).",
+                                 profile_info_loc,
                                  string_VkVideoCodecOperationFlagBitsKHR(video_profiles->pProfiles[0].videoCodecOperation));
                 valid_quantization_map_format = false;
             }
@@ -384,15 +387,15 @@ bool CoreChecks::ValidateImageVideo(const VkImageCreateInfo& create_info, const 
             if (!IsSupportedVideoFormat(create_flags, usage, create_info.imageType, create_info.format, create_info.tiling,
                                         video_profiles)) {
                 skip |= LogError("VUID-VkImageCreateInfo-pNext-06811", device, create_info_loc,
-                                 "specifies flags (%s), format (%s), imageType (%s), and tiling (%s) which are not "
+                                 "specifies flags ({}), format ({}), imageType ({}), and tiling ({}) which are not "
                                  "supported by any of the supported video format properties for the video profiles "
                                  "specified in the VkVideoProfileListInfoKHR structure included in the "
                                  "pCreateInfo->pNext chain, as reported by "
                                  "vkGetPhysicalDeviceVideoFormatPropertiesKHR for the same video profiles "
-                                 "and the image usage flags specified in pCreateInfo->usage (%s).",
-                                 string_VkImageCreateFlags2KHR(create_flags).c_str(), string_VkFormat(create_info.format),
+                                 "and the image usage flags specified in pCreateInfo->usage ({}).",
+                                 vvl::Flags::ImageCreateFlags2KHR(create_flags), string_VkFormat(create_info.format),
                                  string_VkImageType(create_info.imageType), string_VkImageTiling(create_info.tiling),
-                                 string_VkImageUsageFlags2KHR(usage).c_str());
+                                 vvl::Flags::ImageUsageFlags2KHR(usage));
             }
         }
     }
@@ -439,39 +442,45 @@ bool CoreChecks::ValidateImageSwapchain(const VkImageCreateInfo& create_info, co
     }
     if (create_info.format != swapchain_state->create_info.imageFormat) {
         skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                         "was created with format %s which doesn't match pCreateInfo->format %s.",
+                         "was created with format {} which doesn't match pCreateInfo->format {}.",
                          string_VkFormat(swapchain_state->create_info.imageFormat), string_VkFormat(create_info.format));
     }
     if (create_info.extent.width != swapchain_state->create_info.imageExtent.width ||
         create_info.extent.height != swapchain_state->create_info.imageExtent.height || create_info.extent.depth != 1u) {
         skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                         "was created with extent (%" PRIu32 ", %" PRIu32 ", 1) which doesn't match pCreateInfo->extent (%" PRIu32
-                         ", %" PRIu32 ", %" PRIu32 ").",
+                         "was created with extent ({}"
+                         ", {}"
+                         ", 1) which doesn't match pCreateInfo->extent ({}"
+                         ", {}"
+                         ", {}"
+                         ").",
                          swapchain_state->create_info.imageExtent.width, swapchain_state->create_info.imageExtent.height,
                          create_info.extent.width, create_info.extent.height, create_info.extent.depth);
     }
     if (create_info.arrayLayers != swapchain_state->create_info.imageArrayLayers) {
         skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                         "was created with imageArrayLayers %" PRIu32 " which doesn't match pCreateInfo->arrayLayers %" PRIu32 ".",
+                         "was created with imageArrayLayers {}"
+                         " which doesn't match pCreateInfo->arrayLayers {}"
+                         ".",
                          swapchain_state->create_info.imageArrayLayers, create_info.arrayLayers);
     }
     if (usage != swapchain_state->image_usage) {
         skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                         "was created with imageUsage %s which doesn't match pCreateInfo->usage %s.",
-                         string_VkImageUsageFlags2KHR(swapchain_state->image_usage).c_str(),
-                         string_VkImageUsageFlags2KHR(usage).c_str());
+                         "was created with imageUsage {} which doesn't match pCreateInfo->usage {}.",
+                         vvl::Flags::ImageUsageFlags2KHR(swapchain_state->image_usage), vvl::Flags::ImageUsageFlags2KHR(usage));
     }
     if (create_info.sharingMode != swapchain_state->create_info.imageSharingMode) {
         skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                         "was created with imageSharingMode %s which doesn't match pCreateInfo->sharingMode %s.",
+                         "was created with imageSharingMode {} which doesn't match pCreateInfo->sharingMode {}.",
                          string_VkSharingMode(swapchain_state->create_info.imageSharingMode),
                          string_VkSharingMode(create_info.sharingMode));
     }
     if (create_info.sharingMode == VK_SHARING_MODE_CONCURRENT) {
         if (create_info.queueFamilyIndexCount != swapchain_state->create_info.queueFamilyIndexCount) {
             skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                             "was created with queueFamilyIndexCount %" PRIu32
-                             " which doesn't match pCreateInfo->queueFamilyIndexCount %" PRIu32 ".",
+                             "was created with queueFamilyIndexCount {}"
+                             " which doesn't match pCreateInfo->queueFamilyIndexCount {}"
+                             ".",
                              swapchain_state->create_info.queueFamilyIndexCount, create_info.queueFamilyIndexCount);
         } else {
             for (uint32_t i = 0; i < create_info.queueFamilyIndexCount; ++i) {
@@ -484,7 +493,7 @@ bool CoreChecks::ValidateImageSwapchain(const VkImageCreateInfo& create_info, co
                 }
                 if (!found) {
                     skip |= LogError(vuid, device, create_info_loc.pNext(Struct::VkImageSwapchainCreateInfoKHR, Field::swapchain),
-                                     "was created with pQueueFamilyIndices containing index %" PRIu32
+                                     "was created with pQueueFamilyIndices containing index {}"
                                      " which is not included in pCreateInfo->pQueueFamilyIndices.",
                                      i);
                 }
@@ -513,8 +522,8 @@ bool CoreChecks::ValidateImageExternalMemory(const VkImageCreateInfo& create_inf
         if (create_info.initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
             skip |= LogError("VUID-VkImageCreateInfo-pNext-01443", device,
                              create_info_loc.pNext(Struct::VkExternalMemoryImageCreateInfo, Field::handleTypes),
-                             "is %s (non-zero) but the initialLayout is %s.",
-                             string_VkExternalMemoryHandleTypeFlags(external_memory_create_info->handleTypes).c_str(),
+                             "is {} (non-zero) but the initialLayout is {}.",
+                             vvl::Flags::ExternalMemoryHandleTypeFlags(external_memory_create_info->handleTypes),
                              string_VkImageLayout(create_info.initialLayout));
         }
         // Check external memory handle types compatibility
@@ -563,24 +572,24 @@ bool CoreChecks::ValidateImageExternalMemory(const VkImageCreateInfo& create_inf
         if (result != VK_SUCCESS) {
             skip |=
                 LogError("VUID-VkImageCreateInfo-pNext-00990", device, create_info_loc,
-                         "The handle type (%s) with VkImageCreateInfo\n%s"
-                         "is not a supported combination of parameters, and vkGetPhysicalDeviceImageFormatProperties2 returned %s.",
+                         "The handle type ({}) with VkImageCreateInfo\n{}"
+                         "is not a supported combination of parameters, and vkGetPhysicalDeviceImageFormatProperties2 returned {}.",
                          string_VkExternalMemoryHandleTypeFlagBits(external_image_info.handleType),
                          string_VkPhysicalDeviceImageFormatInfo2(image_format_info).c_str(), string_VkResult(result));
         } else if ((external_memory_create_info->handleTypes & compatible_types) != external_memory_create_info->handleTypes) {
             skip |= LogError(
                 "VUID-VkImageCreateInfo-pNext-00990", device,
                 create_info_loc.pNext(Struct::VkExternalMemoryImageCreateInfo, Field::handleTypes),
-                "(%s) is not reported as compatible by vkGetPhysicalDeviceImageFormatProperties2. Compatible types are %s.",
-                string_VkExternalMemoryHandleTypeFlags(external_memory_create_info->handleTypes).c_str(),
-                string_VkExternalMemoryHandleTypeFlags(compatible_types).c_str());
+                "({}) is not reported as compatible by vkGetPhysicalDeviceImageFormatProperties2. Compatible types are {}.",
+                vvl::Flags::ExternalMemoryHandleTypeFlags(external_memory_create_info->handleTypes),
+                vvl::Flags::ExternalMemoryHandleTypeFlags(compatible_types));
         }
     } else if (external_memory_create_info_nv && external_memory_create_info_nv->handleTypes != 0) {
         if (create_info.initialLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
             skip |= LogError("VUID-VkImageCreateInfo-pNext-01443", device,
                              create_info_loc.pNext(Struct::VkExternalMemoryImageCreateInfoNV, Field::handleTypes),
-                             "is %s (non-zero) but pCreateInfo->initialLayout is %s.",
-                             string_VkExternalMemoryHandleTypeFlagsNV(external_memory_create_info_nv->handleTypes).c_str(),
+                             "is {} (non-zero) but pCreateInfo->initialLayout is {}.",
+                             vvl::Flags::ExternalMemoryHandleTypeFlagsNV(external_memory_create_info_nv->handleTypes),
                              string_VkImageLayout(create_info.initialLayout));
         }
         // Check external memory handle types compatibility
@@ -594,17 +603,17 @@ bool CoreChecks::ValidateImageExternalMemory(const VkImageCreateInfo& create_inf
 
         if (result != VK_SUCCESS) {
             skip |= LogError("VUID-VkImageCreateInfo-pNext-00991", device, create_info_loc,
-                             "The handle type (%s) with VkImageCreateInfo\n%s"
+                             "The handle type ({}) with VkImageCreateInfo\n{}"
                              "is not a supported combination of parameters, and vkGetPhysicalDeviceExternalImageFormatPropertiesNV "
-                             "returned back %s.",
+                             "returned back {}.",
                              string_VkExternalMemoryHandleTypeFlagBitsNV(handle_type),
                              string_VkPhysicalDeviceImageFormatInfo2(image_format_info).c_str(), string_VkResult(result));
         } else if ((external_memory_create_info_nv->handleTypes & compatible_types) !=
                    external_memory_create_info_nv->handleTypes) {
             skip |= LogError("VUID-VkImageCreateInfo-pNext-00991", device,
                              create_info_loc.pNext(Struct::VkExternalMemoryImageCreateInfoNV, Field::handleTypes),
-                             "(%s) is not reported as compatible by vkGetPhysicalDeviceExternalImageFormatPropertiesNV.",
-                             string_VkExternalMemoryHandleTypeFlagsNV(external_memory_create_info_nv->handleTypes).c_str());
+                             "({}) is not reported as compatible by vkGetPhysicalDeviceExternalImageFormatPropertiesNV.",
+                             vvl::Flags::ExternalMemoryHandleTypeFlagsNV(external_memory_create_info_nv->handleTypes));
         }
     }
 
@@ -639,16 +648,18 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
     if (usage & attach_flags) {
         if (pCreateInfo->extent.width > phys_dev_props.limits.maxFramebufferWidth) {
             skip |= LogError("VUID-VkImageCreateInfo-usage-00964", device, usage_loc,
-                             "(%s) includes a framebuffer attachment bit and image width (%" PRIu32
-                             ") is greater than maxFramebufferWidth (%" PRIu32 ").",
-                             string_VkImageUsageFlags2KHR(usage).c_str(), pCreateInfo->extent.width,
+                             "({}) includes a framebuffer attachment bit and image width ({}"
+                             ") is greater than maxFramebufferWidth ({}"
+                             ").",
+                             vvl::Flags::ImageUsageFlags2KHR(usage), pCreateInfo->extent.width,
                              phys_dev_props.limits.maxFramebufferWidth);
         }
         if (pCreateInfo->extent.height > phys_dev_props.limits.maxFramebufferHeight) {
             skip |= LogError("VUID-VkImageCreateInfo-usage-00965", device, usage_loc,
-                             "(%s) includes a framebuffer attachment bit and image height (%" PRIu32
-                             ") is greater than maxFramebufferHeight (%" PRIu32 ").",
-                             string_VkImageUsageFlags2KHR(usage).c_str(), pCreateInfo->extent.height,
+                             "({}) includes a framebuffer attachment bit and image height ({}"
+                             ") is greater than maxFramebufferHeight ({}"
+                             ").",
+                             vvl::Flags::ImageUsageFlags2KHR(usage), pCreateInfo->extent.height,
                              phys_dev_props.limits.maxFramebufferHeight);
         }
     }
@@ -658,13 +669,15 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
             static_cast<float>(phys_dev_props.limits.maxFramebufferWidth) /
             std::max(static_cast<float>(phys_dev_ext_props.fragment_density_map_props.minFragmentDensityTexelSize.width), 1.0f)));
         if (pCreateInfo->extent.width > ceiling_width) {
-            skip |= LogError(
-                "VUID-VkImageCreateInfo-fragmentDensityMapOffset-06514", device, usage_loc,
-                "includes VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and image width (%" PRIu32 ") is greater than %" PRIu32
-                ".\n"
-                "This is the ceiling value of maxFramebufferWidth (%" PRIu32 ") / minFragmentDensityTexelSize.width (%" PRIu32 ").",
-                pCreateInfo->extent.width, ceiling_width, phys_dev_props.limits.maxFramebufferWidth,
-                phys_dev_ext_props.fragment_density_map_props.minFragmentDensityTexelSize.width);
+            skip |= LogError("VUID-VkImageCreateInfo-fragmentDensityMapOffset-06514", device, usage_loc,
+                             "includes VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and image width ({}"
+                             ") is greater than {}"
+                             ".\n"
+                             "This is the ceiling value of maxFramebufferWidth ({}"
+                             ") / minFragmentDensityTexelSize.width ({}"
+                             ").",
+                             pCreateInfo->extent.width, ceiling_width, phys_dev_props.limits.maxFramebufferWidth,
+                             phys_dev_ext_props.fragment_density_map_props.minFragmentDensityTexelSize.width);
         }
 
         uint32_t ceiling_height = static_cast<uint32_t>(ceilf(
@@ -672,11 +685,12 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
             std::max(static_cast<float>(phys_dev_ext_props.fragment_density_map_props.minFragmentDensityTexelSize.height), 1.0f)));
         if (pCreateInfo->extent.height > ceiling_height) {
             skip |= LogError("VUID-VkImageCreateInfo-fragmentDensityMapOffset-06515", device, usage_loc,
-                             "includes VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and image height (%" PRIu32
-                             ") is greater than %" PRIu32
+                             "includes VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and image height ({}"
+                             ") is greater than {}"
                              ".\n"
-                             "This is the ceiling value of maxFramebufferHeight (%" PRIu32
-                             ") / minFragmentDensityTexelSize.height (%" PRIu32 ").",
+                             "This is the ceiling value of maxFramebufferHeight ({}"
+                             ") / minFragmentDensityTexelSize.height ({}"
+                             ").",
                              pCreateInfo->extent.height, ceiling_height, phys_dev_props.limits.maxFramebufferHeight,
                              phys_dev_ext_props.fragment_density_map_props.minFragmentDensityTexelSize.height);
         }
@@ -717,7 +731,7 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
                                    ? Func::vkGetPhysicalDeviceImageFormatProperties2
                                    : Func::vkGetPhysicalDeviceImageFormatProperties;
                 skip |= LogError("VUID-VkImageCreateInfo-imageCreateMaxMipLevels-02251", device, error_obj.location,
-                                 "The following VkImageCreateInfo returned %s when calling %s\n%s%s", string_VkResult(result),
+                                 "The following VkImageCreateInfo returned {} when calling {}\n{}{}", string_VkResult(result),
                                  String(command), string_VkPhysicalDeviceImageFormatInfo2(image_format_info).c_str(),
                                  PrintPNextChain(Struct::VkImageCreateInfo, pCreateInfo->pNext).c_str());
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
@@ -746,9 +760,9 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
                     skip |= LogError(
                         "VUID-VkImageDrmFormatModifierListCreateInfoEXT-pDrmFormatModifiers-02263", device,
                         create_info_loc.pNext(Struct::VkImageDrmFormatModifierListCreateInfoEXT, Field::pDrmFormatModifiers, i),
-                        "(%" PRIu64
+                        "({}"
                         ") is not compatible with the rest of the VkImageCreateInfo, "
-                        "vkGetPhysicalDeviceImageFormatProperties2 returned back %s.\n%s%s",
+                        "vkGetPhysicalDeviceImageFormatProperties2 returned back {}.\n{}{}",
                         modifier_list->pDrmFormatModifiers[i], string_VkResult(modifier_result),
                         string_VkPhysicalDeviceImageFormatInfo2(image_format_info).c_str(),
                         PrintPNextChain(Struct::VkImageCreateInfo, pCreateInfo->pNext).c_str());
@@ -766,9 +780,9 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
                 skip |=
                     LogError("VUID-VkImageDrmFormatModifierExplicitCreateInfoEXT-drmFormatModifier-02264", device,
                              create_info_loc.pNext(Struct::VkImageDrmFormatModifierExplicitCreateInfoEXT, Field::drmFormatModifier),
-                             "(%" PRIu64
+                             "({}"
                              ") is not compatible with the rest of the VkImageCreateInfo, "
-                             "vkGetPhysicalDeviceImageFormatProperties2 returned back %s.\n%s%s",
+                             "vkGetPhysicalDeviceImageFormatProperties2 returned back {}.\n{}{}",
                              explicit_modifier->drmFormatModifier, string_VkResult(result),
                              string_VkPhysicalDeviceImageFormatInfo2(image_format_info).c_str(),
                              PrintPNextChain(Struct::VkImageCreateInfo, pCreateInfo->pNext).c_str());
@@ -789,8 +803,10 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
                     skip |= LogError("VUID-VkImageDrmFormatModifierExplicitCreateInfoEXT-drmFormatModifierPlaneCount-02265", device,
                                      create_info_loc.pNext(Struct::VkImageDrmFormatModifierExplicitCreateInfoEXT,
                                                            Field::drmFormatModifierPlaneCount),
-                                     "is %" PRIu32 " but the drmFormatModifierPlaneCount of drmFormatModifier (%" PRIu64
-                                     ") for %s is %" PRIu32 ".",
+                                     "is {}"
+                                     " but the drmFormatModifierPlaneCount of drmFormatModifier ({}"
+                                     ") for {} is {}"
+                                     ".",
                                      explicit_modifier->drmFormatModifierPlaneCount, explicit_modifier->drmFormatModifier,
                                      string_VkFormat(pCreateInfo->format), drm_property.drmFormatModifierPlaneCount);
                 }
@@ -804,8 +820,10 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
         const auto format_limits = image_format_properties.imageFormatProperties;
         if (pCreateInfo->mipLevels > format_limits.maxMipLevels) {
             skip |= LogError("VUID-VkImageCreateInfo-mipLevels-02255", device, create_info_loc.dot(Field::mipLevels),
-                             "(%" PRIu32 ") exceeds the maxMipLevels (%" PRIu32 ") for format %s.", pCreateInfo->mipLevels,
-                             format_limits.maxMipLevels, string_VkFormat(pCreateInfo->format));
+                             "({}"
+                             ") exceeds the maxMipLevels ({}"
+                             ") for format {}.",
+                             pCreateInfo->mipLevels, format_limits.maxMipLevels, string_VkFormat(pCreateInfo->format));
         }
 
         // This likely will only ever happen for 1D images, don't spend time checking things we can't properly calculate.
@@ -829,9 +847,12 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
 
             if (total_size > format_limits.maxResourceSize) {
                 skip |= LogWarning("WARNING-VkImageCreateInfo-maxResourceSize", device, error_obj.location,
-                                   "will be %" PRIu64 " bytes and the VkImageFormatProperties::maxResourceSize is %" PRIu64
-                                   ".\nThe total was calulated from format %s having a texel block size of %" PRIu32
-                                   " bytes with %" PRIu64 " texel blocks and a bufferImageGranularity of %" PRIu64 ".",
+                                   "will be {}"
+                                   " bytes and the VkImageFormatProperties::maxResourceSize is {}"
+                                   ".\nThe total was calulated from format {} having a texel block size of {}"
+                                   " bytes with {}"
+                                   " texel blocks and a bufferImageGranularity of {}"
+                                   ".",
                                    total_size, format_limits.maxResourceSize, string_VkFormat(pCreateInfo->format),
                                    (uint32_t)vkuFormatTexelBlockSize(pCreateInfo->format), texel_block_count, image_granularity);
             }
@@ -839,32 +860,40 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
 
         if (pCreateInfo->arrayLayers > format_limits.maxArrayLayers) {
             skip |= LogError("VUID-VkImageCreateInfo-arrayLayers-02256", device, create_info_loc.dot(Field::arrayLayers),
-                             "(%" PRIu32 ") exceeds the maxArrayLayers (%" PRIu32 ") for %s", pCreateInfo->arrayLayers,
-                             format_limits.maxArrayLayers, string_VkFormat(pCreateInfo->format));
+                             "({}"
+                             ") exceeds the maxArrayLayers ({}"
+                             ") for {}",
+                             pCreateInfo->arrayLayers, format_limits.maxArrayLayers, string_VkFormat(pCreateInfo->format));
         }
 
         if ((pCreateInfo->samples & format_limits.sampleCounts) == 0) {
             skip |= LogError("VUID-VkImageCreateInfo-samples-02258", device, create_info_loc.dot(Field::samples),
-                             "(%s) is not supported by format %s\nsupported sampleCounts: %s",
+                             "({}) is not supported by format {}\nsupported sampleCounts: {}",
                              string_VkSampleCountFlagBits(pCreateInfo->samples), string_VkFormat(pCreateInfo->format),
-                             string_VkSampleCountFlags(format_limits.sampleCounts).c_str());
+                             vvl::Flags::SampleCountFlags(format_limits.sampleCounts));
         }
 
         if (pCreateInfo->extent.width > format_limits.maxExtent.width) {
             skip |= LogError("VUID-VkImageCreateInfo-extent-02252", device, create_info_loc.dot(Field::extent).dot(Field::width),
-                             "(%" PRIu32 ") exceeds the maximum image extent width (%" PRIu32 ") for format %s.",
+                             "({}"
+                             ") exceeds the maximum image extent width ({}"
+                             ") for format {}.",
                              pCreateInfo->extent.width, format_limits.maxExtent.width, string_VkFormat(pCreateInfo->format));
         }
 
         if (pCreateInfo->extent.height > format_limits.maxExtent.height) {
             skip |= LogError("VUID-VkImageCreateInfo-extent-02253", device, create_info_loc.dot(Field::extent).dot(Field::height),
-                             "(%" PRIu32 ") exceeds the maximum image extent height (%" PRIu32 ") for format %s.",
+                             "({}"
+                             ") exceeds the maximum image extent height ({}"
+                             ") for format {}.",
                              pCreateInfo->extent.height, format_limits.maxExtent.height, string_VkFormat(pCreateInfo->format));
         }
 
         if (pCreateInfo->extent.depth > format_limits.maxExtent.depth) {
             skip |= LogError("VUID-VkImageCreateInfo-extent-02254", device, create_info_loc.dot(Field::extent).dot(Field::depth),
-                             "(%" PRIu32 ") exceeds the maximum image extent depth (%" PRIu32 ") for format %s.",
+                             "({}"
+                             ") exceeds the maximum image extent depth ({}"
+                             ") for format {}.",
                              pCreateInfo->extent.depth, format_limits.maxExtent.depth, string_VkFormat(pCreateInfo->format));
         }
     }
@@ -873,20 +902,21 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
     if (FormatRequiresYcbcrConversionExplicitly(pCreateInfo->format)) {
         if (pCreateInfo->mipLevels != 1) {
             skip |= LogError("VUID-VkImageCreateInfo-format-06410", device, create_info_loc.dot(Field::mipLevels),
-                             "(%" PRIu32 "), but when using a YCbCr Conversion format (%s), mipLevels must be 1.",
+                             "({}"
+                             "), but when using a YCbCr Conversion format ({}), mipLevels must be 1.",
                              pCreateInfo->mipLevels, string_VkFormat(pCreateInfo->format));
         }
 
         if (pCreateInfo->samples != VK_SAMPLE_COUNT_1_BIT) {
             skip |= LogError("VUID-VkImageCreateInfo-format-06411", device, create_info_loc.dot(Field::samples),
-                             "(%s), but when using a YCbCr Conversion format (%s), samples must be "
+                             "({}), but when using a YCbCr Conversion format ({}), samples must be "
                              "VK_SAMPLE_COUNT_1_BIT.",
                              string_VkSampleCountFlagBits(pCreateInfo->samples), string_VkFormat(pCreateInfo->format));
         }
 
         if (pCreateInfo->imageType != VK_IMAGE_TYPE_2D) {
             skip |= LogError("VUID-VkImageCreateInfo-format-06412", device, create_info_loc.dot(Field::imageType),
-                             "(%s), but when using a YCbCr Conversion format (%s), imageType must be "
+                             "({}), but when using a YCbCr Conversion format ({}), imageType must be "
                              "VK_IMAGE_TYPE_2D.",
                              string_VkImageType(pCreateInfo->imageType), string_VkFormat(pCreateInfo->format));
         }
@@ -897,7 +927,7 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
             if (!vkuFormatIsCompressed(pCreateInfo->format)) {
                 skip |= LogError(
                     "VUID-VkImageCreateInfo-flags-01572", device, create_info_loc.dot(Field::flags),
-                    "contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT, but format (%s) must be a compressed image format.",
+                    "contains VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT, but format ({}) must be a compressed image format.",
                     string_VkFormat(pCreateInfo->format));
             }
             if (!(create_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT)) {
@@ -916,8 +946,8 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
     if (!vkuFormatIsMultiplane(pCreateInfo->format) && !(create_flags & VK_IMAGE_CREATE_ALIAS_BIT) &&
         (create_flags & VK_IMAGE_CREATE_DISJOINT_BIT)) {
         skip |= LogError("VUID-VkImageCreateInfo-format-01577", device, create_info_loc,
-                         "format is %s and flags are %s. The flags should not include VK_IMAGE_CREATE_DISJOINT_BIT.",
-                         string_VkFormat(pCreateInfo->format), string_VkImageCreateFlags2KHR(create_flags).c_str());
+                         "format is {} and flags are {}. The flags should not include VK_IMAGE_CREATE_DISJOINT_BIT.",
+                         string_VkFormat(pCreateInfo->format), vvl::Flags::ImageCreateFlags2KHR(create_flags));
     }
 
     skip |= ValidateImageFormatFeatures(*pCreateInfo, create_info_loc, create_flags, usage);
@@ -947,14 +977,14 @@ bool CoreChecks::PreCallValidateCreateImage(VkDevice device, const VkImageCreate
         if ((create_flags & VK_IMAGE_CREATE_DESCRIPTOR_HEAP_CAPTURE_REPLAY_BIT_EXT) == 0) {
             skip |= LogError("VUID-VkImageCreateInfo-flags-11281", device,
                              create_info_loc.pNext(Struct::VkOpaqueCaptureDataCreateInfoEXT, Field::pData),
-                             "is not null, but VkImageCreateInfo flags (%s) does not contain "
+                             "is not null, but VkImageCreateInfo flags ({}) does not contain "
                              "VK_IMAGE_CREATE_DESCRIPTOR_HEAP_CAPTURE_REPLAY_BIT_EXT.",
-                             string_VkImageCreateFlags2KHR(create_flags).c_str());
+                             vvl::Flags::ImageCreateFlags2KHR(create_flags));
         } else {
             if (opaque_data->pData->size != phys_dev_ext_props.descriptor_heap_props.imageCaptureReplayOpaqueDataSize) {
                 skip |= LogError("VUID-VkImageCreateInfo-pData-11286", device,
                                  create_info_loc.pNext(Struct::VkOpaqueCaptureDataCreateInfoEXT, Field::pData).dot(Field::size),
-                                 "is %zu, which is not equal to imageCaptureReplayOpaqueDataSize (%zu).", opaque_data->pData->size,
+                                 "is {}, which is not equal to imageCaptureReplayOpaqueDataSize ({}).", opaque_data->pData->size,
                                  phys_dev_ext_props.descriptor_heap_props.imageCaptureReplayOpaqueDataSize);
             }
         }
@@ -985,9 +1015,9 @@ bool CoreChecks::PreCallValidateDestroyImage(VkDevice device, VkImage image, con
     if (auto image_state = Get<vvl::Image>(image)) {
         if (image_state->IsSwapchainImage() && image_state->owned_by_swapchain) {
             skip |= LogError("VUID-vkDestroyImage-image-04882", image, error_obj.location.dot(Field::image),
-                             "%s is a presentable image controlled by the implementation and must be destroyed "
+                             "{} is a presentable image controlled by the implementation and must be destroyed "
                              "with vkDestroySwapchainKHR.",
-                             FormatHandle(image_state->Handle()).c_str());
+                             Handle(image_state->Handle()));
         }
         skip |= ValidateObjectNotInUse(image_state.get(), error_obj.location, "VUID-vkDestroyImage-image-01000");
     }
@@ -1006,7 +1036,7 @@ bool CoreChecks::ValidateClearImageSubresourceRange(const LogObjectList& objlist
 
     if (range.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
         skip |= LogError("VUID-vkCmdClearColorImage-aspectMask-02498", objlist, loc.dot(Field::aspectMask),
-                         "is %s (must only include COLOR_BIT).", string_VkImageAspectFlags(range.aspectMask).c_str());
+                         "is {} (must only include COLOR_BIT).", vvl::Flags::ImageAspectFlags(range.aspectMask));
     }
 
     return skip;
@@ -1042,30 +1072,29 @@ bool CoreChecks::PreCallValidateCmdClearColorImage(VkCommandBuffer commandBuffer
 
     const VkFormat format = image_state.GetFormat();
     if (vkuFormatIsDepthOrStencil(format)) {
-        skip |=
-            LogError("VUID-vkCmdClearColorImage-image-00007", objlist, image_loc,
-                     "(%s) was created with a depth/stencil format (%s).", FormatHandle(image).c_str(), string_VkFormat(format));
+        skip |= LogError("VUID-vkCmdClearColorImage-image-00007", objlist, image_loc,
+                         "({}) was created with a depth/stencil format ({}).", Handle(image), string_VkFormat(format));
     } else if (vkuFormatIsCompressed(format)) {
         skip |= LogError("VUID-vkCmdClearColorImage-image-00007", objlist, image_loc,
-                         "(%s) was created with a compressed format (%s).", FormatHandle(image).c_str(), string_VkFormat(format));
+                         "({}) was created with a compressed format ({}).", Handle(image), string_VkFormat(format));
     }
     if (vkuFormatIs64bit(format) && vkuFormatComponentCount(format) > 2) {
         skip |= LogError("VUID-vkCmdClearColorImage-image-09678", objlist, image_loc,
-                         "(%s) was created with a 64-bit format (%s) but it has more than 2 components. The clear command can only "
+                         "({}) was created with a 64-bit format ({}) but it has more than 2 components. The clear command can only "
                          "clear 16 bytes so this format is too large",
-                         FormatHandle(image).c_str(), string_VkFormat(format));
+                         Handle(image), string_VkFormat(format));
     }
 
     if (!(image_state.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
         skip |= LogError("VUID-vkCmdClearColorImage-image-00002", objlist, image_loc,
-                         "(%s) was created with usage %s (missing VK_IMAGE_USAGE_TRANSFER_DST_BIT).", FormatHandle(image).c_str(),
-                         string_VkImageUsageFlags2KHR(image_state.usage).c_str());
+                         "({}) was created with usage {} (missing VK_IMAGE_USAGE_TRANSFER_DST_BIT).", Handle(image),
+                         vvl::Flags::ImageUsageFlags2KHR(image_state.usage));
     }
 
     // Tests for "Formats requiring sampler Y’CBCR conversion for VK_IMAGE_ASPECT_COLOR_BIT image views"
     if (FormatRequiresYcbcrConversionExplicitly(format)) {
-        skip |= LogError("VUID-vkCmdClearColorImage-image-01545", objlist, image_loc, "(%s) was created with format %s.",
-                         FormatHandle(image).c_str(), string_VkFormat(format));
+        skip |= LogError("VUID-vkCmdClearColorImage-image-01545", objlist, image_loc, "({}) was created with format {}.",
+                         Handle(image), string_VkFormat(format));
     }
     return skip;
 }
@@ -1079,7 +1108,7 @@ bool CoreChecks::ValidateClearDepthStencilValue(VkCommandBuffer commandBuffer, V
         if (!depth_in_unit_range) {
             skip |=
                 LogError("VUID-VkClearDepthStencilValue-depth-00022", commandBuffer, loc.dot(Field::depth),
-                         "is %f (not within the [0.0, 1.0] range) but VK_EXT_depth_range_unrestricted extension is not enabled.",
+                         "is {:f} (not within the [0.0, 1.0] range) but VK_EXT_depth_range_unrestricted extension is not enabled.",
                          clearValue.depth);
         }
     }
@@ -1121,14 +1150,13 @@ bool CoreChecks::PreCallValidateCmdClearDepthStencilImage(VkCommandBuffer comman
         // Image aspect must be depth or stencil or both
         VkImageAspectFlags valid_aspects = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
         if (((pRanges[i].aspectMask & valid_aspects) == 0) || ((pRanges[i].aspectMask & ~valid_aspects) != 0)) {
-            skip |=
-                LogError("VUID-vkCmdClearDepthStencilImage-aspectMask-02824", objlist, range_loc.dot(Field::aspectMask),
-                         "is %s (can only be DEPTH_BIT or STENCIL_BIT).", string_VkImageAspectFlags(pRanges[i].aspectMask).c_str());
+            skip |= LogError("VUID-vkCmdClearDepthStencilImage-aspectMask-02824", objlist, range_loc.dot(Field::aspectMask),
+                             "is {} (can only be DEPTH_BIT or STENCIL_BIT).", vvl::Flags::ImageAspectFlags(pRanges[i].aspectMask));
         }
         if ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
             if (vkuFormatHasDepth(image_format) == false) {
                 skip |= LogError("VUID-vkCmdClearDepthStencilImage-image-02826", objlist, range_loc.dot(Field::aspectMask),
-                                 "has a VK_IMAGE_ASPECT_DEPTH_BIT but %s "
+                                 "has a VK_IMAGE_ASPECT_DEPTH_BIT but {} "
                                  "doesn't have a depth component.",
                                  string_VkFormat(image_format));
             }
@@ -1142,7 +1170,7 @@ bool CoreChecks::PreCallValidateCmdClearDepthStencilImage(VkCommandBuffer comman
             if (vkuFormatHasStencil(image_format) == false) {
                 skip |= LogError("VUID-vkCmdClearDepthStencilImage-image-02825", objlist, range_loc.dot(Field::aspectMask),
                                  "has a VK_IMAGE_ASPECT_STENCIL_BIT but "
-                                 "%s doesn't have a stencil component.",
+                                 "{} doesn't have a stencil component.",
                                  string_VkFormat(image_format));
             }
 
@@ -1150,23 +1178,22 @@ bool CoreChecks::PreCallValidateCmdClearDepthStencilImage(VkCommandBuffer comman
                 if ((image_state.stencil_usage.value() & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0) {
                     skip |= LogError("VUID-vkCmdClearDepthStencilImage-pRanges-02658", objlist, range_loc.dot(Field::aspectMask),
                                      "includes VK_IMAGE_ASPECT_STENCIL_BIT and "
-                                     "image was created with VkImageStencilUsageCreateInfo::stencilUsage = %s.",
-                                     string_VkImageUsageFlags2KHR(image_state.stencil_usage.value()).c_str());
+                                     "image was created with VkImageStencilUsageCreateInfo::stencilUsage = {}.",
+                                     vvl::Flags::ImageUsageFlags2KHR(image_state.stencil_usage.value()));
                 }
             } else if ((image_state.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0) {
                 skip |= LogError("VUID-vkCmdClearDepthStencilImage-pRanges-02659", objlist, range_loc.dot(Field::aspectMask),
                                  "includes VK_IMAGE_ASPECT_STENCIL_BIT and image was not created with "
-                                 "VkImageStencilUsageCreateInfo, but the image usage (%s) does not include "
+                                 "VkImageStencilUsageCreateInfo, but the image usage ({}) does not include "
                                  "VK_IMAGE_USAGE_TRANSFER_DST_BIT.",
-                                 string_VkImageUsageFlags2KHR(image_state.usage).c_str());
+                                 vvl::Flags::ImageUsageFlags2KHR(image_state.usage));
             }
         }
     }
 
     if (!vkuFormatIsDepthOrStencil(image_format)) {
-        skip |=
-            LogError("VUID-vkCmdClearDepthStencilImage-image-00014", objlist, image_loc,
-                     "(%s) doesn't have a depth/stencil format (%s).", FormatHandle(image).c_str(), string_VkFormat(image_format));
+        skip |= LogError("VUID-vkCmdClearDepthStencilImage-image-00014", objlist, image_loc,
+                         "({}) doesn't have a depth/stencil format ({}).", Handle(image), string_VkFormat(image_format));
     }
     return skip;
 }
@@ -1180,8 +1207,8 @@ bool CoreChecks::ValidateClearAttachmentExtent(const vvl::CommandBuffer& cb_stat
         if (!ContainsRect(render_area, clear_rects[i].rect)) {
             skip |=
                 LogError("VUID-vkCmdClearAttachments-pRects-00016", cb_state.Handle(), loc.dot(Field::pRects, i).dot(Field::rect),
-                         "(%s) is not contained in the area of "
-                         "the current render pass instance (%s).",
+                         "({}) is not contained in the area of "
+                         "the current render pass instance ({}).",
                          string_VkRect2D(clear_rects[i].rect).c_str(), string_VkRect2D(render_area).c_str());
         }
 
@@ -1190,11 +1217,14 @@ bool CoreChecks::ValidateClearAttachmentExtent(const vvl::CommandBuffer& cb_stat
         // The layer indices specified by elements of pRects must be inferior to render pass layer count
         const uint64_t necessary_layer_count = uint64_t{rect_base_layer} + uint64_t{rect_layer_count};
         if (necessary_layer_count > render_pass_layer_count) {
-            skip |= LogError(
-                "VUID-vkCmdClearAttachments-pRects-06937", cb_state.Handle(), loc.dot(Field::pRects, i).dot(Field::baseArrayLayer),
-                "(%" PRIu32 ") + layerCount (%" PRIu32 ") is %" PRIu64
-                ", which is larger than the number of layers rendered to in the current render pass instance (%" PRIu32 ").",
-                rect_base_layer, rect_layer_count, necessary_layer_count, render_pass_layer_count);
+            skip |= LogError("VUID-vkCmdClearAttachments-pRects-06937", cb_state.Handle(),
+                             loc.dot(Field::pRects, i).dot(Field::baseArrayLayer),
+                             "({}"
+                             ") + layerCount ({}"
+                             ") is {}"
+                             ", which is larger than the number of layers rendered to in the current render pass instance ({}"
+                             ").",
+                             rect_base_layer, rect_layer_count, necessary_layer_count, render_pass_layer_count);
         }
     }
     return skip;
@@ -1251,11 +1281,10 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
                     color_index < cb_state.rendering_attachments.color_locations.size() &&
                     cb_state.rendering_attachments.color_locations[color_index] == VK_ATTACHMENT_UNUSED) {
                     const LogObjectList objlist(commandBuffer, rp_state->VkHandle());
-                    skip |=
-                        LogError("VUID-vkCmdClearAttachments-colorAttachment-09503", objlist, attachment_loc,
-                                 "cannot be cleared because VkRenderingAttachmentLocationInfo::pColorAttachmentLocations[%" PRIu32
-                                 "] is VK_ATTACHMENT_UNUSED.",
-                                 color_index);
+                    skip |= LogError("VUID-vkCmdClearAttachments-colorAttachment-09503", objlist, attachment_loc,
+                                     "cannot be cleared because VkRenderingAttachmentLocationInfo::pColorAttachmentLocations[{}"
+                                     "] is VK_ATTACHMENT_UNUSED.",
+                                     color_index);
                 }
 
                 color_view_state =
@@ -1310,16 +1339,16 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
                         if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) && !vkuFormatHasDepth(image_view_format)) {
                             const LogObjectList objlist(commandBuffer, rp_state->Handle(), depth_view_state->Handle());
                             skip |= LogError("VUID-vkCmdClearAttachments-aspectMask-07884", objlist, attachment_loc,
-                                             "in pSubpasses[%" PRIu32
-                                             "] has VK_IMAGE_ASPECT_DEPTH_BIT and is backed by an image view with format (%s).",
+                                             "in pSubpasses[{}"
+                                             "] has VK_IMAGE_ASPECT_DEPTH_BIT and is backed by an image view with format ({}).",
                                              cb_state.GetActiveSubpass(), string_VkFormat(image_view_format));
                         }
 
                         if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) && !vkuFormatHasStencil(image_view_format)) {
                             const LogObjectList objlist(commandBuffer, rp_state->Handle(), stencil_view_state->Handle());
                             skip |= LogError("VUID-vkCmdClearAttachments-aspectMask-07885", objlist, attachment_loc,
-                                             "in pSubpasses[%" PRIu32
-                                             "] has VK_IMAGE_ASPECT_STENCIL_BIT and is backed by an image view with format (%s).",
+                                             "in pSubpasses[{}"
+                                             "] has VK_IMAGE_ASPECT_STENCIL_BIT and is backed by an image view with format ({}).",
                                              cb_state.GetActiveSubpass(), string_VkFormat(image_view_format));
                         }
                     }
@@ -1329,13 +1358,13 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
 
         if (aspect_mask & VK_IMAGE_ASPECT_METADATA_BIT) {
             const LogObjectList objlist(commandBuffer, rp_state->Handle());
-            skip |= LogError("VUID-VkClearAttachment-aspectMask-00020", objlist, attachment_loc.dot(Field::aspectMask), "is %s.",
-                             string_VkImageAspectFlags(aspect_mask).c_str());
+            skip |= LogError("VUID-VkClearAttachment-aspectMask-00020", objlist, attachment_loc.dot(Field::aspectMask), "is {}.",
+                             vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if (aspect_mask & (VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT | VK_IMAGE_ASPECT_MEMORY_PLANE_1_BIT_EXT |
                                   VK_IMAGE_ASPECT_MEMORY_PLANE_2_BIT_EXT | VK_IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT)) {
             const LogObjectList objlist(commandBuffer, rp_state->Handle());
-            skip |= LogError("VUID-VkClearAttachment-aspectMask-02246", objlist, attachment_loc.dot(Field::aspectMask), "is %s.",
-                             string_VkImageAspectFlags(aspect_mask).c_str());
+            skip |= LogError("VUID-VkClearAttachment-aspectMask-02246", objlist, attachment_loc.dot(Field::aspectMask), "is {}.",
+                             vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if (aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) {
             if (clear_desc.colorAttachment == VK_ATTACHMENT_UNUSED) {
                 const LogObjectList objlist(commandBuffer, rp_state->Handle());
@@ -1356,16 +1385,17 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
                     return ss.str();
                 };
                 const LogObjectList objlist(commandBuffer, rp_state->Handle());
-                skip |=
-                    LogError("VUID-vkCmdClearAttachments-aspectMask-07271", objlist, attachment_loc.dot(Field::colorAttachment),
-                             "is index %" PRIu32 ", which is not less than colorAttachmentCount (%" PRIu32 ") which was set by %s",
-                             clear_desc.colorAttachment, color_attachment_count, describe_color_count().c_str());
+                skip |= LogError("VUID-vkCmdClearAttachments-aspectMask-07271", objlist, attachment_loc.dot(Field::colorAttachment),
+                                 "is index {}"
+                                 ", which is not less than colorAttachmentCount ({}"
+                                 ") which was set by {}",
+                                 clear_desc.colorAttachment, color_attachment_count, describe_color_count().c_str());
             }
 
             if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) || (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 const LogObjectList objlist(commandBuffer, rp_state->Handle());
                 skip |= LogError("VUID-VkClearAttachment-aspectMask-00019", objlist, attachment_loc.dot(Field::aspectMask),
-                                 "is %s.", string_VkImageAspectFlags(aspect_mask).c_str());
+                                 "is {}.", vvl::Flags::ImageAspectFlags(aspect_mask));
             }
 
         } else if (aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
@@ -1374,7 +1404,7 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
         } else if (external_format_resolve && IsAnyPlaneAspect(aspect_mask)) {
             const LogObjectList objlist(commandBuffer, rp_state->Handle());
             skip |= LogError("VUID-vkCmdClearAttachments-aspectMask-09298", objlist, attachment_loc.dot(Field::aspectMask),
-                             "is %s.", string_VkImageAspectFlags(aspect_mask).c_str());
+                             "is {}.", vvl::Flags::ImageAspectFlags(aspect_mask));
         }
 
         std::array<const vvl::ImageView*, 3> image_views = {nullptr, nullptr, nullptr};
@@ -1401,9 +1431,9 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
             if (vkuFormatIs64bit(image_view_format) && vkuFormatComponentCount(image_view_format) > 2) {
                 const LogObjectList objlist(commandBuffer, image_view->Handle());
                 skip |= LogError("VUID-vkCmdClearAttachments-None-09679", objlist, attachment_loc,
-                                 "(%s) was created with a 64-bit format (%s) but it has more than 2 components. The clear command "
+                                 "({}) was created with a 64-bit format ({}) but it has more than 2 components. The clear command "
                                  "can only clear 16 bytes so this format is too large",
-                                 FormatHandle(image_view->Handle()).c_str(), string_VkFormat(image_view_format));
+                                 Handle(image_view->Handle()), string_VkFormat(image_view_format));
             }
         }
 
@@ -1415,8 +1445,10 @@ bool CoreChecks::PreCallValidateCmdClearAttachments(VkCommandBuffer commandBuffe
                     const LogObjectList objlist(commandBuffer, rp_state->Handle());
                     skip |= LogError("VUID-vkCmdClearAttachments-baseArrayLayer-00018", objlist,
                                      error_obj.location.dot(Field::pRects, i).dot(Field::baseArrayLayer),
-                                     "is %" PRIu32 " and layerCount is %" PRIu32
-                                     ", but the render pass instance viewMask is 0x%" PRIx32 " (non-zero).",
+                                     "is {}"
+                                     " and layerCount is {}"
+                                     ", but the render pass instance viewMask is 0x{:x}"
+                                     " (non-zero).",
                                      pRects[i].baseArrayLayer, pRects[i].layerCount, view_mask);
                 }
             }
@@ -1445,9 +1477,8 @@ bool CoreChecks::ValidateImageUsageFlags(VkCommandBuffer commandBuffer, const vv
     }
 
     if (!correct_usage) {
-        skip |= LogError(vuid, objlist, image_loc, "(%s) was created with %s but requires %s.",
-                         FormatHandle(image_state.Handle()).c_str(), string_VkImageUsageFlags2KHR(image_state.usage).c_str(),
-                         string_VkImageUsageFlags2KHR(desired).c_str());
+        skip |= LogError(vuid, objlist, image_loc, "({}) was created with {} but requires {}.", Handle(image_state.Handle()),
+                         vvl::Flags::ImageUsageFlags2KHR(image_state.usage), vvl::Flags::ImageUsageFlags2KHR(desired));
     }
     return skip;
 }
@@ -1464,18 +1495,17 @@ bool CoreChecks::ValidateImageFormatFeatureFlags(VkCommandBuffer commandBuffer, 
         if (image_state.HasAHBFormat()) {
             skip |= LogError(
                 vuid, objlist, image_loc,
-                "(%s) was created with an external format having VkFormatFeatureFlags2 (%s) which is missing the required feature "
-                "%s (Features found in VkAndroidHardwareBufferFormatPropertiesANDROID::formatFeatures).",
-                FormatHandle(image_state).c_str(), string_VkFormatFeatureFlags2(image_format_features).c_str(),
-                string_VkFormatFeatureFlags2(desired).c_str());
+                "({}) was created with an external format having VkFormatFeatureFlags2 ({}) which is missing the required feature "
+                "{} (Features found in VkAndroidHardwareBufferFormatPropertiesANDROID::formatFeatures).",
+                Handle(image_state), vvl::Flags::FormatFeatureFlags2(image_format_features),
+                vvl::Flags::FormatFeatureFlags2(desired));
         } else {
-            skip |=
-                LogError(vuid, objlist, image_loc,
-                         "(%s) was created with format %s and tiling %s which have VkFormatFeatureFlags2 (%s) which in turn is "
-                         "missing the required feature %s.",
-                         FormatHandle(image_state).c_str(), string_VkFormat(image_state.GetFormat()),
-                         string_VkImageTiling(image_state.GetTiling()), string_VkFormatFeatureFlags2(image_format_features).c_str(),
-                         string_VkFormatFeatureFlags2(desired).c_str());
+            skip |= LogError(vuid, objlist, image_loc,
+                             "({}) was created with format {} and tiling {} which have VkFormatFeatureFlags2 ({}) which in turn is "
+                             "missing the required feature {}.",
+                             Handle(image_state), string_VkFormat(image_state.GetFormat()),
+                             string_VkImageTiling(image_state.GetTiling()), vvl::Flags::FormatFeatureFlags2(image_format_features),
+                             vvl::Flags::FormatFeatureFlags2(desired));
         }
     }
     return skip;
@@ -1491,49 +1521,49 @@ bool CoreChecks::ValidateImageAspectMask(VkImage image, VkFormat format, VkImage
         if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
             skip |= LogError(
                 vuid, image, loc,
-                "Using format (%s) with aspect flags (%s) but color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.",
-                string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                "Using format ({}) with aspect flags ({}) but color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.",
+                string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but color image formats must have ONLY the "
+                             "Using format ({}) with aspect flags ({}) but color image formats must have ONLY the "
                              "VK_IMAGE_ASPECT_COLOR_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         }
     } else if (vkuFormatIsDepthAndStencil(format)) {
         if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) == 0) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but depth/stencil image formats must have at least one "
+                             "Using format ({}) with aspect flags ({}) but depth/stencil image formats must have at least one "
                              "of VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but combination depth/stencil image formats can have "
+                             "Using format ({}) with aspect flags ({}) but combination depth/stencil image formats can have "
                              "only the VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         }
     } else if (vkuFormatIsDepthOnly(format)) {
         if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but depth-only image formats must have the "
+                             "Using format ({}) with aspect flags ({}) but depth-only image formats must have the "
                              "VK_IMAGE_ASPECT_DEPTH_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but depth-only image formats can have only the "
+                             "Using format ({}) with aspect flags ({}) but depth-only image formats can have only the "
                              "VK_IMAGE_ASPECT_DEPTH_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         }
     } else if (vkuFormatIsStencilOnly(format)) {
         if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but stencil-only image formats must have the "
+                             "Using format ({}) with aspect flags ({}) but stencil-only image formats must have the "
                              "VK_IMAGE_ASPECT_STENCIL_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         } else if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but stencil-only image formats can have only the "
+                             "Using format ({}) with aspect flags ({}) but stencil-only image formats can have only the "
                              "VK_IMAGE_ASPECT_STENCIL_BIT set.",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         }
     } else if (vkuFormatIsMultiplane(format)) {
         VkImageAspectFlags valid_flags = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_PLANE_0_BIT | VK_IMAGE_ASPECT_PLANE_1_BIT;
@@ -1542,9 +1572,9 @@ bool CoreChecks::ValidateImageAspectMask(VkImage image, VkFormat format, VkImage
         }
         if ((aspect_mask & valid_flags) != aspect_mask) {
             skip |= LogError(vuid, image, loc,
-                             "Using format (%s) with aspect flags (%s) but multi-plane image formats may have only "
+                             "Using format ({}) with aspect flags ({}) but multi-plane image formats may have only "
                              "VK_IMAGE_ASPECT_COLOR_BIT or VK_IMAGE_ASPECT_PLANE_n_BITs set, where n = [0, 1, 2].",
-                             string_VkFormat(format), string_VkImageAspectFlags(aspect_mask).c_str());
+                             string_VkFormat(format), vvl::Flags::ImageAspectFlags(aspect_mask));
         }
     }
     return skip;
@@ -1560,7 +1590,9 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
     if (subresourceRange.baseMipLevel >= image_mip_count) {
         skip |= LogError(GetSubresourceRangeVUID(subresource_loc, vvl::SubresourceRangeError::BaseMip_01486), objlist,
                          subresource_loc.dot(Field::baseMipLevel),
-                         "(%" PRIu32 ") is greater than or equal to the mip level count of the image (%" PRIu32 ").",
+                         "({}"
+                         ") is greater than or equal to the mip level count of the image ({}"
+                         ").",
                          subresourceRange.baseMipLevel, image_mip_count);
     }
 
@@ -1574,8 +1606,11 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
             if (necessary_mip_count > image_mip_count) {
                 skip |= LogError(GetSubresourceRangeVUID(subresource_loc, vvl::SubresourceRangeError::MipCount_01724), objlist,
                                  subresource_loc.dot(Field::baseMipLevel),
-                                 "(%" PRIu32 ") + levelCount (%" PRIu32 ") is %" PRIu64
-                                 ", which is greater than the image mipLevels (%" PRIu32 ").",
+                                 "({}"
+                                 ") + levelCount ({}"
+                                 ") is {}"
+                                 ", which is greater than the image mipLevels ({}"
+                                 ").",
                                  subresourceRange.baseMipLevel, subresourceRange.levelCount, necessary_mip_count, image_mip_count);
             }
         }
@@ -1590,7 +1625,9 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
                                   : GetSubresourceRangeVUID(subresource_loc, vvl::SubresourceRangeError::BaseLayer_01488);
             skip |=
                 LogError(vuid, objlist, subresource_loc.dot(Field::baseArrayLayer),
-                         "(%" PRIu32 ") is not less than the %s of the image when it was created (%" PRIu32 ").%s",
+                         "({}"
+                         ") is not less than the {} of the image when it was created ({}"
+                         ").{}",
                          subresourceRange.baseArrayLayer, String(image_layer_count_var), image_layer_count,
                          maintenance9_hint ? "\nHint: This can be allowed in some cases if maintenance9 feature is enabled." : "");
         }
@@ -1603,8 +1640,10 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
         if (check_function && (subresourceRange.baseArrayLayer != 0 || subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
             const auto vuid = GetSubresourceRangeVUID(subresource_loc, vvl::SubresourceRangeError::LevelCount_10799);
             skip |= LogError(vuid, objlist, subresource_loc.dot(Field::levelCount),
-                             "is %" PRIu32 " (not 1) for a 3D image, so baseArrayLayer (%" PRIu32
-                             ") must be 0 and layerCount (%" PRIu32 ") must be VK_REMAINING_ARRAY_LAYERS.",
+                             "is {}"
+                             " (not 1) for a 3D image, so baseArrayLayer ({}"
+                             ") must be 0 and layerCount ({}"
+                             ") must be VK_REMAINING_ARRAY_LAYERS.",
                              subresourceRange.levelCount, subresourceRange.baseArrayLayer, subresourceRange.layerCount);
         }
     }
@@ -1626,8 +1665,11 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
                             : GetSubresourceRangeVUID(subresource_loc, vvl::SubresourceRangeError::LayerCount_01725);
                     skip |= LogError(
                         vuid, objlist, subresource_loc.dot(Field::baseArrayLayer),
-                        "(%" PRIu32 ") + layerCount (%" PRIu32 ") is %" PRIu64
-                        ", which is greater than the %s of the image when it was created (%" PRIu32 ").%s",
+                        "({}"
+                        ") + layerCount ({}"
+                        ") is {}"
+                        ", which is greater than the {} of the image when it was created ({}"
+                        ").{}",
                         subresourceRange.baseArrayLayer, subresourceRange.layerCount, necessary_layer_count,
                         String(image_layer_count_var), image_layer_count,
                         maintenance9_hint ? "\nHint: This can be allowed in some cases if maintenance9 feature is enabled." : "");
@@ -1640,15 +1682,15 @@ bool CoreChecks::ValidateImageSubresourceRange(const uint32_t image_mip_count, c
         if (subresourceRange.aspectMask &
             (VK_IMAGE_ASPECT_PLANE_0_BIT | VK_IMAGE_ASPECT_PLANE_1_BIT | VK_IMAGE_ASPECT_PLANE_2_BIT)) {
             skip |= LogError("VUID-VkImageSubresourceRange-aspectMask-01670", objlist, subresource_loc.dot(Field::aspectMask),
-                             "is %s.", string_VkImageAspectFlags(subresourceRange.aspectMask).c_str());
+                             "is {}.", vvl::Flags::ImageAspectFlags(subresourceRange.aspectMask));
         }
     }
 
     // aspectMask must not contain VK_IMAGE_ASPECT_MEMORY_PLANE_i_BIT_EXT
     if (subresourceRange.aspectMask & (VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT | VK_IMAGE_ASPECT_MEMORY_PLANE_1_BIT_EXT |
                                        VK_IMAGE_ASPECT_MEMORY_PLANE_2_BIT_EXT | VK_IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT)) {
-        skip |= LogError("VUID-VkImageSubresourceRange-aspectMask-02278", objlist, subresource_loc.dot(Field::aspectMask), "is %s.",
-                         string_VkImageAspectFlags(subresourceRange.aspectMask).c_str());
+        skip |= LogError("VUID-VkImageSubresourceRange-aspectMask-02278", objlist, subresource_loc.dot(Field::aspectMask), "is {}.",
+                         vvl::Flags::ImageAspectFlags(subresourceRange.aspectMask));
     }
 
     return skip;
@@ -1696,11 +1738,11 @@ bool CoreChecks::ValidateImageBarrierSubresourceRange(const VkImageSubresourceRa
         const bool forward_compatibility_issue = (subresource_range.layerCount == 1 && image_state.GetExtent().depth > 1);
         if (forward_compatibility_issue) {
             skip |= LogWarning("WARNING-VkImageSubresourceRange-layerCount-compatibility", objlist, loc.dot(Field::layerCount),
-                               "is 1 for a 3D image (%s) created with VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT. The "
+                               "is 1 for a 3D image ({}) created with VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT. The "
                                "maintenance9 feature is not currently enabled, so layerCount refers to all depth slices. When "
                                "maintenance9 is enabled, it instead refers to a single depth slice. To remain forward-compatible, "
                                "layerCount should be set to VK_REMAINING_ARRAY_LAYERS.",
-                               FormatHandle(image_state.Handle()).c_str());
+                               Handle(image_state.Handle()));
         }
     }
 
@@ -1822,38 +1864,38 @@ bool CoreChecks::ValidateImageViewFormatFeatures(const vvl::Image& image_state, 
 
     if (tiling_features == 0) {
         skip |= LogError("VUID-VkImageViewCreateInfo-None-02273", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s has no supported format features on this "
+                         "{} with tiling {} has no supported format features on this "
                          "physical device.",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling));
     } else if ((image_usage & VK_IMAGE_USAGE_SAMPLED_BIT) && !(tiling_features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-02274", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s doesn't support VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT.\n"
-                         "(supported features: %s)\n%s",
+                         "{} with tiling {} doesn't support VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_STORAGE_BIT) && !(tiling_features & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-02275", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s doesn't support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT.\n"
-                         "(supported features: %s)\n%s",
+                         "{} with tiling {} doesn't support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
                !(tiling_features & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_2_LINEAR_COLOR_ATTACHMENT_BIT_NV))) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-08931", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s doesn't support VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT.\n"
-                         "(supported features: %s)\n%s",
+                         "{} with tiling {} doesn't support VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
                !(tiling_features & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-02277", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s doesn't support VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT.\n"
-                         "(supported features: %s)\n%s",
+                         "{} with tiling {} doesn't support VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) &&
                !(tiling_features & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
@@ -1861,19 +1903,19 @@ bool CoreChecks::ValidateImageViewFormatFeatures(const vvl::Image& image_state, 
         if (!enabled_features.externalFormatResolve && !device_state->android_external_format_resolve_null_color_attachment_prop &&
             !image_state.HasAHBFormat()) {
             skip |= LogError("VUID-VkImageViewCreateInfo-usage-08932", image_state.Handle(), create_info_loc.dot(Field::format),
-                             "%s with tiling %s doesn't support one of the required formats.\n"
-                             "(supported features: %s)\n%s",
+                             "{} with tiling {} doesn't support one of the required formats.\n"
+                             "(supported features: {})\n{}",
                              string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                             string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                             vvl::Flags::FormatFeatureFlags2(tiling_features),
                              DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
         }
     } else if ((image_usage & VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT) &&
                !(tiling_features & VK_FORMAT_FEATURE_2_FRAGMENT_DENSITY_MAP_BIT_EXT)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-12488", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s with tiling %s doesn't support VK_FORMAT_FEATURE_2_FRAGMENT_DENSITY_MAP_BIT_EXT.\n"
-                         "(supported features: %s)\n%s",
+                         "{} with tiling {} doesn't support VK_FORMAT_FEATURE_2_FRAGMENT_DENSITY_MAP_BIT_EXT.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR)) {
         // shadingRateImage is from the NV extension, should mean the same, lacks spec text
@@ -1884,71 +1926,71 @@ bool CoreChecks::ValidateImageViewFormatFeatures(const vvl::Image& image_state, 
                              "attachmentFragmentShadingRate feature was not enabled.");
         } else if (!(tiling_features & VK_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR)) {
             skip |= LogError("VUID-VkImageViewCreateInfo-usage-04550", image_state.Handle(), create_info_loc.dot(Field::format),
-                             "%s with tiling %s doesn't support VK_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR.\n"
-                             "(supported features: %s)\n%s",
+                             "{} with tiling {} doesn't support VK_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR.\n"
+                             "(supported features: {})\n{}",
                              string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                             string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                             vvl::Flags::FormatFeatureFlags2(tiling_features),
                              DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
         }
     } else if ((image_usage & VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR) &&
                !(tiling_features & VK_FORMAT_FEATURE_2_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-10259", image_state.Handle(), create_info_loc.dot(Field::usage),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_2_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_2_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR) &&
                !(tiling_features & VK_FORMAT_FEATURE_2_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-10260", image_state.Handle(), create_info_loc.dot(Field::usage),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_2_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_2_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     }
 
     if ((image_usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR) &&
         !(tiling_features & VK_FORMAT_FEATURE_VIDEO_DECODE_OUTPUT_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08333", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_VIDEO_DECODE_OUTPUT_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_VIDEO_DECODE_OUTPUT_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR) &&
                !(tiling_features & VK_FORMAT_FEATURE_VIDEO_DECODE_DPB_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08334", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_VIDEO_DECODE_DPB_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_VIDEO_DECODE_DPB_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if (image_usage & VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08335", image_state.Handle(), create_info_loc.dot(Field::usage),
                          "is VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR which is not allowed for image views from video profile "
-                         "independent images.\n%s",
+                         "independent images.\n{}",
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR) &&
                !(tiling_features & VK_FORMAT_FEATURE_VIDEO_ENCODE_INPUT_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08336", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_VIDEO_ENCODE_INPUT_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_VIDEO_ENCODE_INPUT_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if ((image_usage & VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR) &&
                !(tiling_features & VK_FORMAT_FEATURE_VIDEO_ENCODE_DPB_BIT_KHR)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08337", image_state.Handle(), create_info_loc.dot(Field::format),
-                         "%s and tiling %s doesn't support VK_FORMAT_FEATURE_VIDEO_ENCODE_DPB_BIT_KHR.\n"
-                         "(supported features: %s)\n%s",
+                         "{} and tiling {} doesn't support VK_FORMAT_FEATURE_VIDEO_ENCODE_DPB_BIT_KHR.\n"
+                         "(supported features: {})\n{}",
                          string_VkFormat(view_format), string_VkImageTiling(image_tiling),
-                         string_VkFormatFeatureFlags2(tiling_features).c_str(),
+                         vvl::Flags::FormatFeatureFlags2(tiling_features),
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     } else if (image_usage & VK_IMAGE_USAGE_VIDEO_ENCODE_DST_BIT_KHR) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-08338", image_state.Handle(), create_info_loc.dot(Field::usage),
                          "is VK_IMAGE_USAGE_VIDEO_ENCODE_DST_BIT_KHR which is not allowed for image views from video profile "
-                         "independent images.\n%s",
+                         "independent images.\n{}",
                          DescribeImageViewUsage(image_state, create_info, image_usage).c_str());
     }
 
@@ -2001,7 +2043,7 @@ bool CoreChecks::ValidateImageViewSlicedCreateInfo(const VkImageViewCreateInfo& 
 
     if (image_state.GetImageType() != VK_IMAGE_TYPE_3D) {
         skip |= LogError("VUID-VkImageViewSlicedCreateInfoEXT-image-07869", create_info.image, create_info_loc.dot(Field::image),
-                         "(%s) must be VK_IMAGE_TYPE_3D (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n%s",
+                         "({}) must be VK_IMAGE_TYPE_3D (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n{}",
                          string_VkImageType(image_state.GetImageType()),
                          PrintPNextChain(Struct::VkImageViewCreateInfo, create_info.pNext).c_str());
     }
@@ -2009,7 +2051,7 @@ bool CoreChecks::ValidateImageViewSlicedCreateInfo(const VkImageViewCreateInfo& 
     if (create_info.viewType != VK_IMAGE_VIEW_TYPE_3D) {
         skip |=
             LogError("VUID-VkImageViewSlicedCreateInfoEXT-viewType-07909", create_info.image, create_info_loc.dot(Field::viewType),
-                     "(%s) must be VK_IMAGE_VIEW_TYPE_3D (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n%s",
+                     "({}) must be VK_IMAGE_VIEW_TYPE_3D (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n{}",
                      string_VkImageViewType(create_info.viewType),
                      PrintPNextChain(Struct::VkImageViewCreateInfo, create_info.pNext).c_str());
     }
@@ -2017,7 +2059,7 @@ bool CoreChecks::ValidateImageViewSlicedCreateInfo(const VkImageViewCreateInfo& 
     if (normalized_subresource_range.levelCount != 1) {
         skip |= LogError("VUID-VkImageViewSlicedCreateInfoEXT-None-07870", create_info.image,
                          create_info_loc.dot(Field::subresourceRange).dot(Field::levelCount),
-                         "(%s) must be 1 (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n%s",
+                         "({}) must be 1 (since pNext includes a VkImageViewSlicedCreateInfoEXT structure).\n{}",
                          string_LevelCount(image_state.GetMipLevels(), create_info.subresourceRange).c_str(),
                          PrintPNextChain(Struct::VkImageViewCreateInfo, create_info.pNext).c_str());
     }
@@ -2028,10 +2070,12 @@ bool CoreChecks::ValidateImageViewSlicedCreateInfo(const VkImageViewCreateInfo& 
     const uint32_t slice_count = sliced_create_info_ext->sliceCount;
 
     if (slice_offset >= effective_view_depth) {
-        skip |=
-            LogError("VUID-VkImageViewSlicedCreateInfoEXT-sliceOffset-07867", create_info.image,
-                     create_info_loc.pNext(Struct::VkImageViewSlicedCreateInfoEXT, Field::sliceOffset),
-                     "(%" PRIu32 ") must be less than the effective view depth (%" PRIu32 ").", slice_offset, effective_view_depth);
+        skip |= LogError("VUID-VkImageViewSlicedCreateInfoEXT-sliceOffset-07867", create_info.image,
+                         create_info_loc.pNext(Struct::VkImageViewSlicedCreateInfoEXT, Field::sliceOffset),
+                         "({}"
+                         ") must be less than the effective view depth ({}"
+                         ").",
+                         slice_offset, effective_view_depth);
     }
 
     if (slice_count != VK_REMAINING_3D_SLICES_EXT) {
@@ -2044,8 +2088,11 @@ bool CoreChecks::ValidateImageViewSlicedCreateInfo(const VkImageViewCreateInfo& 
         if (necessary_slice_count > effective_view_depth) {
             skip |= LogError("VUID-VkImageViewSlicedCreateInfoEXT-sliceCount-07868", create_info.image,
                              create_info_loc.pNext(Struct::VkImageViewSlicedCreateInfoEXT, Field::sliceOffset),
-                             "(%" PRIu32 ") + sliceCount (%" PRIu32 ") is %" PRIu64
-                             ", which is greater than the effective view depth (%" PRIu32 ").",
+                             "({}"
+                             ") + sliceCount ({}"
+                             ") is {}"
+                             ", which is greater than the effective view depth ({}"
+                             ").",
                              slice_offset, slice_count, necessary_slice_count, effective_view_depth);
         }
     }
@@ -2099,9 +2146,9 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                     skip |=
                         LogError("VUID-VkImageViewCreateInfo-pNext-02662", create_info.image,
                                  create_info_loc.pNext(Struct::VkImageViewUsageCreateInfo, Field::usage),
-                                 "(%s) must not include any bits that were not set in VkImageCreateInfo::usage (%s) of the image.",
-                                 string_VkImageUsageFlags2KHR(image_view_usage.value()).c_str(),
-                                 string_VkImageUsageFlags2KHR(image_state.usage).c_str());
+                                 "({}) must not include any bits that were not set in VkImageCreateInfo::usage ({}) of the image.",
+                                 vvl::Flags::ImageUsageFlags2KHR(image_view_usage.value()),
+                                 vvl::Flags::ImageUsageFlags2KHR(image_state.usage));
                 }
             } else {
                 if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) == VK_IMAGE_ASPECT_STENCIL_BIT &&
@@ -2109,20 +2156,20 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                     skip |=
                         LogError("VUID-VkImageViewCreateInfo-pNext-02663", create_info.image,
                                  create_info_loc.pNext(Struct::VkImageViewUsageCreateInfo, Field::usage),
-                                 "(%s) must not include any bits that were not set in VkImageStencilUsageCreateInfo::stencilUsage "
-                                 "(%s) if subresourceRange.aspectMask includes VK_IMAGE_ASPECT_STENCIL_BIT.",
-                                 string_VkImageUsageFlags2KHR(image_view_usage.value()).c_str(),
-                                 string_VkImageUsageFlags2KHR(image_state.stencil_usage.value()).c_str());
+                                 "({}) must not include any bits that were not set in VkImageStencilUsageCreateInfo::stencilUsage "
+                                 "({}) if subresourceRange.aspectMask includes VK_IMAGE_ASPECT_STENCIL_BIT.",
+                                 vvl::Flags::ImageUsageFlags2KHR(image_view_usage.value()),
+                                 vvl::Flags::ImageUsageFlags2KHR(image_state.stencil_usage.value()));
                 }
                 if ((aspect_mask & ~VK_IMAGE_ASPECT_STENCIL_BIT) != 0 &&
                     (image_state.usage | image_view_usage.value()) != image_state.usage) {
-                    skip |= LogError(
-                        "VUID-VkImageViewCreateInfo-pNext-02664", create_info.image,
-                        create_info_loc.pNext(Struct::VkImageViewUsageCreateInfo, Field::usage),
-                        "(%s) must not include any bits that were not set in VkImageCreateInfo::usage (%s) of the image "
-                        "if subresourceRange.aspectMask (%s) includes bits other than VK_IMAGE_ASPECT_STENCIL_BIT.",
-                        string_VkImageUsageFlags2KHR(image_view_usage.value()).c_str(),
-                        string_VkImageUsageFlags2KHR(image_state.usage).c_str(), string_VkImageAspectFlags(aspect_mask).c_str());
+                    skip |=
+                        LogError("VUID-VkImageViewCreateInfo-pNext-02664", create_info.image,
+                                 create_info_loc.pNext(Struct::VkImageViewUsageCreateInfo, Field::usage),
+                                 "({}) must not include any bits that were not set in VkImageCreateInfo::usage ({}) of the image "
+                                 "if subresourceRange.aspectMask ({}) includes bits other than VK_IMAGE_ASPECT_STENCIL_BIT.",
+                                 vvl::Flags::ImageUsageFlags2KHR(image_view_usage.value()),
+                                 vvl::Flags::ImageUsageFlags2KHR(image_state.usage), vvl::Flags::ImageAspectFlags(aspect_mask));
                 }
             }
         }
@@ -2143,16 +2190,16 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         if (found_format == false) {
             skip |= LogError("VUID-VkImageViewCreateInfo-pNext-01585", create_info.image,
                              create_info_loc.pNext(Struct::VkImageFormatListCreateInfo, Field::pViewFormats),
-                             "has no formats that match the VkImageViewCreateInfo::format (%s).", string_VkFormat(view_format));
+                             "has no formats that match the VkImageViewCreateInfo::format ({}).", string_VkFormat(view_format));
         }
     }
 
     if (image_flags & VK_IMAGE_CREATE_ALIAS_SINGLE_LAYER_DESCRIPTOR_BIT_KHR) {
         if (vkuFormatIsMultiplane(view_format)) {
             skip |= LogError("VUID-VkImageViewCreateInfo-image-13357", create_info.image, create_info_loc.dot(Field::format),
-                             "(%s) is a multiplane format, but the image was created with flag "
-                             "VK_IMAGE_CREATE_ALIAS_SINGLE_LAYER_DESCRIPTOR_BIT_KHR. (image flags: %s).",
-                             string_VkFormat(view_format), string_VkImageCreateFlags2KHR(image_flags).c_str());
+                             "({}) is a multiplane format, but the image was created with flag "
+                             "VK_IMAGE_CREATE_ALIAS_SINGLE_LAYER_DESCRIPTOR_BIT_KHR. (image flags: {}).",
+                             string_VkFormat(view_format), vvl::Flags::ImageCreateFlags2KHR(image_flags));
         }
     }
 
@@ -2160,8 +2207,8 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
     if (multiplane_image) {
         if (IsMultiplePlaneAspect(aspect_mask)) {
             skip |= LogError("VUID-VkImageViewCreateInfo-subresourceRange-07818", create_info.image,
-                             create_info_loc.dot(Field::subresourceRange).dot(Field::aspectMask), "(%s) is invalid for %s.",
-                             string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_format));
+                             create_info_loc.dot(Field::subresourceRange).dot(Field::aspectMask), "({}) is invalid for {}.",
+                             vvl::Flags::ImageAspectFlags(aspect_mask), string_VkFormat(image_format));
         }
 
         if (IsOnlyOneValidPlaneAspect(image_format, aspect_mask)) {
@@ -2172,11 +2219,11 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             // Need to only check if one is NONE to handle edge case both are NONE
             if ((plane_class != view_class) || (plane_class == VKU_FORMAT_COMPATIBILITY_CLASS_NONE)) {
                 skip |= LogError("VUID-VkImageViewCreateInfo-image-01586", create_info.image, create_info_loc.dot(Field::format),
-                                 "(%s) is not compatible with %s which is the plane %" PRIu32
-                                 " compatible format for %s (the image format of %s)",
+                                 "({}) is not compatible with {} which is the plane {}"
+                                 " compatible format for {} (the image format of {})",
                                  string_VkFormat(view_format), string_VkFormat(compat_format),
                                  vkuGetPlaneIndex(static_cast<VkImageAspectFlagBits>(aspect_mask)), string_VkFormat(image_format),
-                                 FormatHandle(create_info.image).c_str());
+                                 Handle(create_info.image));
             }
         }
     }
@@ -2189,10 +2236,10 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             if (aspect_mask == VK_IMAGE_ASPECT_COLOR_BIT) {
                 skip |=
                     LogError("VUID-VkImageViewCreateInfo-format-12398", create_info.image, create_info_loc.dot(Field::format),
-                             "%s is different from %s format (%s). Multiplane formats taking a view with VK_IMAGE_ASPECT_COLOR_BIT "
+                             "{} is different from {} format ({}). Multiplane formats taking a view with VK_IMAGE_ASPECT_COLOR_BIT "
                              "must have identical formats.\nIf a VK_IMAGE_ASPECT_PLANE_*_BIT aspect mask is used, it can be a "
                              "different format that matches the plane.",
-                             string_VkFormat(view_format), FormatHandle(create_info.image).c_str(), string_VkFormat(image_format));
+                             string_VkFormat(view_format), Handle(create_info.image), string_VkFormat(image_format));
             }
         } else if (!(image_flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT)) {
             // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
@@ -2201,24 +2248,24 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             if ((image_class != view_class) || (image_class == VKU_FORMAT_COMPATIBILITY_CLASS_NONE)) {
                 skip |=
                     LogError("VUID-VkImageViewCreateInfo-image-01761", create_info.image, create_info_loc.dot(Field::format),
-                             "%s is not in the same format compatibility class as %s format %s. Images created with the "
+                             "{} is not in the same format compatibility class as {} format {}. Images created with the "
                              "VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT can support ImageViews with differing formats but they must be in "
                              "the same compatibility class.",
-                             string_VkFormat(view_format), FormatHandle(create_info.image).c_str(), string_VkFormat(image_format));
+                             string_VkFormat(view_format), Handle(create_info.image), string_VkFormat(image_format));
             }
         }
     } else if (image_format != view_format) {
         skip |=
             LogError("VUID-VkImageViewCreateInfo-image-12397", create_info.image, create_info_loc.dot(Field::format),
-                     "%s is different from %s format (%s). Formats must be identical unless VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT was "
+                     "{} is different from {} format ({}). Formats must be identical unless VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT was "
                      "set on image creation.",
-                     string_VkFormat(view_format), FormatHandle(create_info.image).c_str(), string_VkFormat(image_format));
+                     string_VkFormat(view_format), Handle(create_info.image), string_VkFormat(image_format));
     }
 
     if (image_state.GetSamples() != VK_SAMPLE_COUNT_1_BIT && view_type != VK_IMAGE_VIEW_TYPE_2D &&
         view_type != VK_IMAGE_VIEW_TYPE_2D_ARRAY) {
         skip |= LogError("VUID-VkImageViewCreateInfo-image-04972", create_info.image, create_info_loc.dot(Field::image),
-                         "was created with sample count %s, but create_info.viewType is %s.",
+                         "was created with sample count {}, but create_info.viewType is {}.",
                          string_VkSampleCountFlagBits(image_state.GetSamples()), string_VkImageViewType(view_type));
     }
 
@@ -2231,7 +2278,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         case VK_IMAGE_TYPE_1D:
             if (view_type != VK_IMAGE_VIEW_TYPE_1D && view_type != VK_IMAGE_VIEW_TYPE_1D_ARRAY) {
                 skip |= LogError("VUID-VkImageViewCreateInfo-subResourceRange-01021", create_info.image,
-                                 create_info_loc.dot(Field::viewType), "(%s) is not compatible with image type %s.",
+                                 create_info_loc.dot(Field::viewType), "({}) is not compatible with image type {}.",
                                  string_VkImageViewType(view_type), string_VkImageType(image_type));
             }
             break;
@@ -2240,11 +2287,11 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                 if ((view_type == VK_IMAGE_VIEW_TYPE_CUBE || view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) &&
                     !(image_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)) {
                     skip |= LogError("VUID-VkImageViewCreateInfo-image-01003", create_info.image,
-                                     create_info_loc.dot(Field::viewType), "(%s) is not compatible with image type %s.",
+                                     create_info_loc.dot(Field::viewType), "({}) is not compatible with image type {}.",
                                      string_VkImageViewType(view_type), string_VkImageType(image_type));
                 } else if (view_type != VK_IMAGE_VIEW_TYPE_CUBE && view_type != VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
                     skip |= LogError("VUID-VkImageViewCreateInfo-subResourceRange-01021", create_info.image,
-                                     create_info_loc.dot(Field::viewType), "(%s) is not compatible with image type %s.",
+                                     create_info_loc.dot(Field::viewType), "({}) is not compatible with image type {}.",
                                      string_VkImageViewType(view_type), string_VkImageType(image_type));
                 }
             }
@@ -2258,16 +2305,16 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                                 skip |=
                                     LogError("VUID-VkImageViewCreateInfo-image-06723", create_info.image,
                                              create_info_loc.dot(Field::viewType),
-                                             "(%s) is not compatible with image type "
-                                             "%s since the image doesn't have VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT flag set.",
+                                             "({}) is not compatible with image type "
+                                             "{} since the image doesn't have VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT flag set.",
                                              string_VkImageViewType(view_type), string_VkImageType(image_type));
                             }
                             if (view_type == VK_IMAGE_VIEW_TYPE_2D &&
                                 (image_flags & VK_IMAGE_CREATE_2D_VIEW_COMPATIBLE_BIT_EXT) == 0) {
                                 skip |= LogError("VUID-VkImageViewCreateInfo-image-06728", create_info.image,
                                                  create_info_loc.dot(Field::viewType),
-                                                 "(%s) is not compatible with image type "
-                                                 "%s since the image doesn't have VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT or "
+                                                 "({}) is not compatible with image type "
+                                                 "{} since the image doesn't have VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT or "
                                                  "VK_IMAGE_CREATE_2D_VIEW_COMPATIBLE_BIT_EXT flag set.",
                                                  string_VkImageViewType(view_type), string_VkImageType(image_type));
                             }
@@ -2275,14 +2322,14 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                         if (normalized_subresource_range.levelCount != 1) {
                             skip |= LogError("VUID-VkImageViewCreateInfo-image-04970", create_info.image,
                                              create_info_loc.dot(Field::viewType),
-                                             "(%s) with image type %s must have a "
-                                             "subresourceRange.levelCount of 1 but it is %s.",
+                                             "({}) with image type {} must have a "
+                                             "subresourceRange.levelCount of 1 but it is {}.",
                                              string_VkImageViewType(view_type), string_VkImageType(image_type),
                                              string_LevelCount(image_state.GetMipLevels(), create_info.subresourceRange).c_str());
                         }
                     } else {
                         skip |= LogError("VUID-VkImageViewCreateInfo-subResourceRange-01021", create_info.image,
-                                         create_info_loc.dot(Field::viewType), "(%s) is not compatible with image type %s.",
+                                         create_info_loc.dot(Field::viewType), "({}) is not compatible with image type {}.",
                                          string_VkImageViewType(view_type), string_VkImageType(image_type));
                     }
                 }
@@ -2292,12 +2339,12 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                     if ((view_type == VK_IMAGE_VIEW_TYPE_2D || view_type == VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
                         skip |= LogError("VUID-VkImageViewCreateInfo-subResourceRange-01021", create_info.image,
                                          create_info_loc.dot(Field::viewType),
-                                         "(%s) is not compatible with image type %s "
+                                         "({}) is not compatible with image type {} "
                                          "without VK_KHR_maintenance1 enabled which was promoted in Vulkan 1.1.",
                                          string_VkImageViewType(view_type), string_VkImageType(image_type));
                     } else {
                         skip |= LogError("VUID-VkImageViewCreateInfo-subResourceRange-01021", create_info.image,
-                                         create_info_loc.dot(Field::viewType), "(%s) is not compatible with image type %s.",
+                                         create_info_loc.dot(Field::viewType), "({}) is not compatible with image type {}.",
                                          string_VkImageViewType(view_type), string_VkImageType(image_type));
                     }
                 }
@@ -2335,7 +2382,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         image_usage & VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR && normalized_subresource_range.layerCount != 1) {
         skip |= LogError("VUID-VkImageViewCreateInfo-usage-04551", create_info.image,
                          create_info_loc.dot(Field::subresourceRange).dot(Field::layerCount),
-                         "is %s for a shading rate attachment image view.",
+                         "is {} for a shading rate attachment image view.",
                          string_LayerCount(image_state.GetArrayLayers(), create_info.subresourceRange).c_str());
     }
 
@@ -2344,19 +2391,24 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         if (view_type == VK_IMAGE_VIEW_TYPE_CUBE && remaining_layers != 6) {
             skip |= LogError("VUID-VkImageViewCreateInfo-viewType-02962", create_info.image,
                              create_info_loc.dot(Field::subresourceRange).dot(Field::layerCount),
-                             "is VK_REMAINING_ARRAY_LAYERS (%" PRIu32 ") but must be 6.", remaining_layers);
+                             "is VK_REMAINING_ARRAY_LAYERS ({}"
+                             ") but must be 6.",
+                             remaining_layers);
         }
         if (view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY && !IsIntegerMultipleOf(remaining_layers, 6)) {
             skip |= LogError("VUID-VkImageViewCreateInfo-viewType-02963", create_info.image,
                              create_info_loc.dot(Field::subresourceRange).dot(Field::layerCount),
-                             "is VK_REMAINING_ARRAY_LAYERS (%" PRIu32 ") but must be a multiple of 6.", remaining_layers);
+                             "is VK_REMAINING_ARRAY_LAYERS ({}"
+                             ") but must be a multiple of 6.",
+                             remaining_layers);
         }
         if ((remaining_layers != 1) && ((view_type == VK_IMAGE_VIEW_TYPE_1D) || (view_type == VK_IMAGE_VIEW_TYPE_2D) ||
                                         (view_type == VK_IMAGE_VIEW_TYPE_3D))) {
             skip |=
                 LogError("VUID-VkImageViewCreateInfo-imageViewType-04974", create_info.image, create_info_loc.dot(Field::viewType),
-                         "is %s and the subresourceRange.layerCount "
-                         "is VK_REMAINING_ARRAY_LAYERS (%" PRIu32 ") but must be 1 (try looking into VK_IMAGE_VIEW_TYPE_%s_ARRAY).",
+                         "is {} and the subresourceRange.layerCount "
+                         "is VK_REMAINING_ARRAY_LAYERS ({}"
+                         ") but must be 1 (try looking into VK_IMAGE_VIEW_TYPE_{}_ARRAY).",
                          string_VkImageViewType(view_type), remaining_layers,
                          view_type == VK_IMAGE_VIEW_TYPE_1D   ? "1D"
                          : view_type == VK_IMAGE_VIEW_TYPE_2D ? "2D"
@@ -2368,7 +2420,8 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
              (view_type == VK_IMAGE_VIEW_TYPE_3D))) {
             skip |= LogError("VUID-VkImageViewCreateInfo-imageViewType-04973", create_info.image,
                              create_info_loc.dot(Field::subresourceRange).dot(Field::layerCount),
-                             "(%" PRIu32 ") must be 1 when using viewType %s (try looking into VK_IMAGE_VIEW_TYPE_*_ARRAY).",
+                             "({}"
+                             ") must be 1 when using viewType {} (try looking into VK_IMAGE_VIEW_TYPE_*_ARRAY).",
                              create_info.subresourceRange.layerCount, string_VkImageViewType(view_type));
         }
     }
@@ -2377,7 +2430,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         if (normalized_subresource_range.levelCount != 1) {
             skip |= LogError("VUID-VkImageViewCreateInfo-image-02571", create_info.image, create_info_loc.dot(Field::image),
                              "was created with usage containing "
-                             "VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and subresourceRange.levelCount must be 1 but it is %s",
+                             "VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT and subresourceRange.levelCount must be 1 but it is {}",
                              string_LevelCount(image_state.GetMipLevels(), create_info.subresourceRange).c_str());
         }
     }
@@ -2407,7 +2460,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                 skip |= LogError(
                     "VUID-VkImageViewCreateInfo-image-07072", create_info.image, create_info_loc.dot(Field::image),
                     "was created with VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT bit, "
-                    "and the image view format (%s) is uncompressed, but subresourceRange.levelCount is %s (instead of 1).",
+                    "and the image view format ({}) is uncompressed, but subresourceRange.levelCount is {} (instead of 1).",
                     string_VkFormat(view_format),
                     string_LevelCount(image_state.GetMipLevels(), create_info.subresourceRange).c_str());
             }
@@ -2416,7 +2469,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                 skip |= LogError(
                     "VUID-VkImageViewCreateInfo-image-09487", create_info.image, create_info_loc.dot(Field::image),
                     "was created with VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT bit, "
-                    "and the image view format (%s) is uncompressed, but subresourceRange.layerCount is %s (instead of 1).%s",
+                    "and the image view format ({}) is uncompressed, but subresourceRange.layerCount is {} (instead of 1).{}",
                     string_VkFormat(view_format),
                     string_LayerCount(image_state.GetArrayLayers(), create_info.subresourceRange).c_str(),
                     !IsExtEnabled(extensions.vk_khr_maintenance6) ? "\nHint: This can be allowed if VK_KHR_maintenance6 is enabled "
@@ -2426,7 +2479,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             if (!AreFormatsSizeCompatible(view_format, image_format, aspect_mask)) {
                 skip |= LogError("VUID-VkImageViewCreateInfo-image-01583", create_info.image, create_info_loc.dot(Field::image),
                                  "was created with VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT bit and "
-                                 "format (%s), but the uncompressed image view format (%s) is not size compatible. %s",
+                                 "format ({}), but the uncompressed image view format ({}) is not size compatible. {}",
                                  string_VkFormat(image_format), string_VkFormat(view_format),
                                  DescribeFormatsSizeCompatible(image_format, view_format).c_str());
             }
@@ -2434,7 +2487,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             // both image and view are compressed format, the BLOCK_TEXEL_VIEW_COMPATIBLE is set for no reason here
             if (vkuFormatCompatibilityClass(view_format) != vkuFormatCompatibilityClass(image_format)) {
                 skip |= LogError("VUID-VkImageViewCreateInfo-image-01583", create_info.image, create_info_loc.dot(Field::format),
-                                 "(%s) and the image format (%s) are not compatible.", string_VkFormat(view_format),
+                                 "({}) and the image format ({}) are not compatible.", string_VkFormat(view_format),
                                  string_VkFormat(image_format));
             }
         }
@@ -2447,9 +2500,9 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                              "fragmentDensityMapDeferred feature is not enabled.");
         }
         if (create_info.flags & VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DYNAMIC_BIT_EXT) {
-            skip |= LogError("VUID-VkImageViewCreateInfo-flags-03568", create_info.image, create_info_loc.dot(Field::flags),
-                             "(%s) includes both DEFERRED_BIT and DYNAMIC_BIT.",
-                             string_VkImageViewCreateFlags(create_info.flags).c_str());
+            skip |=
+                LogError("VUID-VkImageViewCreateInfo-flags-03568", create_info.image, create_info_loc.dot(Field::flags),
+                         "({}) includes both DEFERRED_BIT and DYNAMIC_BIT.", vvl::Flags::ImageViewCreateFlags(create_info.flags));
         }
     }
     if (IsExtEnabled(extensions.vk_ext_fragment_density_map2)) {
@@ -2458,7 +2511,7 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             skip |= LogError("VUID-VkImageViewCreateInfo-image-03569", create_info.image, create_info_loc.dot(Field::image),
                              "was created with flags containing "
                              "VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT and usage containing VK_IMAGE_USAGE_SAMPLED_BIT "
-                             "but subresourceRange.layerCount (%s) must be less than or equal to maxSubsampledArrayLayers (%" PRIu32
+                             "but subresourceRange.layerCount ({}) must be less than or equal to maxSubsampledArrayLayers ({}"
                              ")",
                              string_LayerCount(image_state.GetArrayLayers(), create_info.subresourceRange).c_str(),
                              phys_dev_ext_props.fragment_density_map2_props.maxSubsampledArrayLayers);
@@ -2502,15 +2555,15 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         if ((!enabled_features.minLod) && (image_view_min_lod->minLod != 0)) {
             skip |= LogError("VUID-VkImageViewMinLodCreateInfoEXT-minLod-06455", create_info.image,
                              create_info_loc.pNext(Struct::VkImageViewMinLodCreateInfoEXT, Field::minLod),
-                             "is %f, but the minLod feature was not enabled.", image_view_min_lod->minLod);
+                             "is {:f}, but the minLod feature was not enabled.", image_view_min_lod->minLod);
         }
         const float max_level =
             static_cast<float>(create_info.subresourceRange.baseMipLevel + (normalized_subresource_range.levelCount - 1));
         if (image_view_min_lod->minLod > max_level) {
             skip |= LogError("VUID-VkImageViewMinLodCreateInfoEXT-minLod-06456", create_info.image,
                              create_info_loc.pNext(Struct::VkImageViewMinLodCreateInfoEXT, Field::minLod),
-                             "(%f) must be less than or equal to the index of the last mipmap level "
-                             "accessible to the view (%f).",
+                             "({:f}) must be less than or equal to the index of the last mipmap level "
+                             "accessible to the view ({:f}).",
                              image_view_min_lod->minLod, max_level);
         }
     }
@@ -2521,13 +2574,13 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
         if (ycbcr_state && (create_info.format != ycbcr_state->create_info.format)) {
             skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06658", create_info.image,
                              create_info_loc.pNext(Struct::VkSamplerYcbcrConversionInfo, Field::conversion),
-                             "was created with format %s which is different than create_info.format %s.",
+                             "was created with format {} which is different than create_info.format {}.",
                              string_VkFormat(ycbcr_state->create_info.format), string_VkFormat(view_format));
         }
     } else if ((image_usage & VK_IMAGE_USAGE_SAMPLED_BIT) && FormatRequiresYcbcrConversionExplicitly(view_format)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-format-06415", create_info.image, create_info_loc.dot(Field::image),
-                         "was created with VK_IMAGE_USAGE_SAMPLED_BIT, but create_info.format %s requires a "
-                         "VkSamplerYcbcrConversion but one was not passed in the pNext chain.\n%s",
+                         "was created with VK_IMAGE_USAGE_SAMPLED_BIT, but create_info.format {} requires a "
+                         "VkSamplerYcbcrConversion but one was not passed in the pNext chain.\n{}",
                          string_VkFormat(view_format), PrintPNextChain(Struct::VkImageViewCreateInfo, create_info.pNext).c_str());
     }
 
@@ -2536,21 +2589,21 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
                                          VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
         if (image_usage & decode_usage) {
             skip |= LogError("VUID-VkImageViewCreateInfo-image-04817", create_info.image, create_info_loc.dot(Field::viewType),
-                             "%s is incompatible with video decode usage.", string_VkImageViewType(create_info.viewType));
+                             "{} is incompatible with video decode usage.", string_VkImageViewType(create_info.viewType));
         }
 
         VkImageUsageFlags encode_usage = VK_IMAGE_USAGE_VIDEO_ENCODE_DST_BIT_KHR | VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR |
                                          VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR;
         if (image_usage & encode_usage) {
             skip |= LogError("VUID-VkImageViewCreateInfo-image-04818", create_info.image, create_info_loc.dot(Field::viewType),
-                             "%s is incompatible with video encode usage.", string_VkImageViewType(create_info.viewType));
+                             "{} is incompatible with video encode usage.", string_VkImageViewType(create_info.viewType));
         }
 
         VkImageUsageFlags quantization_map_usage =
             VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR | VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR;
         if (image_usage & quantization_map_usage) {
             skip |= LogError("VUID-VkImageViewCreateInfo-image-10261", create_info.image, create_info_loc.dot(Field::viewType),
-                             "%s is incompatible with video encode quantization map usage.",
+                             "{} is incompatible with video encode quantization map usage.",
                              string_VkImageViewType(create_info.viewType));
         }
     }
@@ -2566,9 +2619,9 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
             vku::FindStructInPNextChain<VkOpaqueCaptureDescriptorDataCreateInfoEXT>(create_info.pNext);
         opaque_capture_descriptor_buffer && !(create_info.flags & VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-08107", create_info.image, create_info_loc.dot(Field::flags),
-                         "(%s) is missing VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT but "
-                         "VkOpaqueCaptureDescriptorDataCreateInfoEXT is in pNext chain.\n%s",
-                         string_VkImageViewCreateFlags(create_info.flags).c_str(),
+                         "({}) is missing VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT but "
+                         "VkOpaqueCaptureDescriptorDataCreateInfoEXT is in pNext chain.\n{}",
+                         vvl::Flags::ImageViewCreateFlags(create_info.flags),
                          PrintPNextChain(Struct::VkImageViewCreateInfo, create_info.pNext).c_str());
     }
 
@@ -2577,13 +2630,14 @@ bool CoreChecks::ValidateImageViewCreateInfo(const VkImageViewCreateInfo& create
     // If Chroma subsampled format ( _420_ or _422_ )
     if (vkuFormatIsXChromaSubsampled(view_format) && !IsIntegerMultipleOf(image_state.GetExtent().width, 2)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-format-04714", device, create_info_loc.dot(Field::format),
-                         "(%s) is X Chroma Subsampled (has _422 or _420 suffix) so the image width (%" PRIu32
+                         "({}) is X Chroma Subsampled (has _422 or _420 suffix) so the image width ({}"
                          ") must be a multiple of 2.",
                          string_VkFormat(view_format), image_state.GetExtent().width);
     }
     if (vkuFormatIsYChromaSubsampled(view_format) && !IsIntegerMultipleOf(image_state.GetExtent().height, 2)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-format-04715", device, create_info_loc.dot(Field::format),
-                         "(%s) is Y Chroma Subsampled (has _420 suffix) so the image height (%" PRIu32 ") must be a multiple of 2.",
+                         "({}) is Y Chroma Subsampled (has _420 suffix) so the image height ({}"
+                         ") must be a multiple of 2.",
                          string_VkFormat(view_format), image_state.GetExtent().height);
     }
 
@@ -2621,8 +2675,8 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
     if (CountSetBits(aspect_mask) != 1) {
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-aspectMask-00997" : "VUID-vkGetImageSubresourceLayout-aspectMask-00997";
-        skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask), "(%s) must have exactly 1 bit set.",
-                         string_VkImageAspectFlags(aspect_mask).c_str());
+        skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask), "({}) must have exactly 1 bit set.",
+                         vvl::Flags::ImageAspectFlags(aspect_mask));
     }
 
     // mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
@@ -2630,7 +2684,9 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-mipLevel-01716" : "VUID-vkGetImageSubresourceLayout-mipLevel-01716";
         skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::mipLevel),
-                         "(%" PRIu32 ") must be less than the mipLevels used to create the image (%" PRIu32 ").",
+                         "({}"
+                         ") must be less than the mipLevels used to create the image ({}"
+                         ").",
                          subresource.mipLevel, image_state.GetMipLevels());
     }
 
@@ -2639,7 +2695,9 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-arrayLayer-01717" : "VUID-vkGetImageSubresourceLayout-arrayLayer-01717";
         skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::arrayLayer),
-                         "(%" PRIu32 ") must be less than the arrayLayers used to create the image (%" PRIu32 ").",
+                         "({}"
+                         ") must be less than the arrayLayers used to create the image ({}"
+                         ").",
                          subresource.arrayLayer, image_state.GetArrayLayers());
     }
 
@@ -2651,7 +2709,7 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-format-08886" : "VUID-vkGetImageSubresourceLayout-format-08886";
         skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                         "is %s but image was created with color format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                         "is {} but image was created with color format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                          string_VkFormat(image_format));
     }
 
@@ -2659,7 +2717,7 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-format-04462" : "VUID-vkGetImageSubresourceLayout-format-04462";
         skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                         "is %s but image was created with depth format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                         "is {} but image was created with depth format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                          string_VkFormat(image_format));
     }
 
@@ -2667,7 +2725,7 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         const char* vuid =
             is_2 ? "VUID-vkGetImageSubresourceLayout2-format-04463" : "VUID-vkGetImageSubresourceLayout-format-04463";
         skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                         "is %s but image was created with stencil format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                         "is {} but image was created with stencil format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                          string_VkFormat(image_format));
     }
 
@@ -2676,7 +2734,7 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
             const char* vuid =
                 is_2 ? "VUID-vkGetImageSubresourceLayout2-format-04464" : "VUID-vkGetImageSubresourceLayout-format-04464";
             skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                             "is %s but image was created with format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                             "is {} but image was created with format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                              string_VkFormat(image_format));
         }
     }
@@ -2686,17 +2744,16 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
         if (vkuFormatIsMultiplane(image_format) && !IsOnlyOneValidPlaneAspect(image_format, aspect_mask)) {
             const char* vuid =
                 is_2 ? "VUID-vkGetImageSubresourceLayout2-tiling-08717" : "VUID-vkGetImageSubresourceLayout-tiling-08717";
-            skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask), "(%s) is invalid for format %s.",
-                             string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_format));
+            skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask), "({}) is invalid for format {}.",
+                             vvl::Flags::ImageAspectFlags(aspect_mask), string_VkFormat(image_format));
         }
     } else if (image_state.GetTiling() == VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
         if ((aspect_mask != VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT) && (aspect_mask != VK_IMAGE_ASPECT_MEMORY_PLANE_1_BIT_EXT) &&
             (aspect_mask != VK_IMAGE_ASPECT_MEMORY_PLANE_2_BIT_EXT) && (aspect_mask != VK_IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT)) {
             const char* vuid =
                 is_2 ? "VUID-vkGetImageSubresourceLayout2-tiling-09435" : "VUID-vkGetImageSubresourceLayout-tiling-09433";
-            skip |=
-                LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                         "(%s) must be VK_IMAGE_ASPECT_MEMORY_PLANE_i_BIT_EXT.", string_VkImageAspectFlags(aspect_mask).c_str());
+            skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
+                             "({}) must be VK_IMAGE_ASPECT_MEMORY_PLANE_i_BIT_EXT.", vvl::Flags::ImageAspectFlags(aspect_mask));
         } else {
             VkImageDrmFormatModifierPropertiesEXT drm_format_properties = vku::InitStructHelper();
             DispatchGetImageDrmFormatModifierPropertiesEXT(device, image_state.VkHandle(), &drm_format_properties);
@@ -2734,9 +2791,10 @@ bool CoreChecks::ValidateGetImageSubresourceLayout(const vvl::Image& image_state
                 const char* vuid =
                     is_2 ? "VUID-vkGetImageSubresourceLayout2-tiling-09435" : "VUID-vkGetImageSubresourceLayout-tiling-09433";
                 skip |= LogError(vuid, image_state.Handle(), subresource_loc.dot(Field::aspectMask),
-                                 "is %s for image format %s, but drmFormatModifierPlaneCount is %" PRIu32
-                                 " (drmFormatModifier = %" PRIu64 ").",
-                                 string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_state.GetFormat()),
+                                 "is {} for image format {}, but drmFormatModifierPlaneCount is {}"
+                                 " (drmFormatModifier = {}"
+                                 ").",
+                                 vvl::Flags::ImageAspectFlags(aspect_mask), string_VkFormat(image_state.GetFormat()),
                                  max_plane_count, drm_format_properties.drmFormatModifier);
             }
         }
@@ -2762,7 +2820,7 @@ bool CoreChecks::PreCallValidateGetImageSubresourceLayout(VkDevice device, VkIma
         const VkImageTiling image_tiling = image_state->GetTiling();
         if (image_tiling != VK_IMAGE_TILING_LINEAR && image_tiling != VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
             skip |= LogError("VUID-vkGetImageSubresourceLayout-image-07790", image, error_obj.location,
-                             "image was created with tiling %s.", string_VkImageTiling(image_tiling));
+                             "image was created with tiling {}.", string_VkImageTiling(image_tiling));
         }
     }
     return skip;
@@ -2801,7 +2859,7 @@ bool CoreChecks::PreCallValidateGetImageDrmFormatModifierPropertiesEXT(VkDevice 
         if (image_state->GetTiling() != VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
             skip |=
                 LogError("VUID-vkGetImageDrmFormatModifierPropertiesEXT-image-02272", image, error_obj.location.dot(Field::image),
-                         "was created with tiling %s.", string_VkImageTiling(image_state->GetTiling()));
+                         "was created with tiling {}.", string_VkImageTiling(image_state->GetTiling()));
         }
     }
     return skip;
@@ -2825,22 +2883,22 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
         if ((image_state->usage & VK_IMAGE_USAGE_HOST_TRANSFER_BIT) == 0) {
             const LogObjectList objlist(device, image_state->Handle());
             skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-09055", objlist, transition_loc.dot(Field::image),
-                             "was created with usage (%s) which does not contain "
+                             "was created with usage ({}) which does not contain "
                              "VK_IMAGE_USAGE_HOST_TRANSFER_BIT.",
-                             string_VkImageUsageFlags2KHR(image_state->usage).c_str());
+                             vvl::Flags::ImageUsageFlags2KHR(image_state->usage));
         }
 
         if (!enabled_features.synchronization2) {
             if (IsValueIn(transition.oldLayout, {VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL})) {
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-synchronization2-07793", objlist,
-                                 transition_loc.dot(Field::oldLayout), "is %s but the synchronization2 feature was not enabled.",
+                                 transition_loc.dot(Field::oldLayout), "is {} but the synchronization2 feature was not enabled.",
                                  string_VkImageLayout(transition.oldLayout));
             }
             if (IsValueIn(transition.newLayout, {VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL})) {
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-synchronization2-07794", objlist,
-                                 transition_loc.dot(Field::newLayout), "is %s but the synchronization2 feature was not enabled.",
+                                 transition_loc.dot(Field::newLayout), "is {} but the synchronization2 feature was not enabled.",
                                  string_VkImageLayout(transition.newLayout));
             }
         }
@@ -2850,14 +2908,14 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-dynamicRenderingLocalRead-09551", objlist,
                                  transition_loc.dot(Field::oldLayout),
-                                 "is %s but the dynamicRenderingLocalRead feature was not enabled",
+                                 "is {} but the dynamicRenderingLocalRead feature was not enabled",
                                  string_VkImageLayout(transition.oldLayout));
             }
             if (transition.newLayout == VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ) {
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-dynamicRenderingLocalRead-09552", objlist,
                                  transition_loc.dot(Field::newLayout),
-                                 "is %s but the dynamicRenderingLocalRead feature was not enabled",
+                                 "is {} but the dynamicRenderingLocalRead feature was not enabled",
                                  string_VkImageLayout(transition.newLayout));
             }
         }
@@ -2867,7 +2925,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
             if (!enabled_features.zeroInitializeDeviceMemory) {
                 skip |=
                     LogError("VUID-VkHostImageLayoutTransitionInfo-oldLayout-10767", objlist, transition_loc.dot(Field::oldLayout),
-                             "is %s, but the zeroInitializeDeviceMemory feature was not enabled.",
+                             "is {}, but the zeroInitializeDeviceMemory feature was not enabled.",
                              string_VkImageLayout(transition.oldLayout));
             }
             skip |= ValidateImageBarrierZeroInitializedSubresourceRange(transition.subresourceRange, *image_state, objlist,
@@ -2878,7 +2936,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-attachmentFeedbackLoopLayout-07313", objlist,
                                  transition_loc.dot(Field::newLayout),
-                                 "is %s, but the attachmentFeedbackLoopLayout feature was not enabled.",
+                                 "is {}, but the attachmentFeedbackLoopLayout feature was not enabled.",
                                  string_VkImageLayout(transition.newLayout));
             }
         }
@@ -2912,14 +2970,14 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-09241", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s (not VK_IMAGE_ASPECT_COLOR_BIT) and image was created with format %s.",
-                                 string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_format));
+                                 "is {} (not VK_IMAGE_ASPECT_COLOR_BIT) and image was created with format {}.",
+                                 vvl::Flags::ImageAspectFlags(aspect_mask), string_VkFormat(image_format));
             } else if (!image_state->disjoint) {
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-09242", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s (not VK_IMAGE_ASPECT_COLOR_BIT) and image was created with format %s.",
-                                 string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_format));
+                                 "is {} (not VK_IMAGE_ASPECT_COLOR_BIT) and image was created with format {}.",
+                                 vvl::Flags::ImageAspectFlags(aspect_mask), string_VkFormat(image_format));
             }
         }
         if ((vkuFormatIsMultiplane(image_format)) && (image_state->disjoint)) {
@@ -2927,7 +2985,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-01672", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s and image was created with format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                                 "is {} and image was created with format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                                  string_VkFormat(image_format));
             }
         }
@@ -2937,7 +2995,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                     const LogObjectList objlist(device, image_state->Handle());
                     skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-03319", objlist,
                                      transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                     "is %s and image was created with format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                                     "is {} and image was created with format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                                      string_VkFormat(image_format));
                 }
             } else {
@@ -2945,8 +3003,8 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                     const LogObjectList objlist(device, image_state->Handle());
                     skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-03320", objlist,
                                      transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                     "is %s and image was created with format %s.%s",
-                                     string_VkImageAspectFlags(aspect_mask).c_str(), string_VkFormat(image_format),
+                                     "is {} and image was created with format {}.{}", vvl::Flags::ImageAspectFlags(aspect_mask),
+                                     string_VkFormat(image_format),
                                      (has_depth_mask || has_stencil_mask)
                                          ? "\nHint: Using only the depth or stencil aspect can be allowed if the "
                                            "separateDepthStencilLayouts feature is enabled."
@@ -2958,7 +3016,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-10749", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s and image was created with format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                                 "is {} and image was created with format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                                  string_VkFormat(image_format));
             }
         } else if (vkuFormatIsStencilOnly(image_format)) {
@@ -2966,7 +3024,7 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-image-10750", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s and image was created with format %s.", string_VkImageAspectFlags(aspect_mask).c_str(),
+                                 "is {} and image was created with format {}.", vvl::Flags::ImageAspectFlags(aspect_mask),
                                  string_VkFormat(image_format));
             }
         }
@@ -2978,10 +3036,10 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-aspectMask-08702", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s meaning that neither oldLayout nor newLayout can be "
+                                 "is {} meaning that neither oldLayout nor newLayout can be "
                                  "VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL or VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL"
-                                 " (oldLayout = %s and newLayout = %s).",
-                                 string_VkImageAspectFlags(aspect_mask).c_str(), string_VkImageLayout(transition.oldLayout),
+                                 " (oldLayout = {} and newLayout = {}).",
+                                 vvl::Flags::ImageAspectFlags(aspect_mask), string_VkImageLayout(transition.oldLayout),
                                  string_VkImageLayout(transition.newLayout));
             }
         }
@@ -2993,10 +3051,10 @@ bool CoreChecks::PreCallValidateTransitionImageLayout(VkDevice device, uint32_t 
                 const LogObjectList objlist(device, image_state->Handle());
                 skip |= LogError("VUID-VkHostImageLayoutTransitionInfo-aspectMask-08703", objlist,
                                  transition_loc.dot(Field::subresourceRange).dot(Field::aspectMask),
-                                 "is %s meaning that neither oldLayout nor newLayout can be "
+                                 "is {} meaning that neither oldLayout nor newLayout can be "
                                  "VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL or VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL"
-                                 " (oldLayout = %s and newLayout = %s).",
-                                 string_VkImageAspectFlags(aspect_mask).c_str(), string_VkImageLayout(transition.oldLayout),
+                                 " (oldLayout = {} and newLayout = {}).",
+                                 vvl::Flags::ImageAspectFlags(aspect_mask), string_VkImageLayout(transition.oldLayout),
                                  string_VkImageLayout(transition.newLayout));
             }
         }
@@ -3052,8 +3110,8 @@ bool CoreChecks::ValidateProtectedImage(const vvl::CommandBuffer& cb_state, cons
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == true) && (image_state.unprotected == false)) {
         const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
         skip |= LogError(vvl::GetProtectedVUID(loc), objlist, loc,
-                         "(%s) is a protected image, but command buffer (%s) is unprotected.%s", FormatHandle(image_state).c_str(),
-                         FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is a protected image, but command buffer ({}) is unprotected.{}", Handle(image_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -3067,8 +3125,8 @@ bool CoreChecks::ValidateUnprotectedImage(const vvl::CommandBuffer& cb_state, co
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == false) && (image_state.unprotected == true)) {
         const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
         skip |= LogError(vvl::GetUnprotectedVUID(loc), objlist, loc,
-                         "(%s) is an unprotected image, but command buffer (%s) is protected.%s", FormatHandle(image_state).c_str(),
-                         FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is an unprotected image, but command buffer ({}) is protected.{}", Handle(image_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -3104,39 +3162,39 @@ bool CoreChecks::ValidateImageViewSampleWeightQCOM(const VkImageViewCreateInfo& 
         skip |= LogError(
             "VUID-VkImageViewCreateInfo-pNext-06946", create_info.image, create_info_loc.dot(Field::pNext),
             "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-            "but not all members of pCreateInfo->components have identity swizzle. Here are the actual swizzle values:\n%s",
+            "but not all members of pCreateInfo->components have identity swizzle. Here are the actual swizzle values:\n{}",
             string_VkComponentMapping(create_info.components).c_str());
     }
 
     if (aspect_mask != VK_IMAGE_ASPECT_COLOR_BIT) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06947", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "but the subresource range aspect mask (%s) is not VK_IMAGE_ASPECT_COLOR_BIT.",
-                         string_VkImageAspectFlags(aspect_mask).c_str());
+                         "but the subresource range aspect mask ({}) is not VK_IMAGE_ASPECT_COLOR_BIT.",
+                         vvl::Flags::ImageAspectFlags(aspect_mask));
     }
     if (normalized_subresource_range.levelCount != 1) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06948", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "so subresourceRange.levelCount must be 1, but it is %s.",
+                         "so subresourceRange.levelCount must be 1, but it is {}.",
                          string_LevelCount(image_state.GetMipLevels(), create_info.subresourceRange).c_str());
     }
     if ((create_info.viewType != VK_IMAGE_VIEW_TYPE_1D_ARRAY) && (create_info.viewType != VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06949", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "but the view type (%s) is not VK_IMAGE_VIEW_TYPE_1D_ARRAY or VK_IMAGE_VIEW_TYPE_2D_ARRAY.",
+                         "but the view type ({}) is not VK_IMAGE_VIEW_TYPE_1D_ARRAY or VK_IMAGE_VIEW_TYPE_2D_ARRAY.",
                          string_VkImageViewType(create_info.viewType));
     }
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) && (image_type != VK_IMAGE_TYPE_1D)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06950", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "and the viewType is VK_IMAGE_VIEW_TYPE_1D_ARRAY but the image type (%s) is not VK_IMAGE_TYPE_1D.",
+                         "and the viewType is VK_IMAGE_VIEW_TYPE_1D_ARRAY but the image type ({}) is not VK_IMAGE_TYPE_1D.",
                          string_VkImageType(image_type));
     }
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) && (normalized_subresource_range.layerCount != 2)) {
         skip |=
             LogError("VUID-VkImageViewCreateInfo-pNext-06951", create_info.image, create_info_loc.dot(Field::pNext),
                      "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                     "and the view type is VK_IMAGE_VIEW_TYPE_1D_ARRAY so the subresourceRange.layerCount must be 2, but it is %s.",
+                     "and the view type is VK_IMAGE_VIEW_TYPE_1D_ARRAY so the subresourceRange.layerCount must be 2, but it is {}.",
                      string_LayerCount(image_state.GetArrayLayers(), create_info.subresourceRange).c_str());
     }
 
@@ -3146,16 +3204,19 @@ bool CoreChecks::ValidateImageViewSampleWeightQCOM(const VkImageViewCreateInfo& 
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) && (image_extent.width < min_image_width)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06952", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "for a VK_IMAGE_VIEW_TYPE_1D_ARRAY with an image created with extent.width (%" PRIu32
-                         "), but numPhases (%" PRIu32 "), filterSize.width (%" PRIu32 "), and filterSize.height (%" PRIu32
-                         ") requires an image extent.width greater than or equal to (%" PRIu32 ").",
+                         "for a VK_IMAGE_VIEW_TYPE_1D_ARRAY with an image created with extent.width ({}"
+                         "), but numPhases ({}"
+                         "), filterSize.width ({}"
+                         "), and filterSize.height ({}"
+                         ") requires an image extent.width greater than or equal to ({}"
+                         ").",
                          image_extent.width, sample_weight_info->numPhases, sample_weight_info->filterSize.width,
                          sample_weight_info->filterSize.height, min_image_width);
     }
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY) && (image_type != VK_IMAGE_TYPE_2D)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06953", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "and the view type is VK_IMAGE_VIEW_TYPE_2D_ARRAY but the image created type (%s) is "
+                         "and the view type is VK_IMAGE_VIEW_TYPE_2D_ARRAY but the image created type ({}) is "
                          "not VK_IMAGE_TYPE_2D.",
                          string_VkImageType(image_type));
     }
@@ -3163,33 +3224,37 @@ bool CoreChecks::ValidateImageViewSampleWeightQCOM(const VkImageViewCreateInfo& 
         (normalized_subresource_range.layerCount < (sample_weight_info->numPhases))) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06954", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "and the view type is VK_IMAGE_VIEW_TYPE_2D_ARRAY but the subresourceRange.layerCount (%s) is not greater "
+                         "and the view type is VK_IMAGE_VIEW_TYPE_2D_ARRAY but the subresourceRange.layerCount ({}) is not greater "
                          "than or equal to "
-                         "VkImageViewSampleWeightCreateInfoQCOM::numPhases (%" PRIu32 ").",
+                         "VkImageViewSampleWeightCreateInfoQCOM::numPhases ({}"
+                         ").",
                          string_LayerCount(image_state.GetArrayLayers(), create_info.subresourceRange).c_str(),
                          sample_weight_info->numPhases);
     }
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY) && (image_extent.width < sample_weight_info->filterSize.width)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06955", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "for a VK_IMAGE_VIEW_TYPE_2D_ARRAY but the created image extent.width (%" PRIu32
-                         ") is not greater than or equal to filterSize.width (%" PRIu32 ").",
+                         "for a VK_IMAGE_VIEW_TYPE_2D_ARRAY but the created image extent.width ({}"
+                         ") is not greater than or equal to filterSize.width ({}"
+                         ").",
                          image_extent.width, sample_weight_info->filterSize.width);
     }
     if ((create_info.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY) && (image_extent.height < sample_weight_info->filterSize.height)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06956", create_info.image, create_info_loc.dot(Field::pNext),
                          "chain includes VkImageViewSampleWeightCreateInfoQCOM "
-                         "for a VK_IMAGE_VIEW_TYPE_2D_ARRAY but the created image extent.height (%" PRIu32
-                         ") is not greater than or equal to filterSize.height (%" PRIu32 ").",
+                         "for a VK_IMAGE_VIEW_TYPE_2D_ARRAY but the created image extent.height ({}"
+                         ") is not greater than or equal to filterSize.height ({}"
+                         ").",
                          image_extent.height, sample_weight_info->filterSize.height);
     }
 
     const Location filter_size_loc = create_info_loc.pNext(vvl::Struct::VkImageViewSampleWeightCreateInfoQCOM, Field::filterSize);
     if ((sample_weight_info->filterSize.height > phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.height)) {
         skip |= LogError("VUID-VkImageViewCreateInfo-pNext-06957", create_info.image, filter_size_loc.dot(Field::height),
-                         "(%" PRIu32
+                         "({}"
                          ") is not less than or equal to "
-                         "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.height (%" PRIu32 ").",
+                         "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.height ({}"
+                         ").",
                          sample_weight_info->filterSize.height,
                          phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.height);
     }
@@ -3198,38 +3263,44 @@ bool CoreChecks::ValidateImageViewSampleWeightQCOM(const VkImageViewCreateInfo& 
     if ((sample_weight_info->filterSize.width > phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.width)) {
         skip |= LogError(
             "VUID-VkImageViewSampleWeightCreateInfoQCOM-filterSize-06958", create_info.image, filter_size_loc.dot(Field::width),
-            "(%" PRIu32
+            "({}"
             ") is not less than or equal to "
-            "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.width (%" PRIu32 ").",
+            "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.width ({}"
+            ").",
             sample_weight_info->filterSize.width, phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.width);
     }
     if ((sample_weight_info->filterSize.height > phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.height)) {
         skip |= LogError(
             "VUID-VkImageViewSampleWeightCreateInfoQCOM-filterSize-06959", create_info.image, filter_size_loc.dot(Field::height),
-            "(%" PRIu32
+            "({}"
             ") is not less than or equal to "
-            "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.height (%" PRIu32 ").",
+            "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterDimension.height ({}"
+            ").",
             sample_weight_info->filterSize.height, phys_dev_ext_props.image_processing_props.maxWeightFilterDimension.height);
     }
 
     const Location filter_center_loc =
         create_info_loc.pNext(vvl::Struct::VkImageViewSampleWeightCreateInfoQCOM, Field::filterCenter);
     if ((static_cast<uint32_t>(sample_weight_info->filterCenter.x) >= sample_weight_info->filterSize.width)) {
-        skip |= LogError(
-            "VUID-VkImageViewSampleWeightCreateInfoQCOM-filterCenter-06960", create_info.image, filter_center_loc.dot(Field::x),
-            "(%" PRId32 ") is not in the range [0, VkImageViewSampleWeightCreateInfoQCOM::filterSize.width (%" PRIu32 ") - 1].",
-            sample_weight_info->filterCenter.x, sample_weight_info->filterSize.width);
+        skip |= LogError("VUID-VkImageViewSampleWeightCreateInfoQCOM-filterCenter-06960", create_info.image,
+                         filter_center_loc.dot(Field::x),
+                         "({}"
+                         ") is not in the range [0, VkImageViewSampleWeightCreateInfoQCOM::filterSize.width ({}"
+                         ") - 1].",
+                         sample_weight_info->filterCenter.x, sample_weight_info->filterSize.width);
     }
     if ((static_cast<uint32_t>(sample_weight_info->filterCenter.y) >= sample_weight_info->filterSize.height)) {
-        skip |= LogError(
-            "VUID-VkImageViewSampleWeightCreateInfoQCOM-filterCenter-06961", create_info.image, filter_center_loc.dot(Field::y),
-            "(%" PRId32 ") is not in the range [0, VkImageViewSampleWeightCreateInfoQCOM::filterSize.height (%" PRIu32 ") - 1].",
-            sample_weight_info->filterCenter.y, sample_weight_info->filterSize.height);
+        skip |= LogError("VUID-VkImageViewSampleWeightCreateInfoQCOM-filterCenter-06961", create_info.image,
+                         filter_center_loc.dot(Field::y),
+                         "({}"
+                         ") is not in the range [0, VkImageViewSampleWeightCreateInfoQCOM::filterSize.height ({}"
+                         ") - 1].",
+                         sample_weight_info->filterCenter.y, sample_weight_info->filterSize.height);
     }
     if (!IsPowerOfTwo(sample_weight_info->numPhases) || (MostSignificantBit(sample_weight_info->numPhases) % 2 != 0)) {
         skip |= LogError("VUID-VkImageViewSampleWeightCreateInfoQCOM-numPhases-06962", create_info.image,
                          create_info_loc.pNext(vvl::Struct::VkImageViewSampleWeightCreateInfoQCOM, Field::numPhases),
-                         "(%" PRIu32
+                         "({}"
                          ") is not a power of two squared "
                          "value (i.e., 1, 4, 16, 64, 256, etc.)",
                          sample_weight_info->numPhases);
@@ -3237,9 +3308,10 @@ bool CoreChecks::ValidateImageViewSampleWeightQCOM(const VkImageViewCreateInfo& 
     if ((sample_weight_info->numPhases > phys_dev_ext_props.image_processing_props.maxWeightFilterPhases)) {
         skip |= LogError("VUID-VkImageViewSampleWeightCreateInfoQCOM-numPhases-06963", create_info.image,
                          create_info_loc.pNext(vvl::Struct::VkImageViewSampleWeightCreateInfoQCOM, Field::numPhases),
-                         "(%" PRIu32
+                         "({}"
                          ") is not less than or equal to "
-                         "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterPhases (%" PRIu32 ")",
+                         "VkPhysicalDeviceImageProcessingPropertiesQCOM::maxWeightFilterPhases ({}"
+                         ")",
                          sample_weight_info->numPhases, phys_dev_ext_props.image_processing_props.maxWeightFilterPhases);
     }
     return skip;

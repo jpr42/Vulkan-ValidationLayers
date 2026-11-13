@@ -17,8 +17,10 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 #include "generated/error_location_helper.h"
 #include "logging.h"
@@ -57,7 +59,14 @@ struct Location {
           debug_region(&debug_region),
           frame_id(frame_id) {}
 
-    void AppendFields(std::ostream &out) const;
+    // Calls `emit` with each piece of the fields text in order, without allocating. One non-template walk serves
+    // AppendFields and the Location formatter, whatever their output.
+    using EmitPiece = void (*)(void* context, std::string_view piece);
+    void VisitFields(EmitPiece emit, void* context) const;
+
+    // Append to `out` without allocating once it has capacity; the logging path reuses one buffer per thread
+    void AppendFields(std::string& out) const;
+    void AppendMessage(std::string& out) const;
 
     // Returns concatenated fields, does not include function part.
     std::string Fields() const;
@@ -97,6 +106,26 @@ struct Location {
 };
 
 std::string PrintPNextChain(vvl::Struct in_struct, const void* in_pNext);
+
+// "{}" with a Location writes the same text as Location::Fields()
+template <>
+struct VVL_FMT_NS::formatter<Location> {
+    // No format spec: anything before '}' is rejected by the backend's check
+    constexpr auto parse(VVL_FMT_NS::format_parse_context& ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const Location& loc, FormatContext& ctx) const {
+        using Out = decltype(ctx.out());
+        Out out = ctx.out();
+        loc.VisitFields(
+            [](void* context, std::string_view piece) {
+                Out& it = *static_cast<Out*>(context);
+                it = std::copy(piece.begin(), piece.end(), it);
+            },
+            &out);
+        return out;
+    }
+};
 
 // Contains the base information needed for errors to be logged out
 // Created for each function as a starting point to build off of

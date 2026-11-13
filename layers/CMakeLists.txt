@@ -288,6 +288,9 @@ target_sources(vvl_core PRIVATE
     ${API_TYPE}/generated/gpuav_offline_spirv.h
     ${API_TYPE}/generated/extended_flags_helper_generator.h
     ${API_TYPE}/generated/extended_flags_helper_generator.cpp
+    ${API_TYPE}/generated/flags_format_helper.h
+    ${API_TYPE}/generated/flags_format_helper.cpp
+    ${API_TYPE}/generated/flags_format_test_cases.h
     gpuav/core/gpuav.h
     gpuav/core/gpuav_features.cpp
     gpuav/core/gpuav_record.cpp
@@ -485,7 +488,12 @@ target_sources(vvl_core PRIVATE
     error_message/logging.cpp
     error_message/error_location.cpp
     error_message/error_location.h
+    error_message/format_backend.cpp
+    error_message/format_backend.h
     error_message/record_object.h
+    error_message/log_flags.cpp
+    error_message/log_flags.h
+    error_message/log_format.h
     error_message/log_message_type.h
     external/xxhash.h
     external/inplace_function.h
@@ -682,6 +690,13 @@ target_include_directories(vvl SYSTEM PRIVATE external)
 
 # Enables the spv::*ToString() helpers in spirv.hpp
 target_compile_definitions(vvl_core PRIVATE SPV_ENABLE_UTILITY_CODE)
+
+# PUBLIC: anything including error_message/format_backend.h must agree on the backend
+if (VVL_FORMAT_BACKEND STREQUAL "fmt")
+    find_package(fmt CONFIG REQUIRED)
+    target_compile_definitions(vvl_core PUBLIC VVL_FORMAT_BACKEND_FMT)
+    target_link_libraries(vvl_core PUBLIC fmt::fmt)
+endif()
 
 # Found to significantly cut VVL build time
 #

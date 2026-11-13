@@ -31,14 +31,18 @@ bool Device::manual_PreCallValidateQueueSetPerfHintQCOM(VkQueue queue, const VkP
 
     if (pPerfHintInfo) {
         if (pPerfHintInfo->type != VK_PERF_HINT_TYPE_FREQUENCY_SCALED_QCOM && pPerfHintInfo->scale != 0) {
-            skip |= LogError(
-                "VUID-VkPerfHintInfoQCOM-type-12389", queue, context.error_obj.location.dot(Field::pPerfHintInfo).dot(Field::scale),
-                "(%" PRIu32 ") is non-zero, but type is %s.", pPerfHintInfo->scale, string_VkPerfHintTypeQCOM(pPerfHintInfo->type));
+            skip |= LogError("VUID-VkPerfHintInfoQCOM-type-12389", queue,
+                             context.error_obj.location.dot(Field::pPerfHintInfo).dot(Field::scale),
+                             "({}"
+                             ") is non-zero, but type is {}.",
+                             pPerfHintInfo->scale, string_VkPerfHintTypeQCOM(pPerfHintInfo->type));
         }
         if (pPerfHintInfo->scale > 100) {
             skip |= LogError("VUID-VkPerfHintInfoQCOM-scale-12390", queue,
                              context.error_obj.location.dot(Field::pPerfHintInfo).dot(Field::scale),
-                             "(%" PRIu32 ") is greater than 100.", pPerfHintInfo->scale);
+                             "({}"
+                             ") is greater than 100.",
+                             pPerfHintInfo->scale);
         }
     }
 

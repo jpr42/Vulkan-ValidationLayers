@@ -28,17 +28,23 @@ bool Device::ValidateDrawIndirect2Info(VkCommandBuffer commandBuffer, const VkDr
 
     if (!IsPointerAligned(info.addressRange.address, 4u)) {
         skip |= LogError("VUID-VkDrawIndirect2InfoKHR-addressRange-13109", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::address), "(0x%" PRIx64 ") must be aligned to 4 bytes.",
+                         info_loc.dot(Field::addressRange).dot(Field::address),
+                         "(0x{:x}"
+                         ") must be aligned to 4 bytes.",
                          info.addressRange.address);
     }
 
     if (!enabled_features.multiDrawIndirect && (info.drawCount > 1)) {
         skip |= LogError("VUID-VkDrawIndirect2InfoKHR-drawCount-02718", commandBuffer, info_loc.dot(Field::drawCount),
-                         "(%" PRIu32 ") must be 0 or 1 if multiDrawIndirect feature is not enabled.", info.drawCount);
+                         "({}"
+                         ") must be 0 or 1 if multiDrawIndirect feature is not enabled.",
+                         info.drawCount);
     } else if (info.drawCount > phys_dev_props.limits.maxDrawIndirectCount) {
         skip |= LogError("VUID-VkDrawIndirect2InfoKHR-drawCount-02719", commandBuffer, info_loc.dot(Field::drawCount),
-                         "(%" PRIu32 ") is not less than or equal to maxDrawIndirectCount (%" PRIu32 ").", info.drawCount,
-                         phys_dev_props.limits.maxDrawIndirectCount);
+                         "({}"
+                         ") is not less than or equal to maxDrawIndirectCount ({}"
+                         ").",
+                         info.drawCount, phys_dev_props.limits.maxDrawIndirectCount);
     }
 
     return skip;
@@ -55,29 +61,36 @@ bool Device::manual_PreCallValidateCmdDrawIndirect2KHR(VkCommandBuffer commandBu
     if (pInfo->drawCount > 0) {
         const VkDeviceSize required_size = (pInfo->drawCount - 1) * address_range.stride + sizeof(VkDrawIndirectCommand);
         if (address_range.size < required_size) {
-            skip |=
-                LogError("VUID-vkCmdDrawIndirect2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::drawCount),
-                         "is %" PRIu32 " (non-zero), but addressRange.size (%" PRIu64 ") is less than the required size of %" PRIu64
-                         ".\nRequired size: (drawCount - 1) * stride + sizeof(VkDrawIndirectCommand) -> (%" PRIu32
-                         " - 1) * %" PRIu64 " + %zu",
-                         pInfo->drawCount, address_range.size, required_size, pInfo->drawCount, address_range.stride,
-                         sizeof(VkDrawIndirectCommand));
+            skip |= LogError("VUID-vkCmdDrawIndirect2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::drawCount),
+                             "is {}"
+                             " (non-zero), but addressRange.size ({}"
+                             ") is less than the required size of {}"
+                             ".\nRequired size: (drawCount - 1) * stride + sizeof(VkDrawIndirectCommand) -> ({}"
+                             " - 1) * {}"
+                             " + {}",
+                             pInfo->drawCount, address_range.size, required_size, pInfo->drawCount, address_range.stride,
+                             sizeof(VkDrawIndirectCommand));
         }
     }
     if (address_range.stride == 0) {
         if (pInfo->drawCount > 1) {
             skip |= LogError("VUID-vkCmdDrawIndirect2KHR-pInfo-13111", commandBuffer, info_loc.dot(Field::drawCount),
-                             "is %" PRIu32 ", but addressRange.stride is 0.", pInfo->drawCount);
+                             "is {}"
+                             ", but addressRange.stride is 0.",
+                             pInfo->drawCount);
         }
     } else if (address_range.stride < sizeof(VkDrawIndirectCommand)) {
         skip |=
             LogError("VUID-vkCmdDrawIndirect2KHR-pInfo-13112", commandBuffer, info_loc.dot(Field::addressRange).dot(Field::stride),
-                     "(%" PRIu64 ") must be at least sizeof(VkDrawIndirectCommand) (%zu).", address_range.stride,
-                     sizeof(VkDrawIndirectCommand));
+                     "({}"
+                     ") must be at least sizeof(VkDrawIndirectCommand) ({}).",
+                     address_range.stride, sizeof(VkDrawIndirectCommand));
     } else if (!IsIntegerMultipleOf(address_range.stride, 4u)) {
         skip |=
             LogError("VUID-vkCmdDrawIndirect2KHR-pInfo-13113", commandBuffer, info_loc.dot(Field::addressRange).dot(Field::stride),
-                     "(%" PRIu64 ") must be a multiple of 4.", address_range.stride);
+                     "({}"
+                     ") must be a multiple of 4.",
+                     address_range.stride);
     }
 
     return skip;
@@ -94,28 +107,35 @@ bool Device::manual_PreCallValidateCmdDrawIndexedIndirect2KHR(VkCommandBuffer co
     if (pInfo->drawCount > 0) {
         const VkDeviceSize required_size = (pInfo->drawCount - 1) * address_range.stride + sizeof(VkDrawIndexedIndirectCommand);
         if (address_range.size < required_size) {
-            skip |=
-                LogError("VUID-vkCmdDrawIndexedIndirect2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::drawCount),
-                         "is %" PRIu32 " (non-zero), but addressRange.size (%" PRIu64 ") is less than the required size of %" PRIu64
-                         ".\nRequired size: (drawCount - 1) * stride + sizeof(VkDrawIndexedIndirectCommand) -> (%" PRIu32
-                         " - 1) * %" PRIu64 " + %zu",
-                         pInfo->drawCount, address_range.size, required_size, pInfo->drawCount, address_range.stride,
-                         sizeof(VkDrawIndexedIndirectCommand));
+            skip |= LogError("VUID-vkCmdDrawIndexedIndirect2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::drawCount),
+                             "is {}"
+                             " (non-zero), but addressRange.size ({}"
+                             ") is less than the required size of {}"
+                             ".\nRequired size: (drawCount - 1) * stride + sizeof(VkDrawIndexedIndirectCommand) -> ({}"
+                             " - 1) * {}"
+                             " + {}",
+                             pInfo->drawCount, address_range.size, required_size, pInfo->drawCount, address_range.stride,
+                             sizeof(VkDrawIndexedIndirectCommand));
         }
     }
     if (address_range.stride == 0) {
         if (pInfo->drawCount > 1) {
             skip |= LogError("VUID-vkCmdDrawIndexedIndirect2KHR-pInfo-13111", commandBuffer, info_loc.dot(Field::drawCount),
-                             "is %" PRIu32 ", but addressRange.stride is 0.", pInfo->drawCount);
+                             "is {}"
+                             ", but addressRange.stride is 0.",
+                             pInfo->drawCount);
         }
     } else if (address_range.stride < sizeof(VkDrawIndexedIndirectCommand)) {
         skip |= LogError("VUID-vkCmdDrawIndexedIndirect2KHR-pInfo-13112", commandBuffer,
                          info_loc.dot(Field::addressRange).dot(Field::stride),
-                         "(%" PRIu64 ") must be at least sizeof(VkDrawIndexedIndirectCommand) (%zu).", address_range.stride,
-                         sizeof(VkDrawIndexedIndirectCommand));
+                         "({}"
+                         ") must be at least sizeof(VkDrawIndexedIndirectCommand) ({}).",
+                         address_range.stride, sizeof(VkDrawIndexedIndirectCommand));
     } else if (!IsIntegerMultipleOf(address_range.stride, 4u)) {
         skip |= LogError("VUID-vkCmdDrawIndexedIndirect2KHR-pInfo-13113", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::stride), "(%" PRIu64 ") must be a multiple of 4.",
+                         info_loc.dot(Field::addressRange).dot(Field::stride),
+                         "({}"
+                         ") must be a multiple of 4.",
                          address_range.stride);
     }
 
@@ -142,17 +162,23 @@ bool Device::ValidateDrawIndirectCount2Info(VkCommandBuffer commandBuffer, const
 
     if (!IsPointerAligned(info.addressRange.address, 4u)) {
         skip |= LogError("VUID-VkDrawIndirectCount2InfoKHR-addressRange-13109", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::address), "(0x%" PRIx64 ") must be aligned to 4 bytes.",
+                         info_loc.dot(Field::addressRange).dot(Field::address),
+                         "(0x{:x}"
+                         ") must be aligned to 4 bytes.",
                          info.addressRange.address);
     }
     if (!IsPointerAligned(info.countAddressRange.address, 4u)) {
         skip |= LogError("VUID-VkDrawIndirectCount2InfoKHR-countAddressRange-13115", commandBuffer,
-                         info_loc.dot(Field::countAddressRange).dot(Field::address), "(0x%" PRIx64 ") must be aligned to 4 bytes.",
+                         info_loc.dot(Field::countAddressRange).dot(Field::address),
+                         "(0x{:x}"
+                         ") must be aligned to 4 bytes.",
                          info.countAddressRange.address);
     }
     if (info.countAddressRange.size < 4) {
         skip |= LogError("VUID-VkDrawIndirectCount2InfoKHR-countAddressRange-13117", commandBuffer,
-                         info_loc.dot(Field::countAddressRange).dot(Field::size), "(%" PRIu64 ") is less than 4.",
+                         info_loc.dot(Field::countAddressRange).dot(Field::size),
+                         "({}"
+                         ") is less than 4.",
                          info.countAddressRange.size);
     }
 
@@ -177,28 +203,35 @@ bool Device::manual_PreCallValidateCmdDrawIndirectCount2KHR(VkCommandBuffer comm
     if (pInfo->maxDrawCount > 0) {
         const VkDeviceSize required_size = (pInfo->maxDrawCount - 1) * address_range.stride + sizeof(VkDrawIndirectCommand);
         if (address_range.size < required_size) {
-            skip |=
-                LogError("VUID-vkCmdDrawIndirectCount2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::maxDrawCount),
-                         "is %" PRIu32 " (non-zero), but addressRange.size (%" PRIu64 ") is less than the required size of %" PRIu64
-                         ".\nRequired size: (maxDrawCount - 1) * stride + sizeof(VkDrawIndirectCommand) -> (%" PRIu32
-                         " - 1) * %" PRIu64 " + %zu",
-                         pInfo->maxDrawCount, address_range.size, required_size, pInfo->maxDrawCount, address_range.stride,
-                         sizeof(VkDrawIndirectCommand));
+            skip |= LogError("VUID-vkCmdDrawIndirectCount2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::maxDrawCount),
+                             "is {}"
+                             " (non-zero), but addressRange.size ({}"
+                             ") is less than the required size of {}"
+                             ".\nRequired size: (maxDrawCount - 1) * stride + sizeof(VkDrawIndirectCommand) -> ({}"
+                             " - 1) * {}"
+                             " + {}",
+                             pInfo->maxDrawCount, address_range.size, required_size, pInfo->maxDrawCount, address_range.stride,
+                             sizeof(VkDrawIndirectCommand));
         }
     }
     if (address_range.stride == 0) {
         if (pInfo->maxDrawCount > 1) {
             skip |= LogError("VUID-vkCmdDrawIndirectCount2KHR-pInfo-13111", commandBuffer, info_loc.dot(Field::maxDrawCount),
-                             "is %" PRIu32 ", but addressRange.stride is 0.", pInfo->maxDrawCount);
+                             "is {}"
+                             ", but addressRange.stride is 0.",
+                             pInfo->maxDrawCount);
         }
     } else if (address_range.stride < sizeof(VkDrawIndirectCommand)) {
         skip |= LogError("VUID-vkCmdDrawIndirectCount2KHR-pInfo-13112", commandBuffer,
                          info_loc.dot(Field::addressRange).dot(Field::stride),
-                         "(%" PRIu64 ") must be at least sizeof(VkDrawIndirectCommand) (%zu).", address_range.stride,
-                         sizeof(VkDrawIndirectCommand));
+                         "({}"
+                         ") must be at least sizeof(VkDrawIndirectCommand) ({}).",
+                         address_range.stride, sizeof(VkDrawIndirectCommand));
     } else if (!IsIntegerMultipleOf(address_range.stride, 4u)) {
         skip |= LogError("VUID-vkCmdDrawIndirectCount2KHR-pInfo-13113", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::stride), "(%" PRIu64 ") must be a multiple of 4.",
+                         info_loc.dot(Field::addressRange).dot(Field::stride),
+                         "({}"
+                         ") must be a multiple of 4.",
                          address_range.stride);
     }
 
@@ -225,29 +258,36 @@ bool Device::manual_PreCallValidateCmdDrawIndexedIndirectCount2KHR(VkCommandBuff
     if (pInfo->maxDrawCount > 0) {
         const VkDeviceSize required_size = (pInfo->maxDrawCount - 1) * address_range.stride + sizeof(VkDrawIndexedIndirectCommand);
         if (address_range.size < required_size) {
-            skip |=
-                LogError("VUID-vkCmdDrawIndexedIndirectCount2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::maxDrawCount),
-                         "is %" PRIu32 " (non-zero), but addressRange.size (%" PRIu64 ") is less than the required size of %" PRIu64
-                         ".\nRequired size: (maxDrawCount - 1) * stride + sizeof(VkDrawIndexedIndirectCommand) -> (%" PRIu32
-                         " - 1) * %" PRIu64 " + %zu",
-                         pInfo->maxDrawCount, address_range.size, required_size, pInfo->maxDrawCount, address_range.stride,
-                         sizeof(VkDrawIndexedIndirectCommand));
+            skip |= LogError("VUID-vkCmdDrawIndexedIndirectCount2KHR-pInfo-13110", commandBuffer, info_loc.dot(Field::maxDrawCount),
+                             "is {}"
+                             " (non-zero), but addressRange.size ({}"
+                             ") is less than the required size of {}"
+                             ".\nRequired size: (maxDrawCount - 1) * stride + sizeof(VkDrawIndexedIndirectCommand) -> ({}"
+                             " - 1) * {}"
+                             " + {}",
+                             pInfo->maxDrawCount, address_range.size, required_size, pInfo->maxDrawCount, address_range.stride,
+                             sizeof(VkDrawIndexedIndirectCommand));
         }
     }
 
     if (address_range.stride == 0) {
         if (pInfo->maxDrawCount > 1) {
             skip |= LogError("VUID-vkCmdDrawIndexedIndirectCount2KHR-pInfo-13111", commandBuffer, info_loc.dot(Field::maxDrawCount),
-                             "is %" PRIu32 ", but addressRange.stride is 0.", pInfo->maxDrawCount);
+                             "is {}"
+                             ", but addressRange.stride is 0.",
+                             pInfo->maxDrawCount);
         }
     } else if (address_range.stride < sizeof(VkDrawIndexedIndirectCommand)) {
         skip |= LogError("VUID-vkCmdDrawIndexedIndirectCount2KHR-pInfo-13112", commandBuffer,
                          info_loc.dot(Field::addressRange).dot(Field::stride),
-                         "(%" PRIu64 ") must be at least sizeof(VkDrawIndexedIndirectCommand) (%zu).", address_range.stride,
-                         sizeof(VkDrawIndexedIndirectCommand));
+                         "({}"
+                         ") must be at least sizeof(VkDrawIndexedIndirectCommand) ({}).",
+                         address_range.stride, sizeof(VkDrawIndexedIndirectCommand));
     } else if (!IsIntegerMultipleOf(address_range.stride, 4u)) {
         skip |= LogError("VUID-vkCmdDrawIndexedIndirectCount2KHR-pInfo-13113", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::stride), "(%" PRIu64 ") must be a multiple of 4.",
+                         info_loc.dot(Field::addressRange).dot(Field::stride),
+                         "({}"
+                         ") must be a multiple of 4.",
                          address_range.stride);
     }
 
@@ -280,13 +320,16 @@ bool Device::manual_PreCallValidateCmdDispatchIndirect2KHR(VkCommandBuffer comma
     if (pInfo->addressRange.size < sizeof(VkDispatchIndirectCommand)) {
         skip |= LogError("VUID-vkCmdDispatchIndirect2KHR-pInfo-13050", commandBuffer,
                          info_loc.dot(Field::addressRange).dot(Field::size),
-                         "(%" PRIu64 ") is less than sizeof(VkDispatchIndirectCommand) (%zu).", pInfo->addressRange.size,
-                         sizeof(VkDispatchIndirectCommand));
+                         "({}"
+                         ") is less than sizeof(VkDispatchIndirectCommand) ({}).",
+                         pInfo->addressRange.size, sizeof(VkDispatchIndirectCommand));
     }
 
     if (!IsPointerAligned(pInfo->addressRange.address, 4u)) {
         skip |= LogError("VUID-VkDispatchIndirect2InfoKHR-addressRange-13109", commandBuffer,
-                         info_loc.dot(Field::addressRange).dot(Field::address), "(0x%" PRIx64 ") must be aligned to 4 bytes.",
+                         info_loc.dot(Field::addressRange).dot(Field::address),
+                         "(0x{:x}"
+                         ") must be aligned to 4 bytes.",
                          pInfo->addressRange.address);
     }
 

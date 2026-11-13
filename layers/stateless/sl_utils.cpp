@@ -28,8 +28,8 @@ bool Instance::CheckPromotedApiAgainstVulkanVersion(VkInstance instance, const L
     bool skip = false;
     if (api_version < promoted_version) {
         skip |= LogError("UNASSIGNED-API-Version-Violation", instance, loc,
-                         "Attempted to call with an effective API version of %s, "
-                         "but this API was not promoted until version %s.",
+                         "Attempted to call with an effective API version of {}, "
+                         "but this API was not promoted until version {}.",
                          StringAPIVersion(api_version).c_str(), StringAPIVersion(promoted_version).c_str());
     }
     return skip;
@@ -44,9 +44,9 @@ bool Instance::CheckPromotedApiAgainstVulkanVersion(VkPhysicalDevice pdev, const
         if (effective_api_version < promoted_version) {
             skip |= LogError(
                 "UNASSIGNED-API-Version-Violation", pdev, loc,
-                "Attempted to call with an effective API version of %s, "
-                "which is the minimum of version requested in pApplicationInfo (%s) and supported by this physical device (%s), "
-                "but this API was not promoted until version %s.",
+                "Attempted to call with an effective API version of {}, "
+                "which is the minimum of version requested in pApplicationInfo ({}) and supported by this physical device ({}), "
+                "but this API was not promoted until version {}.",
                 StringAPIVersion(effective_api_version).c_str(), StringAPIVersion(api_version).c_str(),
                 StringAPIVersion(target_pdev->second->apiVersion).c_str(), StringAPIVersion(promoted_version).c_str());
         }
@@ -56,11 +56,11 @@ bool Instance::CheckPromotedApiAgainstVulkanVersion(VkPhysicalDevice pdev, const
 
 bool Instance::OutputExtensionError(const Location& loc, const vvl::Extensions& extensions) const {
     return LogError("UNASSIGNED-GeneralParameterError-ExtensionNotEnabled", instance, loc,
-                    "function required extension %s which has not been enabled.\n", String(extensions).c_str());
+                    "function required extension {} which has not been enabled.\n", String(extensions).c_str());
 }
 bool Device::OutputExtensionError(const Location& loc, const vvl::Extensions& extensions) const {
     return LogError("UNASSIGNED-GeneralParameterError-ExtensionNotEnabled", device, loc,
-                    "function required extension %s which has not been enabled.\n", String(extensions).c_str());
+                    "function required extension {} which has not been enabled.\n", String(extensions).c_str());
 }
 
 static const uint8_t kUtF8OneByteCode = 0xC0;
@@ -128,7 +128,10 @@ bool Context::ValidateString(const Location& loc, const char* vuid, const char* 
     if (result == VK_STRING_ERROR_NONE) {
         return skip;
     } else if (result & VK_STRING_ERROR_LENGTH) {
-        skip |= log.LogError(vuid, error_obj.handle, loc, "exceeds max length %" PRIu32 ".", kMaxParamCheckerStringLength);
+        skip |= log.LogError(vuid, error_obj.handle, loc,
+                             "exceeds max length {}"
+                             ".",
+                             static_cast<unsigned int>(kMaxParamCheckerStringLength));
     } else if (result & VK_STRING_ERROR_BAD_DATA) {
         skip |= log.LogError(vuid, error_obj.handle, loc, "contains invalid characters or is badly formed.");
     }
@@ -249,18 +252,15 @@ bool Context::ValidateStructPnext(const Location& loc, const void* next, size_t 
             unique_stype_check.reserve(128);  // exception, pass all the feature structs
         }
 
-        const char* disclaimer =
-            "This error is based on the Valid Usage documentation for version %" PRIu32
-            " of the Vulkan header.\nIt is possible that "
-            "you are using a struct from a private extension or an extension that was added to a later version of the Vulkan "
-            "header, in which case the use of %s is undefined and may not work correctly with validation enabled";
-
         const Location pNext_loc = loc.dot(Field::pNext);
         if (allowed_type_count == 0) {
-            std::string message = "must be NULL.\n";
-            message += disclaimer;
-            skip |=
-                log.LogError(pnext_vuid, error_obj.handle, pNext_loc, message.c_str(), header_version, pNext_loc.Fields().c_str());
+            skip |= log.LogError(
+                pnext_vuid, error_obj.handle, pNext_loc,
+                "must be NULL.\n"
+                "This error is based on the Valid Usage documentation for version {} of the Vulkan header.\nIt is possible that "
+                "you are using a struct from a private extension or an extension that was added to a later version of the "
+                "Vulkan header, in which case the use of {} is undefined and may not work correctly with validation enabled",
+                header_version, pNext_loc);
         } else {
             const VkStructureType* start = allowed_types;
             const VkStructureType* end = allowed_types + allowed_type_count;
@@ -274,7 +274,7 @@ bool Context::ValidateStructPnext(const Location& loc, const void* next, size_t 
                     if (is_duplicate && !IsDuplicatePnext(current->sType)) {
                         // stype_vuid will only be null if there are no listed pNext and will hit disclaimer check
                         skip |= log.LogError(stype_vuid, error_obj.handle, pNext_loc,
-                                             "chain contains duplicate structure types: %s appears multiple times.\n%s",
+                                             "chain contains duplicate structure types: {} appears multiple times.\n{}",
                                              string_VkStructureName(current->sType), PrintPNextChain(loc.structure, next).c_str());
                         break;  // stop looping (since a circular cycle might have been hit)
                     } else if (!is_duplicate) {
@@ -284,21 +284,31 @@ bool Context::ValidateStructPnext(const Location& loc, const void* next, size_t 
                     if (std::find(start, end, current->sType) == end) {
                         const std::string type_name = string_VkStructureType(current->sType);
                         if (type_name.compare("Unhandled VkStructureType") == 0) {
-                            std::string message = "chain includes a structure with unknown VkStructureType (%" PRIu32 ").\n%s\n";
-                            message += disclaimer;
-                            skip |= log.LogError(pnext_vuid, error_obj.handle, pNext_loc, message.c_str(), current->sType,
-                                                 PrintPNextChain(Struct::Empty, next).c_str(), header_version,
-                                                 pNext_loc.Fields().c_str());
+                            skip |= log.LogError(pnext_vuid, error_obj.handle, pNext_loc,
+                                                 "chain includes a structure with unknown VkStructureType ({}).\n{}\n"
+                                                 "This error is based on the Valid Usage documentation for version {} of the "
+                                                 "Vulkan header.\nIt is possible that "
+                                                 "you are using a struct from a private extension or an extension that was added "
+                                                 "to a later version of the "
+                                                 "Vulkan header, in which case the use of {} is undefined and may not work "
+                                                 "correctly with validation enabled",
+                                                 static_cast<uint32_t>(current->sType), PrintPNextChain(Struct::Empty, next),
+                                                 header_version, pNext_loc);
                         } else {
                             const bool likley_null = current->sType == VK_STRUCTURE_TYPE_APPLICATION_INFO;
-                            std::string message = "chain includes a structure with unexpected VkStructureType %s.%s\n%s\n";
-                            message += disclaimer;
-                            skip |= log.LogError(pnext_vuid, error_obj.handle, pNext_loc, message.c_str(), type_name.c_str(),
+                            skip |= log.LogError(pnext_vuid, error_obj.handle, pNext_loc,
+                                                 "chain includes a structure with unexpected VkStructureType {}.{}\n{}\n"
+                                                 "This error is based on the Valid Usage documentation for version {} of the "
+                                                 "Vulkan header.\nIt is possible that "
+                                                 "you are using a struct from a private extension or an extension that was added "
+                                                 "to a later version of the "
+                                                 "Vulkan header, in which case the use of {} is undefined and may not work "
+                                                 "correctly with validation enabled",
+                                                 type_name,
                                                  likley_null ? "\nHint: You likely forgot to set the sType in the struct as "
                                                                "VK_STRUCTURE_TYPE_APPLICATION_INFO is the value zero."
                                                              : "",
-                                                 PrintPNextChain(Struct::Empty, next).c_str(), header_version,
-                                                 pNext_loc.Fields().c_str());
+                                                 PrintPNextChain(Struct::Empty, next), header_version, pNext_loc);
                         }
                     }
                     // Send Location without pNext field so the pNext() connector can be used
@@ -322,7 +332,7 @@ bool Context::ValidateBool32(const Location& loc, VkBool32 value) const {
     bool skip = false;
     if ((value != VK_TRUE) && (value != VK_FALSE)) {
         skip |= log.LogError("UNASSIGNED-GeneralParameterError-UnrecognizedBool32", error_obj.handle, loc,
-                             "(%" PRIu32
+                             "({}"
                              ") is neither VK_TRUE nor VK_FALSE. Applications MUST not pass any other "
                              "values than VK_TRUE or VK_FALSE into a Vulkan implementation where a VkBool32 is expected.",
                              value);
@@ -342,7 +352,7 @@ bool Context::ValidateBool32Array(const Location& count_loc, const Location& arr
         for (uint32_t i = 0; i < count; ++i) {
             if ((array[i] != VK_TRUE) && (array[i] != VK_FALSE)) {
                 skip |= log.LogError(array_required_vuid, error_obj.handle, array_loc.dot(i),
-                                     "(%" PRIu32
+                                     "({}"
                                      ") is neither VK_TRUE nor VK_FALSE. Applications MUST not pass any other "
                                      "values than VK_TRUE or VK_FALSE into a Vulkan implementation where a VkBool32 is expected.",
                                      array[i]);
@@ -356,7 +366,10 @@ bool Context::ValidateBool32Array(const Location& count_loc, const Location& arr
 bool Context::ValidateReservedFlags(const Location& loc, VkFlags value, const char* vuid) const {
     bool skip = false;
     if (value != 0) {
-        skip |= log.LogError(vuid, error_obj.handle, loc, "is %" PRIu32 ", but must be 0.", value);
+        skip |= log.LogError(vuid, error_obj.handle, loc,
+                             "is {}"
+                             ", but must be 0.",
+                             value);
     }
     return skip;
 }
@@ -364,7 +377,10 @@ bool Context::ValidateReservedFlags(const Location& loc, VkFlags value, const ch
 bool Context::ValidateReservedFlags(const Location& loc, VkFlags64 value, const char* vuid) const {
     bool skip = false;
     if (value != 0) {
-        skip |= log.LogError(vuid, error_obj.handle, loc, "is %" PRIu64 ", but must be 0.", value);
+        skip |= log.LogError(vuid, error_obj.handle, loc,
+                             "is {}"
+                             ", but must be 0.",
+                             value);
     }
     return skip;
 }
@@ -392,7 +408,8 @@ bool Context::ValidateFlagsImplementation(const Location& loc, vvl::FlagBitmask 
     const bool is_bits_type = flag_type == kRequiredSingleBit || flag_type == kOptionalSingleBit;
     if (is_bits_type && !HasMaxOneBitSet(value)) {
         skip |= log.LogError(vuid, error_obj.handle, loc,
-                             "(0x%" PRIx64 ") contains multiple members of %s when only a single value is allowed.",
+                             "(0x{:x}"
+                             ") contains multiple members of {} when only a single value is allowed.",
                              static_cast<uint64_t>(value), String(flag_bitmask));
     }
 
@@ -409,9 +426,10 @@ bool Context::ValidateFlags(const Location& loc, vvl::FlagBitmask flag_bitmask, 
     }
 
     if ((value & ~all_flags) != 0) {
-        skip |=
-            log.LogError(vuid, error_obj.handle, loc, "contains flag bits (0x%" PRIx32 ") which are not recognized members of %s.",
-                         value, String(flag_bitmask));
+        skip |= log.LogError(vuid, error_obj.handle, loc,
+                             "contains flag bits (0x{:x}"
+                             ") which are not recognized members of {}.",
+                             value, String(flag_bitmask));
     }
 
     if (!skip && value != 0) {
@@ -422,7 +440,7 @@ bool Context::ValidateFlags(const Location& loc, vvl::FlagBitmask flag_bitmask, 
             // This is a quick fix, without adding yet another ValidateFlags overload, to give better info around WSI
             const bool image_usage_hint = loc.field == Field::imageUsage;
             skip |=
-                log.LogError(vuid, error_obj.handle, loc, "has %s values (%s) that require the extensions %s.%s",
+                log.LogError(vuid, error_obj.handle, loc, "has {} values ({}) that require the extensions {}.{}",
                              String(flag_bitmask), DescribeFlagBitmaskValue(flag_bitmask, value).c_str(), String(required).c_str(),
                              image_usage_hint ? "\nHint: Make sure to filter the supportedUsageFlags from "
                                                 "vkGetPhysicalDeviceSurfaceCapabilitiesKHR to only use what is desired."
@@ -442,15 +460,16 @@ bool Context::ValidateFlags(const Location& loc, vvl::FlagBitmask flag_bitmask, 
     }
 
     if ((value & ~all_flags) != 0) {
-        skip |=
-            log.LogError(vuid, error_obj.handle, loc, "contains flag bits (0x%" PRIx64 ") which are not recognized members of %s.",
-                         value, String(flag_bitmask));
+        skip |= log.LogError(vuid, error_obj.handle, loc,
+                             "contains flag bits (0x{:x}"
+                             ") which are not recognized members of {}.",
+                             value, String(flag_bitmask));
     }
 
     if (!skip && value != 0) {
         vvl::Extensions required = IsValidFlag64Value(flag_bitmask, value, instance_function);
         if (!required.empty()) {
-            skip |= log.LogError(vuid, error_obj.handle, loc, "has %s values (%s) that require the extensions %s.",
+            skip |= log.LogError(vuid, error_obj.handle, loc, "has {} values ({}) that require the extensions {}.",
                                  String(flag_bitmask), DescribeFlagBitmaskValue64(flag_bitmask, value).c_str(),
                                  String(required).c_str());
         }
@@ -471,8 +490,9 @@ bool Context::ValidateFlagsArray(const Location& count_loc, const Location& arra
         for (uint32_t i = 0; i < count; ++i) {
             if ((array[i] & (~all_flags)) != 0) {
                 skip |= log.LogError(array_required_vuid, error_obj.handle, array_loc.dot(i),
-                                     "contains flag bits (0x%" PRIx32 ") which are not recognized members of %s.", array[i],
-                                     String(flag_bitmask));
+                                     "contains flag bits (0x{:x}"
+                                     ") which are not recognized members of {}.",
+                                     array[i], String(flag_bitmask));
             }
         }
     }

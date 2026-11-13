@@ -82,9 +82,8 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
     }
     if ((create_flags & VK_PIPELINE_CREATE_RAY_TRACING_SKIP_TRIANGLES_BIT_KHR) != 0 &&
         (create_flags & VK_PIPELINE_CREATE_RAY_TRACING_SKIP_AABBS_BIT_KHR) != 0) {
-        skip |=
-            LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-06546", device, pipeline.GetCreateFlagsLoc(create_info_loc),
-                     "is %s (contains both SKIP_TRIANGLES and SKIP_AABBS).", string_VkPipelineCreateFlags2(create_flags).c_str());
+        skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-06546", device, pipeline.GetCreateFlagsLoc(create_info_loc),
+                         "is {} (contains both SKIP_TRIANGLES and SKIP_AABBS).", vvl::Flags::PipelineCreateFlags2(create_flags));
     }
 
     for (uint32_t group_index = 0; group_index < create_info.groupCount; group_index++) {
@@ -98,7 +97,7 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
                     VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_CALLABLE_BIT_KHR)) {
                 skip |=
                     LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-type-03474", device, group_loc.dot(Field::generalShader),
-                             "is %s, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR which requires it to be a "
+                             "is {}, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR which requires it to be a "
                              "valid index to a VK_SHADER_STAGE_RAYGEN_BIT_KHR, VK_SHADER_STAGE_MISS_BIT_KHR, or "
                              "VK_SHADER_STAGE_CALLABLE_BIT_KHR shader.",
                              string_ShaderIndex(group.generalShader).c_str());
@@ -106,8 +105,8 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
             if (group.anyHitShader != VK_SHADER_UNUSED_KHR || group.closestHitShader != VK_SHADER_UNUSED_KHR ||
                 group.intersectionShader != VK_SHADER_UNUSED_KHR) {
                 skip |= LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-type-03475", device, group_loc,
-                                 "has a type of VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, but anyHitShader is %s, "
-                                 "closestHitShader is %s, and intersectionShader is %s (all three must be VK_SHADER_UNUSED_KHR).",
+                                 "has a type of VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, but anyHitShader is {}, "
+                                 "closestHitShader is {}, and intersectionShader is {} (all three must be VK_SHADER_UNUSED_KHR).",
                                  string_ShaderIndex(group.anyHitShader).c_str(), string_ShaderIndex(group.closestHitShader).c_str(),
                                  string_ShaderIndex(group.intersectionShader).c_str());
             }
@@ -116,7 +115,7 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
                 !GroupHasValidIndex(pipeline, group.intersectionShader, VK_SHADER_STAGE_INTERSECTION_BIT_KHR)) {
                 skip |= LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-type-03476", device,
                                  group_loc.dot(Field::intersectionShader),
-                                 "is %s, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR which requires "
+                                 "is {}, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR which requires "
                                  "it to be a valid index to a VK_SHADER_STAGE_INTERSECTION_BIT_KHR shader.",
                                  string_ShaderIndex(group.intersectionShader).c_str());
             }
@@ -124,7 +123,7 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
             if (group.intersectionShader != VK_SHADER_UNUSED_KHR) {
                 skip |= LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-type-03477", device,
                                  group_loc.dot(Field::intersectionShader),
-                                 "is %s, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR which requires "
+                                 "is {}, but type is VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR which requires "
                                  "it to be VK_SHADER_UNUSED_KHR.",
                                  string_ShaderIndex(group.intersectionShader).c_str());
             }
@@ -135,7 +134,7 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
             if (!GroupHasValidIndex(pipeline, group.anyHitShader, VK_SHADER_STAGE_ANY_HIT_BIT_KHR)) {
                 skip |= LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-anyHitShader-03479", device,
                                  group_loc.dot(Field::anyHitShader),
-                                 "is %s, but type is %s which requires it to be either VK_SHADER_UNUSED_KHR or a valid index "
+                                 "is {}, but type is {} which requires it to be either VK_SHADER_UNUSED_KHR or a valid index "
                                  "to a VK_SHADER_STAGE_ANY_HIT_BIT_KHR shader.",
                                  string_ShaderIndex(group.anyHitShader).c_str(), string_VkRayTracingShaderGroupTypeKHR(group.type));
             }
@@ -143,7 +142,7 @@ bool CoreChecks::ValidateRayTracingPipeline(const vvl::Pipeline& pipeline,
                 skip |=
                     LogError("VUID-VkRayTracingShaderGroupCreateInfoKHR-closestHitShader-03478", device,
                              group_loc.dot(Field::closestHitShader),
-                             "is %s, but type is %s which requires it to be either VK_SHADER_UNUSED_KHR or a valid index "
+                             "is {}, but type is {} which requires it to be either VK_SHADER_UNUSED_KHR or a valid index "
                              "to a VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR shader.",
                              string_ShaderIndex(group.closestHitShader).c_str(), string_VkRayTracingShaderGroupTypeKHR(group.type));
             }
@@ -236,9 +235,10 @@ bool CoreChecks::PreCallValidateCreateRayTracingPipelinesKHR(VkDevice device, Vk
             skip |=
                 LogError("VUID-VkRayTracingPipelineCreateInfoKHR-maxPipelineRayRecursionDepth-03589", device,
                          create_info_loc.dot(Field::maxPipelineRayRecursionDepth),
-                         "(%" PRIu32
+                         "({}"
                          ") must be less than or equal to "
-                         "maxRayRecursionDepth (%" PRIu32 ").",
+                         "maxRayRecursionDepth ({}"
+                         ").",
                          create_info.maxPipelineRayRecursionDepth, phys_dev_ext_props.ray_tracing_props_khr.maxRayRecursionDepth);
         }
 
@@ -282,19 +282,18 @@ bool CoreChecks::ValidateRayTracingPipelineLibrary(const vvl::Pipeline& pipeline
         if (lib->pipeline_type != VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR) {
             skip |=
                 LogError("VUID-VkPipelineLibraryCreateInfoKHR-pLibraries-03381", lib->Handle(), library_loc,
-                         "is a %s pipeline, not a ray tracing pipeline library.", string_VkPipelineBindPoint(lib->pipeline_type));
+                         "is a {} pipeline, not a ray tracing pipeline library.", string_VkPipelineBindPoint(lib->pipeline_type));
             continue;
         } else if ((lib->create_flags & VK_PIPELINE_CREATE_LIBRARY_BIT_KHR) == 0) {
             skip |= LogError("VUID-VkPipelineLibraryCreateInfoKHR-pLibraries-03381", lib->Handle(), library_loc,
-                             "was created with %s.", string_VkPipelineCreateFlags2(lib->create_flags).c_str());
+                             "was created with {}.", vvl::Flags::PipelineCreateFlags2(lib->create_flags));
         }
         for (const auto& [vuid, flag] : vuid_map) {
             if (pipeline_create_flags & flag) {
                 if ((lib->create_flags & flag) == 0) {
-                    skip |= LogError(vuid, lib->Handle(), library_loc, "was created with %s, which is missing %s (%s is %s).",
-                                     string_VkPipelineCreateFlags2(lib->create_flags).c_str(),
-                                     string_VkPipelineCreateFlags2(flag).c_str(), flags_loc.Fields().c_str(),
-                                     string_VkPipelineCreateFlags2(pipeline_create_flags).c_str());
+                    skip |= LogError(vuid, lib->Handle(), library_loc, "was created with {}, which is missing {} ({} is {}).",
+                                     vvl::Flags::PipelineCreateFlags2(lib->create_flags), vvl::Flags::PipelineCreateFlags2(flag),
+                                     flags_loc, vvl::Flags::PipelineCreateFlags2(pipeline_create_flags));
                 }
             }
         }
@@ -306,10 +305,9 @@ bool CoreChecks::ValidateRayTracingPipelineLibrary(const vvl::Pipeline& pipeline
                 std::string err_msg;
                 if (!VerifyPipelineLayoutCompatibility(*pipeline_layout, *lib_pipeline_layout, err_msg)) {
                     skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-pLibraryInfo-03592", lib->Handle(), library_loc,
-                                     " has a pipeline layout (%s) incompatible with %s (%s).\n%s",
-                                     FormatHandle(lib_pipeline_layout->VkHandle()).c_str(),
-                                     create_info_loc.dot(Field::layout).Fields().c_str(),
-                                     FormatHandle(pipeline_layout->VkHandle()).c_str(), err_msg.c_str());
+                                     " has a pipeline layout ({}) incompatible with {} ({}).\n{}",
+                                     Handle(lib_pipeline_layout->VkHandle()), create_info_loc.dot(Field::layout),
+                                     Handle(pipeline_layout->VkHandle()), err_msg.c_str());
                 }
             }
         }
@@ -317,41 +315,42 @@ bool CoreChecks::ValidateRayTracingPipelineLibrary(const vvl::Pipeline& pipeline
         if (pipeline.descriptor_heap_mode != lib->descriptor_heap_mode) {
             if (pipeline.descriptor_heap_mode) {
                 skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-11275", lib->Handle(), library_loc,
-                                 "was created with %s, which is missing "
-                                 "VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT included in %s (%s).",
-                                 string_VkPipelineCreateFlags2(lib->create_flags).c_str(), flags_loc.Fields().c_str(),
-                                 string_VkPipelineCreateFlags2(pipeline.create_flags).c_str());
+                                 "was created with {}, which is missing "
+                                 "VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT included in {} ({}).",
+                                 vvl::Flags::PipelineCreateFlags2(lib->create_flags), flags_loc,
+                                 vvl::Flags::PipelineCreateFlags2(pipeline.create_flags));
             } else {
                 skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-11276", lib->Handle(), library_loc,
-                                 "was created with %s, but VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT is not included in "
-                                 "%s (%s).",
-                                 string_VkPipelineCreateFlags2(lib->create_flags).c_str(), flags_loc.Fields().c_str(),
-                                 string_VkPipelineCreateFlags2(pipeline.create_flags).c_str());
+                                 "was created with {}, but VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT is not included in "
+                                 "{} ({}).",
+                                 vvl::Flags::PipelineCreateFlags2(lib->create_flags), flags_loc,
+                                 vvl::Flags::PipelineCreateFlags2(pipeline.create_flags));
             }
         }
 
         if (pipeline.descriptor_buffer_mode != lib->descriptor_buffer_mode) {
             if (pipeline.descriptor_buffer_mode) {
                 skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-12361", lib->Handle(), library_loc,
-                                 "was created with %s, which is missing "
-                                 "VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT included in %s (%s).",
-                                 string_VkPipelineCreateFlags2(lib->create_flags).c_str(), flags_loc.Fields().c_str(),
-                                 string_VkPipelineCreateFlags2(pipeline.create_flags).c_str());
+                                 "was created with {}, which is missing "
+                                 "VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT included in {} ({}).",
+                                 vvl::Flags::PipelineCreateFlags2(lib->create_flags), flags_loc,
+                                 vvl::Flags::PipelineCreateFlags2(pipeline.create_flags));
             } else {
                 skip |=
                     LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-12362", lib->Handle(), library_loc,
-                             "was created with %s, but VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT is not included in %s (%s).",
-                             string_VkPipelineCreateFlags2(lib->create_flags).c_str(), flags_loc.Fields().c_str(),
-                             string_VkPipelineCreateFlags2(pipeline.create_flags).c_str());
+                             "was created with {}, but VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT is not included in {} ({}).",
+                             vvl::Flags::PipelineCreateFlags2(lib->create_flags), flags_loc,
+                             vvl::Flags::PipelineCreateFlags2(pipeline.create_flags));
             }
         }
 
         const auto& lib_create_info = lib->RayTracingCreateInfo();
         if (lib_create_info.maxPipelineRayRecursionDepth != pipeline_create_info.maxPipelineRayRecursionDepth) {
             skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-pLibraries-03591", lib->Handle(), library_loc,
-                             "was created with maxPipelineRayRecursionDepth (%" PRIu32 ") which is not equal to %s (%" PRIu32 ").",
-                             lib_create_info.maxPipelineRayRecursionDepth,
-                             create_info_loc.dot(Field::maxPipelineRayRecursionDepth).Fields().c_str(),
+                             "was created with maxPipelineRayRecursionDepth ({}"
+                             ") which is not equal to {} ({}"
+                             ").",
+                             lib_create_info.maxPipelineRayRecursionDepth, create_info_loc.dot(Field::maxPipelineRayRecursionDepth),
                              pipeline_create_info.maxPipelineRayRecursionDepth);
         }
         if (lib_create_info.pLibraryInterface && pipeline_create_info.pLibraryInterface) {
@@ -361,21 +360,23 @@ bool CoreChecks::ValidateRayTracingPipelineLibrary(const vvl::Pipeline& pipeline
             if (lib_interface.maxPipelineRayHitAttributeSize != pipeline_interface.maxPipelineRayHitAttributeSize ||
                 lib_interface.maxPipelineRayPayloadSize != pipeline_interface.maxPipelineRayPayloadSize) {
                 skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-pLibraryInfo-03593", lib->Handle(), library_loc,
-                                 "was created with maxPipelineRayPayloadSize (%" PRIu32
+                                 "was created with maxPipelineRayPayloadSize ({}"
                                  ") and "
-                                 "maxPipelineRayHitAttributeSize (%" PRIu32 ") which is not equal to %s values of (%" PRIu32
-                                 ") and (%" PRIu32 ").",
+                                 "maxPipelineRayHitAttributeSize ({}"
+                                 ") which is not equal to {} values of ({}"
+                                 ") and ({}"
+                                 ").",
                                  lib_interface.maxPipelineRayPayloadSize, lib_interface.maxPipelineRayHitAttributeSize,
-                                 create_info_loc.dot(Field::pLibraryInterface).Fields().c_str(),
-                                 pipeline_interface.maxPipelineRayPayloadSize, pipeline_interface.maxPipelineRayHitAttributeSize);
+                                 create_info_loc.dot(Field::pLibraryInterface), pipeline_interface.maxPipelineRayPayloadSize,
+                                 pipeline_interface.maxPipelineRayHitAttributeSize);
             }
             if ((pipeline_create_flags & VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR) &&
                 !(lib->create_flags & VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR)) {
                 skip |= LogError("VUID-VkRayTracingPipelineCreateInfoKHR-flags-03594", lib->Handle(), library_loc,
-                                 "was created with %s, which is missing "
-                                 "VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR included in %s (%s).",
-                                 string_VkPipelineCreateFlags2(pipeline_create_flags).c_str(), flags_loc.Fields().c_str(),
-                                 string_VkPipelineCreateFlags2(lib->create_flags).c_str());
+                                 "was created with {}, which is missing "
+                                 "VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR included in {} ({}).",
+                                 vvl::Flags::PipelineCreateFlags2(pipeline_create_flags), flags_loc,
+                                 vvl::Flags::PipelineCreateFlags2(lib->create_flags));
             }
         }
     }

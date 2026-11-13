@@ -36,14 +36,15 @@ bool Device::ValidateDataGraphProcessingEngineCreateInfo(const VkDataGraphProces
         if (!enabled_features.dataGraphModel) {
             skip |= LogError("VUID-VkDataGraphProcessingEngineCreateInfoARM-pProcessingEngines-11844", device,
                              dg_engine_ci_loc.dot(Field::pProcessingEngines, i).dot(Field::type),
-                             "is %s, but dataGraphModel is not enabled.",
+                             "is {}, but dataGraphModel is not enabled.",
                              string_VkPhysicalDeviceDataGraphProcessingEngineTypeARM(engine.type));
             break;  // only report once
         } else if (engine.isForeign && dg_engine_ci.processingEngineCount != 1) {
             skip |=
                 LogError("VUID-VkDataGraphProcessingEngineCreateInfoARM-pProcessingEngines-11843", device,
                          dg_engine_ci_loc.dot(Field::pProcessingEngines, i),
-                         "is %s, isForeign is true, but processingEngineCount is %" PRIu32 " (not 1).",
+                         "is {}, isForeign is true, but processingEngineCount is {}"
+                         " (not 1).",
                          string_VkPhysicalDeviceDataGraphProcessingEngineTypeARM(engine.type), dg_engine_ci.processingEngineCount);
             break;  // only report once
         }
@@ -78,16 +79,16 @@ bool Device::ValidateCreateDataGraphPipelinesFlags(const VkPipelineCreateFlags2 
 
     if ((flags & ~(valid_flag_mask)) != 0) {
         // TODO - print the flags that violated the list
-        skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-flags-09764", device, flags_loc, "(%s) contains invalid values.",
-                         string_VkPipelineCreateFlags2(flags).c_str());
+        skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-flags-09764", device, flags_loc, "({}) contains invalid values.",
+                         vvl::Flags::PipelineCreateFlags2(flags));
     }
 
     if ((flags & VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT) != 0) {
         if (!enabled_features.dataGraphDescriptorBuffer) {
             skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-dataGraphDescriptorBuffer-09885", device, flags_loc,
-                             "(%s) includes VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT but the dataGraphDescriptorBuffer "
+                             "({}) includes VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT but the dataGraphDescriptorBuffer "
                              "feature is not enabled.",
-                             string_VkPipelineCreateFlags2(flags).c_str());
+                             vvl::Flags::PipelineCreateFlags2(flags));
         }
     }
 
@@ -108,8 +109,8 @@ bool Device::manual_PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, 
     }
     if (deferredOperation != VK_NULL_HANDLE) {
         skip |= LogError("VUID-vkCreateDataGraphPipelinesARM-deferredOperation-09761", deferredOperation,
-                         error_obj.location.dot(Field::deferredOperation), "is %s, but must be VK_NULL_HANDLE.",
-                         FormatHandle(deferredOperation).c_str());
+                         error_obj.location.dot(Field::deferredOperation), "is {}, but must be VK_NULL_HANDLE.",
+                         Handle(deferredOperation));
     }
 
     for (uint32_t i = 0; i < createInfoCount; i++) {
@@ -122,15 +123,15 @@ bool Device::manual_PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, 
         if (deferredOperation != VK_NULL_HANDLE && (create_info.flags & VK_PIPELINE_CREATE_EARLY_RETURN_ON_FAILURE_BIT)) {
             skip |= LogError(
                 "VUID-vkCreateDataGraphPipelinesARM-deferredOperation-09916", device, create_info_loc.dot(Field::flags),
-                "(%s) includes VK_PIPELINE_CREATE_EARLY_RETURN_ON_FAILURE_BIT but deferredOperation is not VK_NULL_HANDLE.",
-                string_VkPipelineCreateFlags2(create_info.flags).c_str());
+                "({}) includes VK_PIPELINE_CREATE_EARLY_RETURN_ON_FAILURE_BIT but deferredOperation is not VK_NULL_HANDLE.",
+                vvl::Flags::PipelineCreateFlags2(create_info.flags));
         }
 
         if (vku::FindStructInPNextChain<VkDataGraphPipelineIdentifierCreateInfoARM>(create_info.pNext)) {
             if (pipelineCache == VK_NULL_HANDLE) {
                 skip |= LogError("VUID-vkCreateDataGraphPipelinesARM-pNext-09928", device,
                                  create_info_loc.pNext(Struct::VkDataGraphPipelineIdentifierCreateInfoARM),
-                                 "exists but pipelineCache is VK_NULL_HANDLE.\n%s",
+                                 "exists but pipelineCache is VK_NULL_HANDLE.\n{}",
                                  PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             }
         }

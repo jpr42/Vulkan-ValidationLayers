@@ -215,22 +215,21 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
 
     if (module_state.HasCapability(spv::CapabilityCooperativeMatrixKHR)) {
         if (!(entrypoint.stage & phys_dev_ext_props.cooperative_matrix_props_khr.cooperativeMatrixSupportedStages)) {
-            skip |=
-                LogError("VUID-RuntimeSpirv-cooperativeMatrixSupportedStages-08985", module_state.handle(), loc,
-                         "shader %s contains OpTypeCooperativeMatrixKHR but %s is not in "
-                         "cooperativeMatrixSupportedStages (%s)",
-                         entrypoint.Describe().c_str(), string_VkShaderStageFlagBits(entrypoint.stage),
-                         string_VkShaderStageFlags(phys_dev_ext_props.cooperative_matrix_props_khr.cooperativeMatrixSupportedStages)
-                             .c_str());
+            skip |= LogError(
+                "VUID-RuntimeSpirv-cooperativeMatrixSupportedStages-08985", module_state.handle(), loc,
+                "shader {} contains OpTypeCooperativeMatrixKHR but {} is not in "
+                "cooperativeMatrixSupportedStages ({})",
+                entrypoint.Describe().c_str(), string_VkShaderStageFlagBits(entrypoint.stage),
+                vvl::Flags::ShaderStageFlags(phys_dev_ext_props.cooperative_matrix_props_khr.cooperativeMatrixSupportedStages));
         }
     } else if (module_state.HasCapability(spv::CapabilityCooperativeMatrixNV)) {
         if (!(entrypoint.stage & phys_dev_ext_props.cooperative_matrix_props.cooperativeMatrixSupportedStages)) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-OpTypeCooperativeMatrixNV-06322", module_state.handle(), loc,
-                "shader %s contains OpTypeCooperativeMatrixNV but %s is not in cooperativeMatrixSupportedStages "
-                "(%s)",
+                "shader {} contains OpTypeCooperativeMatrixNV but {} is not in cooperativeMatrixSupportedStages "
+                "({})",
                 entrypoint.Describe().c_str(), string_VkShaderStageFlagBits(entrypoint.stage),
-                string_VkShaderStageFlags(phys_dev_ext_props.cooperative_matrix_props.cooperativeMatrixSupportedStages).c_str());
+                vvl::Flags::ShaderStageFlags(phys_dev_ext_props.cooperative_matrix_props.cooperativeMatrixSupportedStages));
         }
     } else {
         return skip;  // If the capability isn't enabled, don't bother with the rest of this function.
@@ -241,8 +240,8 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
             const char* vuid = stage_state.HasPipeline() ? "VUID-RuntimeSpirv-OpTypeCooperativeMatrixKHR-10770"
                                                          : "VUID-RuntimeSpirv-OpTypeCooperativeMatrixKHR-10771";
             skip |= LogError(vuid, module_state.handle(), loc,
-                             "shader %s contains SPV_KHR_cooperative_matrix which requires SPIR-V 1.6 (Vulkan 1.3). In order to "
-                             "use it with older versions, you need to use %s (which requires VK_EXT_subgroup_size_control).",
+                             "shader {} contains SPV_KHR_cooperative_matrix which requires SPIR-V 1.6 (Vulkan 1.3). In order to "
+                             "use it with older versions, you need to use {} (which requires VK_EXT_subgroup_size_control).",
                              entrypoint.Describe().c_str(),
                              stage_state.HasPipeline() ? "VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT"
                                                        : "VK_SHADER_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT");
@@ -412,8 +411,9 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                                                      ? "VUID-VkPipelineShaderStageCreateInfo-module-08987"
                                                      : "VUID-VkPipelineShaderStageCreateInfo-module-10169";
                         skip |= LogError(vuid_string, module_state.handle(), loc,
-                                         "shader %s has a local workgroup size in the X dimension (%" PRIu32
-                                         ") that is not a multiple of subgroupSize (%" PRIu32 ").",
+                                         "shader {} has a local workgroup size in the X dimension ({}"
+                                         ") that is not a multiple of subgroupSize ({}"
+                                         ").",
                                          entrypoint.Describe().c_str(), local_size.x, effective_subgroup_size);
                         found_error = true;
                     }
@@ -422,8 +422,9 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                             phys_dev_ext_props.cooperative_matrix_props2_nv.cooperativeMatrixWorkgroupScopeMaxWorkgroupSize) {
                             skip |= LogError(
                                 "VUID-VkPipelineShaderStageCreateInfo-module-10169", module_state.handle(), loc,
-                                "shader %s has a total local workgroup size (%" PRIu64
-                                ") that is larger than cooperativeMatrixWorkgroupScopeMaxWorkgroupSize (%" PRIu32 ").",
+                                "shader {} has a total local workgroup size ({}"
+                                ") that is larger than cooperativeMatrixWorkgroupScopeMaxWorkgroupSize ({}"
+                                ").",
                                 entrypoint.Describe().c_str(), workgroup_size,
                                 phys_dev_ext_props.cooperative_matrix_props2_nv.cooperativeMatrixWorkgroupScopeMaxWorkgroupSize);
                             found_error = true;
@@ -437,7 +438,7 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
 
                 if (m.scope == VK_SCOPE_WORKGROUP_KHR && !enabled_features.cooperativeMatrixWorkgroupScopeNV) {
                     skip |= LogError("VUID-RuntimeSpirv-cooperativeMatrixWorkgroupScope-10164", module_state.handle(), loc,
-                                     "shader %s has a cooperative matrix that uses workgroup scope but "
+                                     "shader {} has a cooperative matrix that uses workgroup scope but "
                                      "cooperativeMatrixWorkgroupScope is not enabled.",
                                      entrypoint.Describe().c_str());
                     found_error = true;
@@ -559,20 +560,20 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                     if (enabled_features.cooperativeMatrixProperties2) {
                         found_error = true;
                         skip |= LogError("VUID-RuntimeSpirv-cooperativeMatrixProperties2-13382", module_state.handle(), loc,
-                                         "shader %s has\n%s (%s)\nbut doesn't match any supported "
-                                         "VkCooperativeMatrixPropertiesKHR or VkCooperativeMatrixProperties2EXT.\n%s",
+                                         "shader {} has\n{} ({})\nbut doesn't match any supported "
+                                         "VkCooperativeMatrixPropertiesKHR or VkCooperativeMatrixProperties2EXT.\n{}",
                                          entrypoint.Describe().c_str(), insn.Describe().c_str(), m.Describe().c_str(),
                                          print_workgroup_size(m.scope).c_str());
                     } else if (!enabled_features.cooperativeMatrixFlexibleDimensionsNV) {
                         found_error = true;
                         skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixKHR-10163", module_state.handle(), loc,
-                                         "shader %s has\n%s (%s)\nbut doesn't match any VkCooperativeMatrixPropertiesKHR\n%s%s",
+                                         "shader {} has\n{} ({})\nbut doesn't match any VkCooperativeMatrixPropertiesKHR\n{}{}",
                                          entrypoint.Describe().c_str(), insn.Describe().c_str(), m.Describe().c_str(),
                                          print_workgroup_size(m.scope).c_str(), print_properties().c_str());
                     } else {
                         skip |= LogError("VUID-RuntimeSpirv-cooperativeMatrixFlexibleDimensions-10165", module_state.handle(), loc,
-                                         "shader %s has\n%s (%s)\nbut doesn't match any VkCooperativeMatrixPropertiesKHR or "
-                                         "VkCooperativeMatrixFlexibleDimensionsPropertiesNV\n%s%s\n%s",
+                                         "shader {} has\n{} ({})\nbut doesn't match any VkCooperativeMatrixPropertiesKHR or "
+                                         "VkCooperativeMatrixFlexibleDimensionsPropertiesNV\n{}{}\n{}",
                                          entrypoint.Describe().c_str(), insn.Describe().c_str(), m.Describe().c_str(),
                                          print_workgroup_size(m.scope).c_str(), print_properties().c_str(),
                                          print_flexible_properties().c_str());
@@ -583,8 +584,9 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                         m.cols > phys_dev_ext_props.cooperative_matrix_props2_nv.cooperativeMatrixFlexibleDimensionsMaxDimension) {
                         skip |= LogError(
                             "VUID-RuntimeSpirv-cooperativeMatrixFlexibleDimensionsMaxDimension-10167", module_state.handle(), loc,
-                            "shader %s has\n%s (%s)\nbut number of rows or columns is greater than "
-                            "cooperativeMatrixFlexibleDimensionsMaxDimension (%" PRIu32 ").",
+                            "shader {} has\n{} ({})\nbut number of rows or columns is greater than "
+                            "cooperativeMatrixFlexibleDimensionsMaxDimension ({}"
+                            ").",
                             entrypoint.Describe().c_str(), insn.Describe().c_str(), m.Describe().c_str(),
                             phys_dev_ext_props.cooperative_matrix_props2_nv.cooperativeMatrixFlexibleDimensionsMaxDimension);
                         found_error = true;
@@ -731,22 +733,22 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
 
                         if (enabled_features.cooperativeMatrixProperties2) {
                             skip |= LogError("VUID-RuntimeSpirv-cooperativeMatrixProperties2-13383", module_state.handle(), loc,
-                                             "shader %s instruction\n%s\ndoesn't match any supported "
-                                             "VkCooperativeMatrixPropertiesKHR or VkCooperativeMatrixProperties2EXT\n%s%s",
+                                             "shader {} instruction\n{}\ndoesn't match any supported "
+                                             "VkCooperativeMatrixPropertiesKHR or VkCooperativeMatrixProperties2EXT\n{}{}",
                                              entrypoint.Describe().c_str(), insn.Describe().c_str(), operands_str.c_str(),
                                              print_workgroup_size(report_scope).c_str());
                         } else if (!enabled_features.cooperativeMatrixFlexibleDimensionsNV) {
                             skip |= LogError("VUID-RuntimeSpirv-OpCooperativeMatrixMulAddKHR-10060", module_state.handle(), loc,
-                                             "shader %s instruction\n%s\ndoesn't match a supported matrix "
-                                             "VkCooperativeMatrixPropertiesKHR\n%s%s%s",
+                                             "shader {} instruction\n{}\ndoesn't match a supported matrix "
+                                             "VkCooperativeMatrixPropertiesKHR\n{}{}{}",
                                              entrypoint.Describe().c_str(), insn.Describe().c_str(), operands_str.c_str(),
                                              print_workgroup_size(report_scope).c_str(), print_properties().c_str());
                         } else {
                             skip |=
                                 LogError("VUID-RuntimeSpirv-cooperativeMatrixFlexibleDimensions-10166", module_state.handle(), loc,
-                                         "shader %s instruction\n%s\ndoesn't match a supported matrix "
+                                         "shader {} instruction\n{}\ndoesn't match a supported matrix "
                                          "VkCooperativeMatrixPropertiesKHR or "
-                                         "VkPhysicalDeviceCooperativeMatrix2PropertiesNV\n%s%s%s\n%s",
+                                         "VkPhysicalDeviceCooperativeMatrix2PropertiesNV\n{}{}{}\n{}",
                                          entrypoint.Describe().c_str(), insn.Describe().c_str(), operands_str.c_str(),
                                          print_workgroup_size(report_scope).c_str(), print_properties().c_str(),
                                          print_flexible_properties().c_str());
@@ -790,8 +792,8 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                 if (!valid) {
                     found_error = true;
                     skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixNV-06316", module_state.handle(), loc,
-                                     "shader %s has an OpTypeCooperativeMatrixNV (result id = %" PRIu32
-                                     ") operand that does not match a supported matrix type (%s).",
+                                     "shader {} has an OpTypeCooperativeMatrixNV (result id = {}"
+                                     ") operand that does not match a supported matrix type ({}).",
                                      entrypoint.Describe().c_str(), insn.Word(1), m.Describe().c_str());
                 }
                 break;
@@ -825,30 +827,30 @@ bool CoreChecks::ValidateCooperativeMatrix(const spirv::Module& module_state, co
                     }
                     if (!valid_a) {
                         skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixMulAddNV-10059", module_state.handle(), loc,
-                                         "shader %s OpCooperativeMatrixMulAddNV (result id = %" PRIu32
+                                         "shader {} OpCooperativeMatrixMulAddNV (result id = {}"
                                          ") operands don't match a supported matrix "
-                                         "VkCooperativeMatrixPropertiesNV for A type (%s).",
+                                         "VkCooperativeMatrixPropertiesNV for A type ({}).",
                                          entrypoint.Describe().c_str(), insn.Word(2), a.Describe().c_str());
                         found_error = true;
                     } else if (!valid_b) {
                         skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixMulAddNV-10059", module_state.handle(), loc,
-                                         "shader %s OpCooperativeMatrixMulAddNV (result id = %" PRIu32
+                                         "shader {} OpCooperativeMatrixMulAddNV (result id = {}"
                                          ") operands don't match a supported matrix "
-                                         "VkCooperativeMatrixPropertiesNV for B type (%s).",
+                                         "VkCooperativeMatrixPropertiesNV for B type ({}).",
                                          entrypoint.Describe().c_str(), insn.Word(2), b.Describe().c_str());
                         found_error = true;
                     } else if (!valid_c) {
                         skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixMulAddNV-10059", module_state.handle(), loc,
-                                         "shader %s OpCooperativeMatrixMulAddNV (result id = %" PRIu32
+                                         "shader {} OpCooperativeMatrixMulAddNV (result id = {}"
                                          ") operands don't match a supported matrix "
-                                         "VkCooperativeMatrixPropertiesNV for C type (%s).",
+                                         "VkCooperativeMatrixPropertiesNV for C type ({}).",
                                          entrypoint.Describe().c_str(), insn.Word(2), c.Describe().c_str());
                         found_error = true;
                     } else if (!valid_d) {
                         skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeMatrixMulAddNV-10059", module_state.handle(), loc,
-                                         "shader %s OpCooperativeMatrixMulAddNV (result id = %" PRIu32
+                                         "shader {} OpCooperativeMatrixMulAddNV (result id = {}"
                                          ") operands don't match a supported matrix "
-                                         "VkCooperativeMatrixPropertiesNV for D type (%s).",
+                                         "VkCooperativeMatrixPropertiesNV for D type ({}).",
                                          entrypoint.Describe().c_str(), insn.Word(2), d.Describe().c_str());
                         found_error = true;
                     }
@@ -896,10 +898,10 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
         if (!(entrypoint.stage & phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorSupportedStages)) {
             skip |= LogError(
                 "VUID-RuntimeSpirv-cooperativeVectorSupportedStages-10091", module_state.handle(), loc,
-                "shader %s contains cooperative vector capability but %s is not in "
-                "cooperativeVectorSupportedStages (%s)",
+                "shader {} contains cooperative vector capability but {} is not in "
+                "cooperativeVectorSupportedStages ({})",
                 entrypoint.Describe().c_str(), string_VkShaderStageFlagBits(entrypoint.stage),
-                string_VkShaderStageFlags(phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorSupportedStages).c_str());
+                vvl::Flags::ShaderStageFlags(phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorSupportedStages));
         }
     } else {
         return skip;
@@ -926,8 +928,9 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
 
                 if (m_signed.component_count > phys_dev_ext_props.cooperative_vector_props_nv.maxCooperativeVectorComponents) {
                     skip |= LogError("VUID-RuntimeSpirv-maxCooperativeVectorComponents-10094", module_state.handle(), loc,
-                                     "shader %s has a cooperative vector component count (%" PRIu32
-                                     ") which is greater than maxCooperativeVectorComponents (%" PRIu32 ")",
+                                     "shader {} has a cooperative vector component count ({}"
+                                     ") which is greater than maxCooperativeVectorComponents ({}"
+                                     ")",
                                      entrypoint.Describe().c_str(), m_signed.component_count,
                                      phys_dev_ext_props.cooperative_vector_props_nv.maxCooperativeVectorComponents);
                 }
@@ -944,7 +947,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
 
                 if (!found) {
                     skip |= LogError("VUID-RuntimeSpirv-OpTypeCooperativeVector-10095", module_state.handle(), loc,
-                                     "shader %s contains unsupported cooperative vector component type (%s)",
+                                     "shader {} contains unsupported cooperative vector component type ({})",
                                      entrypoint.Describe().c_str(),
                                      string_VkComponentTypeKHR((VkComponentTypeKHR)m_signed.component_type));
                 }
@@ -1018,9 +1021,9 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
 
                 if (!found) {
                     skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorMatrixMulNV-10089", module_state.handle(), loc,
-                                     "shader %s contains unsupported cooperative vector matrix mul with "
-                                     "result component type (%s), input component type (%s), input interpretation (%s), "
-                                     "matrix interpretation (%s), bias interpretation (%s), transpose (%d)",
+                                     "shader {} contains unsupported cooperative vector matrix mul with "
+                                     "result component type ({}), input component type ({}), input interpretation ({}), "
+                                     "matrix interpretation ({}), bias interpretation ({}), transpose ({})",
                                      entrypoint.Describe().c_str(), string_VkComponentTypeKHR((VkComponentTypeKHR)result_type),
                                      string_VkComponentTypeKHR((VkComponentTypeKHR)input_type),
                                      string_VkComponentTypeKHR((VkComponentTypeKHR)input_interpretation),
@@ -1028,7 +1031,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                                      (insn.Opcode() == spv::OpCooperativeVectorMatrixMulNV
                                           ? "None"
                                           : string_VkComponentTypeKHR((VkComponentTypeKHR)bias_interpretation)),
-                                     transpose);
+                                     static_cast<int>(transpose));
                 }
 
                 uint32_t memory_layout{};
@@ -1039,8 +1042,8 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                           memory_layout == VK_COOPERATIVE_VECTOR_MATRIX_LAYOUT_TRAINING_OPTIMAL_NV)) {
                         skip |= LogError(
                             "VUID-RuntimeSpirv-OpCooperativeVectorMatrixMulNV-10090", module_state.handle(), loc,
-                            "shader %s contains unsupported cooperative vector matrix mul with "
-                            "matrix_interpretation (%s) and memory layout (%s)",
+                            "shader {} contains unsupported cooperative vector matrix mul with "
+                            "matrix_interpretation ({}) and memory layout ({})",
                             entrypoint.Describe().c_str(), string_VkComponentTypeKHR((VkComponentTypeKHR)matrix_interpretation),
                             string_VkCooperativeVectorMatrixLayoutNV((VkCooperativeVectorMatrixLayoutNV)memory_layout));
                     }
@@ -1055,7 +1058,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                         if (!phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorTrainingFloat16Accumulation) {
                             skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorReduceSumAccumulateNV-10092",
                                              module_state.handle(), loc,
-                                             "shader %s cooperative vector component type is FLOAT16 but "
+                                             "shader {} cooperative vector component type is FLOAT16 but "
                                              "cooperativeVectorTrainingFloat16Accumulation not supported",
                                              entrypoint.Describe().c_str());
                         }
@@ -1064,14 +1067,14 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                         if (!phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorTrainingFloat32Accumulation) {
                             skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorReduceSumAccumulateNV-10092",
                                              module_state.handle(), loc,
-                                             "shader %s cooperative vector component type is FLOAT32 but "
+                                             "shader {} cooperative vector component type is FLOAT32 but "
                                              "cooperativeVectorTrainingFloat32Accumulation not supported",
                                              entrypoint.Describe().c_str());
                         }
                         break;
                     default:
                         skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorReduceSumAccumulateNV-10092", module_state.handle(),
-                                         loc, "shader %s has an unsupported component type (%s)", entrypoint.Describe().c_str(),
+                                         loc, "shader {} has an unsupported component type ({})", entrypoint.Describe().c_str(),
                                          string_VkComponentTypeKHR((VkComponentTypeKHR)v.component_type));
                         break;
                 }
@@ -1080,7 +1083,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                 if (ptr_type->StorageClass() != spv::StorageClassStorageBuffer &&
                     ptr_type->StorageClass() != spv::StorageClassPhysicalStorageBuffer) {
                     skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorReduceSumAccumulateNV-10092", module_state.handle(), loc,
-                                     "shader %s has an unsupported pointer storage class (%s)", entrypoint.Describe().c_str(),
+                                     "shader {} has an unsupported pointer storage class ({})", entrypoint.Describe().c_str(),
                                      spv::StorageClassToString(ptr_type->StorageClass()));
                 }
 
@@ -1095,7 +1098,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                             if (!phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorTrainingFloat16Accumulation) {
                                 skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093",
                                                  module_state.handle(), loc,
-                                                 "shader %s matrix interpretation is FLOAT16 but "
+                                                 "shader {} matrix interpretation is FLOAT16 but "
                                                  "cooperativeVectorTrainingFloat16Accumulation not supported",
                                                  entrypoint.Describe().c_str());
                             }
@@ -1104,14 +1107,14 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                             if (!phys_dev_ext_props.cooperative_vector_props_nv.cooperativeVectorTrainingFloat32Accumulation) {
                                 skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093",
                                                  module_state.handle(), loc,
-                                                 "shader %s matrix interpretation is FLOAT32 but "
+                                                 "shader {} matrix interpretation is FLOAT32 but "
                                                  "cooperativeVectorTrainingFloat32Accumulation not supported",
                                                  entrypoint.Describe().c_str());
                             }
                             break;
                         default:
                             skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093",
-                                             module_state.handle(), loc, "shader %s has unsupported Matrix interpretation (%s)",
+                                             module_state.handle(), loc, "shader {} has unsupported Matrix interpretation ({})",
                                              entrypoint.Describe().c_str(),
                                              string_VkComponentTypeKHR((VkComponentTypeKHR)matrix_interpretation));
                             break;
@@ -1124,13 +1127,13 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                 if (a.component_type != VK_COMPONENT_TYPE_FLOAT16_KHR) {
                     skip |=
                         LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093", module_state.handle(), loc,
-                                 "shader %s has a component type of A (%s) but it must be FLOAT16", entrypoint.Describe().c_str(),
+                                 "shader {} has a component type of A ({}) but it must be FLOAT16", entrypoint.Describe().c_str(),
                                  string_VkComponentTypeKHR((VkComponentTypeKHR)a.component_type));
                 }
                 if (b.component_type != VK_COMPONENT_TYPE_FLOAT16_KHR) {
                     skip |=
                         LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093", module_state.handle(), loc,
-                                 "shader %s has a component type of B (%s) but it must be FLOAT16", entrypoint.Describe().c_str(),
+                                 "shader {} has a component type of B ({}) but it must be FLOAT16", entrypoint.Describe().c_str(),
                                  string_VkComponentTypeKHR((VkComponentTypeKHR)b.component_type));
                 }
 
@@ -1139,7 +1142,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                     if (memory_layout != VK_COOPERATIVE_VECTOR_MATRIX_LAYOUT_TRAINING_OPTIMAL_NV) {
                         skip |= LogError(
                             "VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093", module_state.handle(), loc,
-                            "shader %s has memory layout (%s) but it must be TRAINING_OPTIMAL", entrypoint.Describe().c_str(),
+                            "shader {} has memory layout ({}) but it must be TRAINING_OPTIMAL", entrypoint.Describe().c_str(),
                             string_VkCooperativeVectorMatrixLayoutNV((VkCooperativeVectorMatrixLayoutNV)memory_layout));
                     }
                 }
@@ -1148,7 +1151,7 @@ bool CoreChecks::ValidateCooperativeVector(const spirv::Module& module_state, co
                 if (ptr_type->StorageClass() != spv::StorageClassStorageBuffer &&
                     ptr_type->StorageClass() != spv::StorageClassPhysicalStorageBuffer) {
                     skip |= LogError("VUID-RuntimeSpirv-OpCooperativeVectorOuterProductAccumulateNV-10093", module_state.handle(),
-                                     loc, "shader %s has unsupported pointer storage class (%s)", entrypoint.Describe().c_str(),
+                                     loc, "shader {} has unsupported pointer storage class ({})", entrypoint.Describe().c_str(),
                                      spv::StorageClassToString(ptr_type->StorageClass()));
                 }
 

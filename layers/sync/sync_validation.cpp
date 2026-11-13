@@ -75,7 +75,7 @@ void SyncValidator::DebugCapture() {
 
 bool SyncValidator::SyncError(SyncHazard hazard, const LogObjectList& objlist, const Location& loc,
                               const std::string& error_message) const {
-    return LogError(string_SyncHazardVUID(hazard), objlist, loc, "%s", error_message.c_str());
+    return LogError(string_SyncHazardVUID(hazard), objlist, loc, "{}", error_message.c_str());
 }
 
 ResourceUsageRange SyncValidator::ReserveGlobalTagRange(size_t tag_count) const {

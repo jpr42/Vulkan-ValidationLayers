@@ -96,7 +96,7 @@ bool Instance::ValidateExtensionReqs(const ExtensionState& extensions, bool is_i
         for (const auto& missing_name : missing) {
             ss << " - " << missing_name << "\n";
         }
-        skip |= LogError("VUID-vkCreateInstance-ppEnabledExtensionNames-01388", instance, extension_loc, "%s", ss.str().c_str());
+        skip |= LogError("VUID-vkCreateInstance-ppEnabledExtensionNames-01388", instance, extension_loc, "{}", ss.str().c_str());
 
     } else {
         std::ostringstream ss;
@@ -105,7 +105,7 @@ bool Instance::ValidateExtensionReqs(const ExtensionState& extensions, bool is_i
         for (const auto& missing_name : missing) {
             ss << " - " << missing_name << "\n";
         }
-        skip |= LogError("VUID-vkCreateDevice-ppEnabledExtensionNames-01387", instance, extension_loc, "%s", ss.str().c_str());
+        skip |= LogError("VUID-vkCreateDevice-ppEnabledExtensionNames-01387", instance, extension_loc, "{}", ss.str().c_str());
     }
 
     return skip;
@@ -146,13 +146,17 @@ bool Instance::PreCallValidateCreateInstance(const VkInstanceCreateInfo* pCreate
         if ((api_version_nopatch < VK_API_VERSION_1_0) && (local_api_version != 0)) {
             skip |= LogError("VUID-VkApplicationInfo-apiVersion-04010", instance,
                              create_info_loc.dot(Field::pApplicationInfo).dot(Field::apiVersion),
-                             "is (0x%08x). "
-                             "Using VK_API_VERSION_%" PRIu32 "_%" PRIu32 ".",
+                             "is (0x{:08x}). "
+                             "Using VK_API_VERSION_{}"
+                             "_{}"
+                             ".",
                              local_api_version, api_version.Major(), api_version.Minor());
         } else {
             skip |= LogWarning(kVUIDUndefined, instance, create_info_loc.dot(Field::pApplicationInfo).dot(Field::apiVersion),
-                               "is (0x%08x). "
-                               "Assuming VK_API_VERSION_%" PRIu32 "_%" PRIu32 ".",
+                               "is (0x{:08x}). "
+                               "Assuming VK_API_VERSION_{}"
+                               "_{}"
+                               ".",
                                local_api_version, api_version.Major(), api_version.Minor());
         }
     }
@@ -202,7 +206,7 @@ bool Instance::PreCallValidateCreateInstance(const VkInstanceCreateInfo* pCreate
             (export_metal_object_info->exportObjectType != VK_EXPORT_METAL_OBJECT_TYPE_METAL_COMMAND_QUEUE_BIT_EXT)) {
             skip |= LogError("VUID-VkInstanceCreateInfo-pNext-06779", instance, error_obj.location,
                              "The pNext chain contains a VkExportMetalObjectCreateInfoEXT whose "
-                             "exportObjectType = %s, but only VkExportMetalObjectCreateInfoEXT structs with exportObjectType of "
+                             "exportObjectType = {}, but only VkExportMetalObjectCreateInfoEXT structs with exportObjectType of "
                              "VK_EXPORT_METAL_OBJECT_TYPE_METAL_DEVICE_BIT_EXT or "
                              "VK_EXPORT_METAL_OBJECT_TYPE_METAL_COMMAND_QUEUE_BIT_EXT are allowed",
                              string_VkExportMetalObjectTypeFlagBitsEXT(export_metal_object_info->exportObjectType));
@@ -216,7 +220,7 @@ bool Instance::PreCallValidateCreateInstance(const VkInstanceCreateInfo* pCreate
     if (debug_report_callback && !instance_extensions.vk_ext_debug_report) {
         skip |=
             LogError("VUID-VkInstanceCreateInfo-pNext-04925", instance, create_info_loc.dot(Field::ppEnabledExtensionNames),
-                     "does not include VK_EXT_debug_report, but the pNext chain includes VkDebugReportCallbackCreateInfoEXT.\n%s",
+                     "does not include VK_EXT_debug_report, but the pNext chain includes VkDebugReportCallbackCreateInfoEXT.\n{}",
                      PrintPNextChain(Struct::VkInstanceCreateInfo, pCreateInfo->pNext).c_str());
         return skip;
     }
@@ -224,7 +228,7 @@ bool Instance::PreCallValidateCreateInstance(const VkInstanceCreateInfo* pCreate
     if (debug_utils_messenger && !instance_extensions.vk_ext_debug_utils) {
         skip |=
             LogError("VUID-VkInstanceCreateInfo-pNext-04926", instance, create_info_loc.dot(Field::ppEnabledExtensionNames),
-                     "does not include VK_EXT_debug_utils, but the pNext chain includes VkDebugUtilsMessengerCreateInfoEXT.\n%s",
+                     "does not include VK_EXT_debug_utils, but the pNext chain includes VkDebugUtilsMessengerCreateInfoEXT.\n{}",
                      PrintPNextChain(Struct::VkInstanceCreateInfo, pCreateInfo->pNext).c_str());
         return skip;
     }
@@ -232,7 +236,7 @@ bool Instance::PreCallValidateCreateInstance(const VkInstanceCreateInfo* pCreate
     if (direct_driver_loading_list && !instance_extensions.vk_lunarg_direct_driver_loading) {
         skip |= LogError(
             "VUID-VkInstanceCreateInfo-pNext-09400", instance, create_info_loc.dot(Field::ppEnabledExtensionNames),
-            "does not include VK_LUNARG_direct_driver_loading, but the pNext chain includes VkDirectDriverLoadingListLUNARG.\n%s",
+            "does not include VK_LUNARG_direct_driver_loading, but the pNext chain includes VkDirectDriverLoadingListLUNARG.\n{}",
             PrintPNextChain(Struct::VkInstanceCreateInfo, pCreateInfo->pNext).c_str());
         return skip;
     }
@@ -371,16 +375,16 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
     if (pCreateInfo->enabledLayerCount != 0) {
         skip |= LogError("VUID-VkDeviceCreateInfo-enabledLayerCount-12384", physicalDevice,
                          create_info_loc.dot(Field::enabledLayerCount),
-                         "is %" PRIu32
+                         "is {}"
                          " (not zero).\nDevice Layers have never worked since Vulkan 1.0 and only Instance Layers should be used "
                          "instead: https://docs.vulkan.org/spec/latest/appendices/legacy.html#legacy-devicelayers",
                          pCreateInfo->enabledLayerCount);
     } else if (pCreateInfo->ppEnabledLayerNames) {
         skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledLayerNames-12385", physicalDevice,
                          create_info_loc.dot(Field::ppEnabledLayerNames),
-                         "is %p (not NULL).\nDevice Layers have never worked since Vulkan 1.0 and only Instance Layers should be "
+                         "is {} (not NULL).\nDevice Layers have never worked since Vulkan 1.0 and only Instance Layers should be "
                          "used instead: https://docs.vulkan.org/spec/latest/appendices/legacy.html#legacy-devicelayers",
-                         pCreateInfo->ppEnabledLayerNames);
+                         static_cast<const void*>(pCreateInfo->ppEnabledLayerNames));
     }
 
     // If this device supports VK_KHR_portability_subset, it must be enabled
@@ -406,9 +410,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
     }
 
     if (portability_supported && !portability_requested) {
-        skip |= LogError("VUID-VkDeviceCreateInfo-pProperties-04451", physicalDevice, error_obj.location,
-                         "VK_KHR_portability_subset must be enabled because physical device %s supports it",
-                         FormatHandle(physicalDevice).c_str());
+        skip |=
+            LogError("VUID-VkDeviceCreateInfo-pProperties-04451", physicalDevice, error_obj.location,
+                     "VK_KHR_portability_subset must be enabled because physical device {} supports it", Handle(physicalDevice));
     }
 
     if (IsExtEnabledByCreateinfo(ExtensionStateByName(extensions, vvl::Extension::_VK_AMD_negative_viewport_height))) {
@@ -455,7 +459,7 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
     if (pCreateInfo->pNext != nullptr && pCreateInfo->pEnabledFeatures && features2) {
         // Cannot include VkPhysicalDeviceFeatures2 and have non-null pEnabledFeatures
         skip |= LogError("VUID-VkDeviceCreateInfo-pNext-00373", physicalDevice, create_info_loc.dot(Field::pNext),
-                         "includes a VkPhysicalDeviceFeatures2 struct when pCreateInfo->pEnabledFeatures is not NULL.\n%s",
+                         "includes a VkPhysicalDeviceFeatures2 struct when pCreateInfo->pEnabledFeatures is not NULL.\n{}",
                          PrintPNextChain(Struct::VkDeviceCreateInfo, pCreateInfo->pNext).c_str());
     }
 
@@ -504,9 +508,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
             if (IsValueIn(current->sType, illegal_feature_structs_with_11)) {
                 skip |= LogError("VUID-VkDeviceCreateInfo-pNext-02829", physicalDevice, create_info_loc.dot(Field::pNext),
                                  "chain includes a VkPhysicalDeviceVulkan11Features structure, then it must not "
-                                 "include a %s structure. The features in %s were promoted in Vulkan 1.1 and is also found in "
+                                 "include a {} structure. The features in {} were promoted in Vulkan 1.1 and is also found in "
                                  "VkPhysicalDeviceVulkan11Features. To prevent one feature setting something to VK_TRUE and the "
-                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n%s",
+                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n{}",
                                  string_VkStructureName(current->sType), string_VkStructureName(current->sType),
                                  PrintPNextChain(Struct::VkDeviceCreateInfo, pCreateInfo->pNext).c_str());
                 break;
@@ -518,7 +522,7 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
         if (vulkan_11_features->shaderDrawParameters == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_KHR_shader_draw_parameters) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-04476", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan11Features::shaderDrawParameters is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan11Features::shaderDrawParameters is not VK_TRUE.",
                              VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
         }
     }
@@ -544,9 +548,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
             if (IsValueIn(current->sType, illegal_feature_structs_with_12)) {
                 skip |= LogError("VUID-VkDeviceCreateInfo-pNext-02830", physicalDevice, create_info_loc.dot(Field::pNext),
                                  "chain includes a VkPhysicalDeviceVulkan12Features structure, then it must not "
-                                 "include a %s structure. The features in %s were promoted in Vulkan 1.2 and is also found in "
+                                 "include a {} structure. The features in {} were promoted in Vulkan 1.2 and is also found in "
                                  "VkPhysicalDeviceVulkan12Features. To prevent one feature setting something to VK_TRUE and the "
-                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n%s",
+                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n{}",
                                  string_VkStructureName(current->sType), string_VkStructureName(current->sType),
                                  PrintPNextChain(Struct::VkDeviceCreateInfo, pCreateInfo->pNext).c_str());
                 break;
@@ -557,32 +561,32 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
         if (vulkan_12_features->drawIndirectCount == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_KHR_draw_indirect_count) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-02831", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan12Features::drawIndirectCount is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan12Features::drawIndirectCount is not VK_TRUE.",
                              VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
         }
         if (vulkan_12_features->samplerMirrorClampToEdge == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_KHR_sampler_mirror_clamp_to_edge) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-02832", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan12Features::samplerMirrorClampToEdge is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan12Features::samplerMirrorClampToEdge is not VK_TRUE.",
                              VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
         }
         if (vulkan_12_features->descriptorIndexing == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_EXT_descriptor_indexing) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-02833", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan12Features::descriptorIndexing is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan12Features::descriptorIndexing is not VK_TRUE.",
                              VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         }
         if (vulkan_12_features->samplerFilterMinmax == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_EXT_sampler_filter_minmax) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-02834", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan12Features::samplerFilterMinmax is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan12Features::samplerFilterMinmax is not VK_TRUE.",
                              VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME);
         }
 
         if ((vulkan_12_features->shaderOutputViewportIndex == VK_FALSE || vulkan_12_features->shaderOutputLayer == VK_FALSE) &&
             enabled_extensions.find(vvl::Extension::_VK_EXT_shader_viewport_index_layer) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-02835", physicalDevice, error_obj.location,
-                             "%s is enabled but both VkPhysicalDeviceVulkan12Features::shaderOutputViewportIndex "
+                             "{} is enabled but both VkPhysicalDeviceVulkan12Features::shaderOutputViewportIndex "
                              "and VkPhysicalDeviceVulkan12Features::shaderOutputLayer are not VK_TRUE.",
                              VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
         }
@@ -622,9 +626,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
             if (IsValueIn(current->sType, illegal_feature_structs_with_13)) {
                 skip |= LogError("VUID-VkDeviceCreateInfo-pNext-06532", physicalDevice, create_info_loc.dot(Field::pNext),
                                  "chain includes a VkPhysicalDeviceVulkan13Features structure, then it must not "
-                                 "include a %s structure. The features in %s were promoted in Vulkan 1.3 and is also found in "
+                                 "include a {} structure. The features in {} were promoted in Vulkan 1.3 and is also found in "
                                  "VkPhysicalDeviceVulkan13Features. To prevent one feature setting something to VK_TRUE and the "
-                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n%s",
+                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n{}",
                                  string_VkStructureName(current->sType), string_VkStructureName(current->sType),
                                  PrintPNextChain(Struct::VkDeviceCreateInfo, pCreateInfo->pNext).c_str());
                 break;
@@ -655,9 +659,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
             if (IsValueIn(current->sType, illegal_feature_structs_with_14)) {
                 skip |= LogError("VUID-VkDeviceCreateInfo-pNext-10360", physicalDevice, create_info_loc.dot(Field::pNext),
                                  "chain includes a VkPhysicalDeviceVulkan14Features structure, then it must not "
-                                 "include a %s structure. The features in %s were promoted in Vulkan 1.4 and is also found in "
+                                 "include a {} structure. The features in {} were promoted in Vulkan 1.4 and is also found in "
                                  "VkPhysicalDeviceVulkan14Features. To prevent one feature setting something to VK_TRUE and the "
-                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n%s",
+                                 "other to VK_FALSE, only one struct containing the feature is allowed.\n{}",
                                  string_VkStructureName(current->sType), string_VkStructureName(current->sType),
                                  PrintPNextChain(Struct::VkDeviceCreateInfo, pCreateInfo->pNext).c_str());
                 break;
@@ -667,7 +671,7 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
         if (vulkan_14_features->pushDescriptor == VK_FALSE &&
             enabled_extensions.find(vvl::Extension::_VK_KHR_push_descriptor) != enabled_extensions.end()) {
             skip |= LogError("VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-10858", physicalDevice, error_obj.location,
-                             "%s is enabled but VkPhysicalDeviceVulkan14Features::pushDescriptor is not VK_TRUE.",
+                             "{} is enabled but VkPhysicalDeviceVulkan14Features::pushDescriptor is not VK_TRUE.",
                              VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
         }
     }
@@ -697,7 +701,7 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
                     if (!(queue_priority >= 0.f) || !(queue_priority <= 1.f)) {
                         skip |= LogError("VUID-VkDeviceQueueCreateInfo-pQueuePriorities-00383", physicalDevice,
                                          create_info_loc.dot(Field::pQueueCreateInfos, i).dot(Field::pQueuePriorities, j),
-                                         "(%f) is not between 0 and 1 (inclusive).", queue_priority);
+                                         "({:f}) is not between 0 and 1 (inclusive).", queue_priority);
                     }
                 }
             }
@@ -877,8 +881,9 @@ bool Instance::manual_PreCallValidateCreateDevice(VkPhysicalDevice physicalDevic
                 if (device_group_ci->pPhysicalDevices[i] == device_group_ci->pPhysicalDevices[j]) {
                     skip |= LogError("VUID-VkDeviceGroupDeviceCreateInfo-pPhysicalDevices-00375", physicalDevice,
                                      create_info_loc.pNext(Struct::VkDeviceGroupDeviceCreateInfo, Field::pPhysicalDevices, i),
-                                     "and pPhysicalDevices[%" PRIu32 "] are both %s.", j,
-                                     FormatHandle(device_group_ci->pPhysicalDevices[i]).c_str());
+                                     "and pPhysicalDevices[{}"
+                                     "] are both {}.",
+                                     j, Handle(device_group_ci->pPhysicalDevices[i]));
                 }
             }
         }
@@ -929,8 +934,8 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
                     Location stencil_usage_loc =
                         has_stencil_usage_2 ? format_info_loc.pNext(Struct::VkImageStencilUsage2CreateInfoKHR, Field::stencilUsage)
                                             : format_info_loc.pNext(Struct::VkImageStencilUsageCreateInfo, Field::stencilUsage);
-                    skip |= LogError(vuid, physicalDevice, stencil_usage_loc, "is %s.",
-                                     string_VkImageUsageFlags2KHR(stencil_usage.value()).c_str());
+                    skip |= LogError(vuid, physicalDevice, stencil_usage_loc, "is {}.",
+                                     vvl::Flags::ImageUsageFlags2KHR(stencil_usage.value()));
                 }
             }
         }
@@ -940,8 +945,8 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
             if (pImageFormatInfo->tiling != VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
                 skip |= LogError("VUID-VkPhysicalDeviceImageFormatInfo2-tiling-02249", physicalDevice,
                                  format_info_loc.dot(Field::tiling),
-                                 "is %s, but the pNext chain includes VkPhysicalDeviceImageDrmFormatModifierInfoEXT (which "
-                                 "requires VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT).\n%s",
+                                 "is {}, but the pNext chain includes VkPhysicalDeviceImageDrmFormatModifierInfoEXT (which "
+                                 "requires VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT).\n{}",
                                  string_VkImageTiling(pImageFormatInfo->tiling),
                                  PrintPNextChain(Struct::VkPhysicalDeviceImageFormatInfo2, pImageFormatInfo->pNext).c_str());
             }
@@ -960,17 +965,18 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
                         skip |= LogError(
                             "VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02315", physicalDevice,
                             format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT, Field::sharingMode),
-                            "is VK_SHARING_MODE_CONCURRENT, but queueFamilyIndexCount is %" PRIu32
+                            "is VK_SHARING_MODE_CONCURRENT, but queueFamilyIndexCount is {}"
                             " (must be at least 2)\nHint: queueFamilyIndexCount can be 1 if the VK_KHR_maintenance11 extension "
                             "is supported on the device.",
                             image_drm_format->queueFamilyIndexCount);
                     }
                 } else if (!image_drm_format->pQueueFamilyIndices) {
-                    skip |= LogError(
-                        "VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02314", physicalDevice,
-                        format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT, Field::sharingMode),
-                        "is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount is %" PRIu32 ", but pQueueFamilyIndices is NULL.",
-                        image_drm_format->queueFamilyIndexCount);
+                    skip |=
+                        LogError("VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02314", physicalDevice,
+                                 format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT, Field::sharingMode),
+                                 "is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount is {}"
+                                 ", but pQueueFamilyIndices is NULL.",
+                                 image_drm_format->queueFamilyIndexCount);
                 } else {
                     uint32_t queue_family_property_count = 0;
                     DispatchGetPhysicalDeviceQueueFamilyProperties2Helper(api_version, physicalDevice, &queue_family_property_count,
@@ -982,16 +988,19 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
                             skip |= LogError("VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02316", physicalDevice,
                                              format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT,
                                                                    Field::pQueueFamilyIndices, i),
-                                             "is %" PRIu32 ", but is duplicated in pQueueFamilyIndices.", queue_index);
+                                             "is {}"
+                                             ", but is duplicated in pQueueFamilyIndices.",
+                                             queue_index);
                             break;
                         } else if (queue_index >= queue_family_property_count) {
-                            skip |= LogError(
-                                "VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02316", physicalDevice,
-                                format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT,
-                                                      Field::pQueueFamilyIndices, i),
-                                "is %" PRIu32
-                                ", but vkGetPhysicalDeviceQueueFamilyProperties2::pQueueFamilyPropertyCount returned %" PRIu32 ".",
-                                queue_index, queue_family_property_count);
+                            skip |=
+                                LogError("VUID-VkPhysicalDeviceImageDrmFormatModifierInfoEXT-sharingMode-02316", physicalDevice,
+                                         format_info_loc.pNext(Struct::VkPhysicalDeviceImageDrmFormatModifierInfoEXT,
+                                                               Field::pQueueFamilyIndices, i),
+                                         "is {}"
+                                         ", but vkGetPhysicalDeviceQueueFamilyProperties2::pQueueFamilyPropertyCount returned {}"
+                                         ".",
+                                         queue_index, queue_family_property_count);
                         }
                         queue_family_indices_set.emplace(queue_index);
                     }
@@ -1002,7 +1011,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
                 skip |= LogError("VUID-VkPhysicalDeviceImageFormatInfo2-tiling-02249", physicalDevice,
                                  format_info_loc.dot(Field::tiling),
                                  "is VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT, but pNext chain does not include "
-                                 "VkPhysicalDeviceImageDrmFormatModifierInfoEXT.\n%s",
+                                 "VkPhysicalDeviceImageDrmFormatModifierInfoEXT.\n{}",
                                  PrintPNextChain(Struct::VkPhysicalDeviceImageFormatInfo2, pImageFormatInfo->pNext).c_str());
             }
         }
@@ -1027,16 +1036,16 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceImageFormatProperties2(
                     error_obj.location.dot(Field::pImageFormatProperties)
                         .pNext(Struct::VkFilterCubicImageViewImageFormatPropertiesEXT),
                     "is included in the pNext chain of pImageFormatProperties, but "
-                    "VkPhysicalDeviceImageViewImageFormatInfoEXT is not included in the pNext chain of pImageFormatInfo.\n%s",
+                    "VkPhysicalDeviceImageViewImageFormatInfoEXT is not included in the pNext chain of pImageFormatInfo.\n{}",
                     PrintPNextChain(Struct::VkPhysicalDeviceImageFormatInfo2, pImageFormatInfo->pNext).c_str());
             } else if (!IsImageViewTypeCompatibleWithImageType(physical_device_extensions.at(physicalDevice),
                                                                image_view_info->imageViewType, pImageFormatInfo->type,
                                                                GetImageCreateFlags(*pImageFormatInfo))) {
                 skip |= LogError("VUID-VkFilterCubicImageViewImageFormatPropertiesEXT-pNext-02627", physicalDevice,
                                  format_info_loc.pNext(Struct::VkPhysicalDeviceImageViewImageFormatInfoEXT, Field::imageViewType),
-                                 "(%s) is not compatible with (%s) that has (%s).",
+                                 "({}) is not compatible with ({}) that has ({}).",
                                  string_VkImageViewType(image_view_info->imageViewType), string_VkImageType(pImageFormatInfo->type),
-                                 string_VkImageCreateFlags2KHR(GetImageCreateFlags(*pImageFormatInfo)).c_str());
+                                 vvl::Flags::ImageCreateFlags2KHR(GetImageCreateFlags(*pImageFormatInfo)));
             }
         }
     }
@@ -1114,7 +1123,7 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceProperties2(VkPhysicalDevi
                                              .pNext(Struct::VkPhysicalDeviceLayeredApiPropertiesListKHR, Field::pLayeredApis, i)
                                              .dot(Field::properties)
                                              .dot(Field::pNext),
-                                         "contains an invalid struct (%s).", string_VkStructureType(current->sType));
+                                         "contains an invalid struct ({}).", string_VkStructureType(current->sType));
                     }
                     current = current->pNext;
                 }
@@ -1138,7 +1147,7 @@ bool Instance::ValidateGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physi
                                    ? "VUID-vkGetPhysicalDeviceFormatProperties-None-12272"
                                    : "VUID-vkGetPhysicalDeviceFormatProperties2-None-12273";
             skip |= LogError(vuid, physicalDevice, context.error_obj.location.dot(Field::format),
-                             "is %s.\nHint: This format can be used with Vulkan 1.3, "
+                             "is {}.\nHint: This format can be used with Vulkan 1.3, "
                              "VK_KHR_maintenance5, or VK_EXT_ycbcr_2plane_444_formats.",
                              string_VkFormat(format));
         }
@@ -1191,12 +1200,15 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceCooperativeMatrixPropertie
 
     if (scope != VK_SCOPE_SUBGROUP_KHR && scope != VK_SCOPE_WORKGROUP_KHR) {
         skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13372", physicalDevice, info_loc.dot(Field::scope),
-                         "is %s, but must be VK_SCOPE_SUBGROUP_KHR or VK_SCOPE_WORKGROUP_KHR.", string_VkScopeKHR(scope));
+                         "is {}, but must be VK_SCOPE_SUBGROUP_KHR or VK_SCOPE_WORKGROUP_KHR.", string_VkScopeKHR(scope));
     }
 
     if (subgroup_size != 0 && !IsPowerOfTwo(subgroup_size)) {
         skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-subgroupSize-13374", physicalDevice,
-                         info_loc.dot(Field::subgroupSize), "is %" PRIu32 ", which is not a power of two.", subgroup_size);
+                         info_loc.dot(Field::subgroupSize),
+                         "is {}"
+                         ", which is not a power of two.",
+                         subgroup_size);
     }
 
     if (scope == VK_SCOPE_SUBGROUP_KHR && subgroup_size != 0) {
@@ -1206,16 +1218,20 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceCooperativeMatrixPropertie
             DispatchGetPhysicalDeviceProperties2Helper(api_version, physicalDevice, &props2);
 
             if (subgroup_size < subgroup_size_control_props.minSubgroupSize) {
-                skip |=
-                    LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13375", physicalDevice,
-                             info_loc.dot(Field::subgroupSize), "is %" PRIu32 ", which is less than minSubgroupSize (%" PRIu32 ").",
-                             subgroup_size, subgroup_size_control_props.minSubgroupSize);
+                skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13375", physicalDevice,
+                                 info_loc.dot(Field::subgroupSize),
+                                 "is {}"
+                                 ", which is less than minSubgroupSize ({}"
+                                 ").",
+                                 subgroup_size, subgroup_size_control_props.minSubgroupSize);
             }
             if (subgroup_size > subgroup_size_control_props.maxSubgroupSize) {
                 skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13376", physicalDevice,
                                  info_loc.dot(Field::subgroupSize),
-                                 "is %" PRIu32 ", which is greater than maxSubgroupSize (%" PRIu32 ").", subgroup_size,
-                                 subgroup_size_control_props.maxSubgroupSize);
+                                 "is {}"
+                                 ", which is greater than maxSubgroupSize ({}"
+                                 ").",
+                                 subgroup_size, subgroup_size_control_props.maxSubgroupSize);
             }
         } else {
             VkPhysicalDeviceSubgroupProperties subgroup_props = vku::InitStructHelper();
@@ -1225,7 +1241,9 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceCooperativeMatrixPropertie
             if (subgroup_size != subgroup_props.subgroupSize) {
                 skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13377", physicalDevice,
                                  info_loc.dot(Field::subgroupSize),
-                                 "is %" PRIu32 ", but subgroupSizeControl is not supported and subgroupSize is %" PRIu32 ".",
+                                 "is {}"
+                                 ", but subgroupSizeControl is not supported and subgroupSize is {}"
+                                 ".",
                                  subgroup_size, subgroup_props.subgroupSize);
             }
         }
@@ -1243,25 +1261,35 @@ bool Instance::manual_PreCallValidateGetPhysicalDeviceCooperativeMatrixPropertie
             DispatchGetPhysicalDeviceProperties2Helper(api_version, physicalDevice, &props2);
 
             if (invocations > cooperative_matrix2_props.cooperativeMatrixWorkgroupScopeMaxWorkgroupSize) {
-                skip |= LogError(
-                    "VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13380", physicalDevice, info_loc.dot(Field::invocations),
-                    "is %" PRIu32 ", which is greater than cooperativeMatrixWorkgroupScopeMaxWorkgroupSize (%" PRIu32 ").",
-                    invocations, cooperative_matrix2_props.cooperativeMatrixWorkgroupScopeMaxWorkgroupSize);
+                skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-scope-13380", physicalDevice,
+                                 info_loc.dot(Field::invocations),
+                                 "is {}"
+                                 ", which is greater than cooperativeMatrixWorkgroupScopeMaxWorkgroupSize ({}"
+                                 ").",
+                                 invocations, cooperative_matrix2_props.cooperativeMatrixWorkgroupScopeMaxWorkgroupSize);
             }
         }
         if (!IsPowerOfTwo(invocations)) {
             skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-invocations-13378", physicalDevice,
-                             info_loc.dot(Field::invocations), "is %" PRIu32 ", which is not a power of two.", invocations);
+                             info_loc.dot(Field::invocations),
+                             "is {}"
+                             ", which is not a power of two.",
+                             invocations);
         }
         if (subgroup_size != 0 && (invocations % subgroup_size) != 0) {
             skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-subgroupSize-13379", physicalDevice,
                              info_loc.dot(Field::invocations),
-                             "is %" PRIu32 ", which is not a multiple of subgroupSize (%" PRIu32 ").", invocations, subgroup_size);
+                             "is {}"
+                             ", which is not a multiple of subgroupSize ({}"
+                             ").",
+                             invocations, subgroup_size);
         }
 
     } else if (invocations != 0) {
         skip |= LogError("VUID-VkPhysicalDeviceCooperativeMatrixInfo2EXT-invocations-13381", physicalDevice,
-                         info_loc.dot(Field::invocations), "is %" PRIu32 ", but scope is %s, so invocations must be zero.",
+                         info_loc.dot(Field::invocations),
+                         "is {}"
+                         ", but scope is {}, so invocations must be zero.",
                          invocations, string_VkScopeKHR(scope));
     }
 

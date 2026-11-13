@@ -135,10 +135,11 @@ bool CoreChecks::ValidateDescriptorImageLayout(const LogObjectList& objlist, con
                 const vvl::Subresource subresource = image_state.subresource_encoder.Decode(range.begin);
                 local_skip |=
                     LogError(CreateActionVuid(loc.function, vvl::ActionVUID::IMAGE_LAYOUT_00344), objlist, loc,
-                             "Cannot use %s (layer %" PRIu32 ", mip %" PRIu32
-                             ") with specific layout %s (specified by %s) that doesn't match the "
-                             "%s layout %s.%s",
-                             FormatHandle(image_state).c_str(), subresource.arrayLayer, subresource.mipLevel,
+                             "Cannot use {} (layer {}"
+                             ", mip {}"
+                             ") with specific layout {} (specified by {}) that doesn't match the "
+                             "{} layout {}.{}",
+                             Handle(image_state), subresource.arrayLayer, subresource.mipLevel,
                              string_VkImageLayout(mismatch->expected_layout), describe_descriptor_callback().c_str(),
                              mismatch->message, string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
             }
@@ -181,10 +182,11 @@ bool CoreChecks::ValidateSubresourceImageLayout(const vvl::CommandBuffer& cb_sta
                 const vvl::Subresource subresource = image_state.subresource_encoder.Decode(range.begin);
                 const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
                 local_skip |= LogError(vuid, objlist, loc,
-                                       "Cannot use %s (layer %" PRIu32 ", mip %" PRIu32
-                                       ") with specific layout %s that doesn't match the "
-                                       "%s layout %s.%s",
-                                       FormatHandle(image_state).c_str(), subresource.arrayLayer, subresource.mipLevel,
+                                       "Cannot use {} (layer {}"
+                                       ", mip {}"
+                                       ") with specific layout {} that doesn't match the "
+                                       "{} layout {}.{}",
+                                       Handle(image_state), subresource.arrayLayer, subresource.mipLevel,
                                        string_VkImageLayout(mismatch->expected_layout), mismatch->message,
                                        string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
             }
@@ -222,17 +224,18 @@ bool CoreChecks::ValidateVideoImageLayout(const vvl::CommandBuffer& cb_state, co
                     expected_layout += " or VK_IMAGE_LAYOUT_GENERAL";
                 }
                 const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
-                local_skip |= LogError(mismatch_layout_vuid, objlist, loc,
-                                       "Cannot use %s (layer=%" PRIu32 " mip=%" PRIu32
-                                       ") with specific layout %s that doesn't match the "
-                                       "%s layout %s.%s%s",
-                                       FormatHandle(image_state).c_str(), subresource.arrayLayer, subresource.mipLevel,
-                                       expected_layout.c_str(), mismatch->message, string_VkImageLayout(mismatch->layout),
-                                       mismatch->DescribeLayoutSource().c_str(),
-                                       (!enabled_features.unifiedImageLayoutsVideo && mismatch->layout == VK_IMAGE_LAYOUT_GENERAL)
-                                           ? "\nHint: VK_IMAGE_LAYOUT_GENERAL can be allowed if the unifiedImageLayoutsVideo "
-                                             "feature is enabled."
-                                           : "");
+                local_skip |=
+                    LogError(mismatch_layout_vuid, objlist, loc,
+                             "Cannot use {} (layer={}"
+                             " mip={}"
+                             ") with specific layout {} that doesn't match the "
+                             "{} layout {}.{}{}",
+                             Handle(image_state), subresource.arrayLayer, subresource.mipLevel, expected_layout.c_str(),
+                             mismatch->message, string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str(),
+                             (!enabled_features.unifiedImageLayoutsVideo && mismatch->layout == VK_IMAGE_LAYOUT_GENERAL)
+                                 ? "\nHint: VK_IMAGE_LAYOUT_GENERAL can be allowed if the unifiedImageLayoutsVideo "
+                                   "feature is enabled."
+                                 : "");
             }
             return local_skip;
         });
@@ -367,11 +370,10 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const Location& submit_loc, const vv
                         const LogObjectList objlist(cb_info.cb->Handle(), image_state->Handle());
                         skip |= LogError(
                             vuid, objlist, loc_with_region,
-                            "command buffer %s expects %s (subresource: %s) to be in layout %s--instead, current layout is "
-                            "%s.%s",
-                            FormatHandle(*cb_info.cb).c_str(), FormatHandle(*image_state).c_str(),
-                            string_VkImageSubresource(subresource).c_str(), string_VkImageLayout(first_layout),
-                            string_VkImageLayout(image_layout), expected_by.c_str());
+                            "command buffer {} expects {} (subresource: {}) to be in layout {}--instead, current layout is "
+                            "{}.{}",
+                            Handle(*cb_info.cb), Handle(*image_state), string_VkImageSubresource(subresource).c_str(),
+                            string_VkImageLayout(first_layout), string_VkImageLayout(image_layout), expected_by.c_str());
                     }
                 }
             }
@@ -397,10 +399,9 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const Location& submit_loc, const vv
                             "the image layout and rendering commands "
                             "(https://docs.vulkan.org/refpages/latest/refpages/source/VkSwapchainKHR.html#_description)";
                         skip |= LogError("UNASSIGNED-non-acquired-swapchain-image-used", objlist, submit_loc,
-                                         "performs a layout transition on presentable %s, but the image has not been acquired from "
-                                         "%s (either never or since the last present operation).\n%s",
-                                         FormatHandle(*image_state).c_str(), FormatHandle(*image_state->bind_swapchain).c_str(),
-                                         acquire_image_usage_spec_text);
+                                         "performs a layout transition on presentable {}, but the image has not been acquired from "
+                                         "{} (either never or since the last present operation).\n{}",
+                                         Handle(*image_state), Handle(*image_state->bind_swapchain), acquire_image_usage_spec_text);
                     } else if (!has_wait && (semaphore_signal || fence_signal)) {
                         std::ostringstream oss;
                         const char* was_were = "was";
@@ -422,10 +423,9 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const Location& submit_loc, const vv
                             "must use a synchronization primitive to ensure that the presentation engine has finished reading from "
                             "the image (https://docs.vulkan.org/refpages/latest/refpages/source/VkSwapchainKHR.html#_description)";
                         skip |= LogError("UNASSIGNED-non-acquired-swapchain-image-used", objlist, submit_loc,
-                                         "performs a layout transition on presentable %s, but %s signaled by image acquire "
-                                         "operation %s not waited on.\n%s",
-                                         FormatHandle(*image_state).c_str(), oss.str().c_str(), was_were,
-                                         acquire_image_usage_spec_text);
+                                         "performs a layout transition on presentable {}, but {} signaled by image acquire "
+                                         "operation {} not waited on.\n{}",
+                                         Handle(*image_state), oss.str().c_str(), was_were, acquire_image_usage_spec_text);
                     }
                 }
             }
@@ -473,17 +473,20 @@ bool CoreChecks::ValidateLayoutVsAttachmentDescription(const VkImageLayout first
                         (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) ||
                         (first_layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL))) {
             skip |= LogError("VUID-VkRenderPassCreateInfo2-pAttachments-02522", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         } else if ((use_rp2 == false) && IsExtEnabled(extensions.vk_khr_maintenance2) &&
                    (first_layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL)) {
             skip |= LogError("VUID-VkRenderPassCreateInfo-pAttachments-01566", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         } else if ((use_rp2 == false) && ((first_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) ||
                                           (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))) {
             skip |= LogError("VUID-VkRenderPassCreateInfo-pAttachments-00836", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         }
     }
@@ -494,17 +497,20 @@ bool CoreChecks::ValidateLayoutVsAttachmentDescription(const VkImageLayout first
                         (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) ||
                         (first_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL))) {
             skip |= LogError("VUID-VkRenderPassCreateInfo2-pAttachments-02523", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         } else if ((use_rp2 == false) && IsExtEnabled(extensions.vk_khr_maintenance2) &&
                    (first_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL)) {
             skip |= LogError("VUID-VkRenderPassCreateInfo-pAttachments-01567", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         } else if ((use_rp2 == false) && ((first_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) ||
                                           (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))) {
             skip |= LogError("VUID-VkRenderPassCreateInfo-pAttachments-02511", device, layout_loc,
-                             "(%s) is invalid for pAttachments[%" PRIu32 "] (first attachment to have LOAD_OP_CLEAR).",
+                             "({}) is invalid for pAttachments[{}"
+                             "] (first attachment to have LOAD_OP_CLEAR).",
                              string_VkImageLayout(first_layout), attachment);
         }
     }
@@ -523,16 +529,16 @@ bool CoreChecks::ValidateMultipassRenderedToSingleSampledSampleCount(VkFramebuff
     if (!(image_state.image_format_properties.sampleCounts & msrtss_samples)) {
         const LogObjectList objlist(renderpass, framebuffer, image_state.Handle());
         skip |= LogError("VUID-VkRenderPassAttachmentBeginInfo-pAttachments-07010", objlist, rasterization_samples_loc,
-                         "is %s but is not supported with image (%s) created with\n"
-                         "format: %s\n"
-                         "imageType: %s\n"
-                         "tiling: %s\n"
-                         "usage: %s\n"
-                         "flags: %s\n",
-                         string_VkSampleCountFlagBits(msrtss_samples), FormatHandle(image_state).c_str(),
+                         "is {} but is not supported with image ({}) created with\n"
+                         "format: {}\n"
+                         "imageType: {}\n"
+                         "tiling: {}\n"
+                         "usage: {}\n"
+                         "flags: {}\n",
+                         string_VkSampleCountFlagBits(msrtss_samples), Handle(image_state),
                          string_VkFormat(image_state.GetFormat()), string_VkImageType(image_state.GetImageType()),
-                         string_VkImageTiling(image_state.GetTiling()), string_VkImageUsageFlags2KHR(image_state.usage).c_str(),
-                         string_VkImageCreateFlags2KHR(image_state.create_flags).c_str());
+                         string_VkImageTiling(image_state.GetTiling()), vvl::Flags::ImageUsageFlags2KHR(image_state.usage),
+                         vvl::Flags::ImageCreateFlags2KHR(image_state.create_flags));
     }
     return skip;
 }
@@ -592,11 +598,10 @@ bool CoreChecks::ValidateRenderPassLayoutAgainstFramebufferImageUsage(VkImageLay
     if (skip) {
         const LogObjectList objlist(image_state->Handle(), renderpass, framebuffer, image_view_state.Handle());
         return LogError(vuid, objlist, rp_loc,
-                        "(%s) was created with %s = %s, but %s pAttachments[%" PRIu32
-                        "] (%s) references an image not created with the required VkImageUsageFlags.\n%s.",
-                        FormatHandle(renderpass).c_str(), attachment_reference_loc.Fields().c_str(), string_VkImageLayout(layout),
-                        FormatHandle(framebuffer).c_str(), attachment_index, FormatHandle(image_view_state.Handle()).c_str(),
-                        image_view_state.DescribeImageUsage(*this).c_str());
+                        "({}) was created with {} = {}, but {} pAttachments[{}"
+                        "] ({}) references an image not created with the required VkImageUsageFlags.\n{}.",
+                        Handle(renderpass), attachment_reference_loc, string_VkImageLayout(layout), Handle(framebuffer),
+                        attachment_index, Handle(image_view_state.Handle()), image_view_state.DescribeImageUsage(*this).c_str());
     }
 
     return skip;
@@ -618,10 +623,10 @@ bool CoreChecks::ValidateRenderPassStencilLayoutAgainstFramebufferImageUsage(VkI
                                    : "VUID-vkCmdBeginRenderPass-stencilInitialLayout-02843";
         const LogObjectList objlist(renderpass, framebuffer, image_view_state.Handle(), image_state->Handle());
         skip |= LogError(vuid, objlist, layout_loc,
-                         "is %s but %s attachment (%s) references an image which"
-                         " was not created with VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT.\n%s",
-                         string_VkImageLayout(layout), FormatHandle(framebuffer).c_str(),
-                         FormatHandle(image_view_state.Handle()).c_str(), image_view_state.DescribeImageUsage(*this).c_str());
+                         "is {} but {} attachment ({}) references an image which"
+                         " was not created with VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT.\n{}",
+                         string_VkImageLayout(layout), Handle(framebuffer), Handle(image_view_state.Handle()),
+                         image_view_state.DescribeImageUsage(*this).c_str());
     }
 
     return skip;
@@ -644,8 +649,9 @@ bool CoreChecks::ValidateFramebufferAndRenderPassLayouts(const vvl::CommandBuffe
         const LogObjectList objlist(render_pass, framebuffer_state.Handle());
         // VU bieng worked on at https://gitlab.khronos.org/vulkan/vulkan/-/issues/2267
         skip |= LogError("UNASSIGNED-CoreValidation-DrawState-InvalidRenderpass", objlist, rp_begin_loc,
-                         "You cannot start a render pass using a framebuffer with a different number of attachments (%" PRIu32
-                         " vs %" PRIu32 ").",
+                         "You cannot start a render pass using a framebuffer with a different number of attachments ({}"
+                         " vs {}"
+                         ").",
                          render_pass_info->attachmentCount, framebuffer_info.attachmentCount);
     }
 
@@ -670,8 +676,8 @@ bool CoreChecks::ValidateFramebufferAndRenderPassLayouts(const vvl::CommandBuffe
 
         if (!view_state) {
             const LogObjectList objlist(render_pass, framebuffer_state.Handle(), image_view);
-            skip |= LogError("VUID-VkRenderPassBeginInfo-framebuffer-parameter", objlist, attachment_loc, "%s is invalid.",
-                             FormatHandle(image_view).c_str());
+            skip |= LogError("VUID-VkRenderPassBeginInfo-framebuffer-parameter", objlist, attachment_loc, "{} is invalid.",
+                             Handle(image_view));
             continue;
         }
 
@@ -681,14 +687,14 @@ bool CoreChecks::ValidateFramebufferAndRenderPassLayouts(const vvl::CommandBuffe
         if (!image_state) {
             const LogObjectList objlist(render_pass, framebuffer_state.Handle(), image_view, image);
             skip |= LogError("VUID-VkRenderPassBeginInfo-framebuffer-parameter", objlist, attachment_loc,
-                             "%s references invalid image (%s).", FormatHandle(image_view).c_str(), FormatHandle(image).c_str());
+                             "{} references invalid image ({}).", Handle(image_view), Handle(image));
             continue;
         }
         if (image_state->IsSwapchainImage() && image_state->owned_by_swapchain && !image_state->bind_swapchain) {
             const LogObjectList objlist(render_pass, framebuffer_state.Handle(), image_view, image);
             skip |= LogError("VUID-VkRenderPassBeginInfo-framebuffer-parameter", objlist, attachment_loc,
-                             "%s references a swapchain image (%s) from a swapchain that has been destroyed.",
-                             FormatHandle(image_view).c_str(), FormatHandle(image).c_str());
+                             "{} references a swapchain image ({}) from a swapchain that has been destroyed.", Handle(image_view),
+                             Handle(image));
             continue;
         }
         auto attachment_initial_layout = render_pass_info->pAttachments[i].initialLayout;
@@ -746,9 +752,9 @@ bool CoreChecks::ValidateFramebufferAndRenderPassLayouts(const vvl::CommandBuffe
                                                ? "VUID-vkCmdBeginRenderPass2-initialLayout-03100"
                                                : "VUID-vkCmdBeginRenderPass-initialLayout-00900";
                         subres_skip |= LogError(vuid, objlist, attachment_loc,
-                                                "You cannot start a render pass using attachment %" PRIu32
-                                                " where the render pass initial layout is %s and the %s layout "
-                                                "of the attachment is %s.%s The layouts "
+                                                "You cannot start a render pass using attachment {}"
+                                                " where the render pass initial layout is {} and the {} layout "
+                                                "of the attachment is {}.{} The layouts "
                                                 "must match, or the render pass initial layout for the "
                                                 "attachment must be VK_IMAGE_LAYOUT_UNDEFINED.",
                                                 i, string_VkImageLayout(mismatch->expected_layout), mismatch->message,
@@ -901,12 +907,13 @@ bool CoreChecks::ValidateRenderingAttachmentCurrentLayout(const core::RenderingA
                 bool local_skip = false;
                 if (auto mismatch = DetectLayoutMismatch(state, attachment_layout, aspect_mask)) {
                     const vvl::Subresource subresource = image_state.subresource_encoder.Decode(range.begin);
-                    local_skip |=
-                        LogError(vuid, vvl_attachment.GetObjectList(), vvl_attachment.Loc(),
-                                 "(%s, layer %" PRIu32 ", mip %" PRIu32 ") is expected to have layout %s but %s layout is %s.%s",
-                                 FormatHandle(image_state).c_str(), subresource.arrayLayer, subresource.mipLevel,
-                                 string_VkImageLayout(mismatch->expected_layout), mismatch->message,
-                                 string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
+                    local_skip |= LogError(vuid, vvl_attachment.GetObjectList(), vvl_attachment.Loc(),
+                                           "({}, layer {}"
+                                           ", mip {}"
+                                           ") is expected to have layout {} but {} layout is {}.{}",
+                                           Handle(image_state), subresource.arrayLayer, subresource.mipLevel,
+                                           string_VkImageLayout(mismatch->expected_layout), mismatch->message,
+                                           string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
                 }
                 return local_skip;
             });
@@ -993,7 +1000,7 @@ bool CoreChecks::ValidateClearImageLayout(const vvl::CommandBuffer& cb_state, co
         if ((dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) && (dest_image_layout != VK_IMAGE_LAYOUT_GENERAL)) {
             LogObjectList objlist(cb_state.Handle(), image_state.Handle());
             skip |= LogError("VUID-vkCmdClearDepthStencilImage-imageLayout-00012", objlist, loc,
-                             "Layout for cleared image is %s but can only be TRANSFER_DST_OPTIMAL or GENERAL.",
+                             "Layout for cleared image is {} but can only be TRANSFER_DST_OPTIMAL or GENERAL.",
                              string_VkImageLayout(dest_image_layout));
         }
 
@@ -1002,7 +1009,7 @@ bool CoreChecks::ValidateClearImageLayout(const vvl::CommandBuffer& cb_state, co
             (dest_image_layout != VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR)) {
             LogObjectList objlist(cb_state.Handle(), image_state.Handle());
             skip |= LogError("VUID-vkCmdClearColorImage-imageLayout-01394", objlist, loc,
-                             "Layout for cleared image is %s but can only be TRANSFER_DST_OPTIMAL, SHARED_PRESENT_KHR, or GENERAL.",
+                             "Layout for cleared image is {} but can only be TRANSFER_DST_OPTIMAL, SHARED_PRESENT_KHR, or GENERAL.",
                              string_VkImageLayout(dest_image_layout));
         }
     }
@@ -1026,7 +1033,7 @@ bool CoreChecks::ValidateClearImageLayout(const vvl::CommandBuffer& cb_state, co
                                                : "VUID-vkCmdClearColorImage-imageLayout-00004";
                         LogObjectList objlist(cb_state.Handle(), image);
                         subres_skip |= LogError(vuid, objlist, loc,
-                                                "Cannot clear an image whose layout is %s and doesn't match the %s layout %s.%s",
+                                                "Cannot clear an image whose layout is {} and doesn't match the {} layout {}.{}",
                                                 string_VkImageLayout(mismatch->expected_layout), mismatch->message,
                                                 string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
                     }
@@ -1090,14 +1097,15 @@ bool CoreChecks::ValidateImageBarrierLayouts(const vvl::CommandBuffer& cb_state,
                         const vvl::Subresource subresource = image_state.subresource_encoder.Decode(range.begin);
                         const VkImageSubresource vk_subresource = image_state.subresource_encoder.MakeVkSubresource(subresource);
                         const LogObjectList objlist(cb_state.Handle(), image_barrier.image);
-                        subres_skip = LogError(
-                            vuid, objlist, image_loc,
-                            "(%s) cannot transition the layout of aspect=%s, level=%" PRIu32 ", layer=%" PRIu32
-                            " from %s when the "
-                            "%s layout is %s.%s",
-                            FormatHandle(image_barrier.image).c_str(), string_VkImageAspectFlags(vk_subresource.aspectMask).c_str(),
-                            vk_subresource.mipLevel, vk_subresource.arrayLayer, string_VkImageLayout(image_barrier.oldLayout),
-                            mismatch->message, string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
+                        subres_skip = LogError(vuid, objlist, image_loc,
+                                               "({}) cannot transition the layout of aspect={}, level={}"
+                                               ", layer={}"
+                                               " from {} when the "
+                                               "{} layout is {}.{}",
+                                               Handle(image_barrier.image), vvl::Flags::ImageAspectFlags(vk_subresource.aspectMask),
+                                               vk_subresource.mipLevel, vk_subresource.arrayLayer,
+                                               string_VkImageLayout(image_barrier.oldLayout), mismatch->message,
+                                               string_VkImageLayout(mismatch->layout), mismatch->DescribeLayoutSource().c_str());
                     }
                     return subres_skip;
                 });
@@ -1174,7 +1182,7 @@ bool CoreChecks::VerifyDynamicRenderingImageBarrierLayouts(const vvl::CommandBuf
             if (layout != VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ && layout != VK_IMAGE_LAYOUT_GENERAL) {
                 const auto& vuid = GetDynamicRenderingBarrierVUID(barrier_loc, vvl::DynamicRenderingBarrierError::kImageLayout);
                 local_skip |=
-                    LogError(vuid, image_state.VkHandle(), barrier_loc, "image layout is %s.", string_VkImageLayout(layout));
+                    LogError(vuid, image_state.VkHandle(), barrier_loc, "image layout is {}.", string_VkImageLayout(layout));
             }
             return local_skip;
         });
@@ -1286,9 +1294,9 @@ bool CoreChecks::ValidateHostCopyCurrentLayout(const VkImageLayout expected_layo
     if (check_state.found_range.non_empty()) {
         const VkImageSubresource subres = image_state.subresource_encoder.IndexToVkSubresource(check_state.found_range.begin);
         skip |= LogError(vvl::GetImageImageLayoutVUID(loc), image_state.Handle(), loc,
-                         "is currently %s but expected to be %s for %s (subresource: %s)",
+                         "is currently {} but expected to be {} for {} (subresource: {})",
                          string_VkImageLayout(check_state.found_layout), string_VkImageLayout(expected_layout),
-                         debug_report->FormatHandle(image_state.Handle()).c_str(), string_VkImageSubresource(subres).c_str());
+                         debug_report->Handle(image_state.Handle()), string_VkImageSubresource(subres).c_str());
     }
     return skip;
 }

@@ -125,8 +125,8 @@ bool Tracker::CheckPoisoning(const ObjectState& object_state, const char* vuid, 
     if ((object_state.status_flags & kObjectStatusPoisoned) != 0) {
         const VulkanTypedHandle typed_handle = ObjTrackStateTypedHandle(object_state);
         LogObjectList objlist(handle_, typed_handle);
-        skip |= LogError(vuid, objlist, loc, "(%s) %s", FormatHandle(typed_handle).c_str(),
-                         DescribePoisonChain(object_state.poison_chain).c_str());
+        skip |=
+            LogError(vuid, objlist, loc, "({}) {}", Handle(typed_handle), DescribePoisonChain(object_state.poison_chain).c_str());
     }
     return skip;
 }
@@ -176,7 +176,9 @@ bool Tracker::CheckObjectValidity(VulkanTypedHandle object, bool poisoned_object
     }
     // Object was not found anywhere
     if (!other_lifetimes) {
-        return LogError(invalid_handle_vuid, handle_, loc, "Invalid %s Object 0x%" PRIxLEAST64 ".",
+        return LogError(invalid_handle_vuid, handle_, loc,
+                        "Invalid {} Object 0x{:x}"
+                        ".",
                         string_VulkanObjectType(object.type), object.handle);
     }
     // Anonymous object validation does not check parent, only that the object exists
@@ -187,11 +189,10 @@ bool Tracker::CheckObjectValidity(VulkanTypedHandle object, bool poisoned_object
     // Object found on another device
     LogObjectList objlist(handle_, other_lifetimes->handle_);
     return LogError(wrong_parent_vuid, objlist, loc,
-                    "(%s 0x%" PRIxLEAST64
-                    ") was created, allocated or retrieved from %s, but command is using (or its dispatchable parameter is "
-                    "associated with) %s",
-                    string_VulkanObjectType(object.type), object.handle, FormatHandle(other_lifetimes->handle_).c_str(),
-                    FormatHandle(handle_).c_str());
+                    "({} 0x{:x}"
+                    ") was created, allocated or retrieved from {}, but command is using (or its dispatchable parameter is "
+                    "associated with) {}",
+                    string_VulkanObjectType(object.type), object.handle, Handle(other_lifetimes->handle_), Handle(handle_));
 }
 
 void Tracker::SetDeviceHandle(const Device& device) {
@@ -215,8 +216,8 @@ bool Device::CheckPipelineObjectValidity(uint64_t object_handle, const char* inv
     for (const auto& pipeline : itr->second) {
         if (!tracker.TracksObject(pipeline->TypedHandle())) {
             skip |= LogError(invalid_handle_vuid, instance, loc,
-                             "Invalid VkPipeline Object 0x%" PRIxLEAST64
-                             " as it was created with VkPipelineLibraryCreateInfoKHR::pLibraries 0x%" PRIxLEAST64
+                             "Invalid VkPipeline Object 0x{:x}"
+                             " as it was created with VkPipelineLibraryCreateInfoKHR::pLibraries 0x{:x}"
                              " that doesn't exist anymore. The application must maintain the lifetime of a pipeline library based "
                              "on the pipelines that link with it.",
                              object_handle, pipeline->handle);
@@ -247,7 +248,7 @@ void Tracker::CreateObject(VulkanTypedHandle object, const VkAllocationCallbacks
         // a race condition in the app. Report an error and move on.
         // TODO should this be an error? https://gitlab.khronos.org/vulkan/vulkan/-/issues/3616
         LogError("UNASSIGNED-ObjectTracker-Insert", object, loc,
-                 "Couldn't insert %s Object 0x%" PRIxLEAST64
+                 "Couldn't insert {} Object 0x{:x}"
                  ", already existed. This should not happen and may indicate a "
                  "race condition in the application.",
                  string_VulkanObjectType(object.type), object.handle);
@@ -276,12 +277,12 @@ bool Tracker::ValidateDestroyObject(VulkanTypedHandle object, const VkAllocation
                 // This check only verifies that custom allocation callbacks were provided to both Create and Destroy calls,
                 // it cannot verify that these allocation callbacks are compatible with each other.
                 skip |= LogError(expected_custom_allocator_code, object, loc,
-                                 "Custom allocator not specified while destroying %s Object 0x%" PRIxLEAST64
+                                 "Custom allocator not specified while destroying {} Object 0x{:x}"
                                  ", but it was specified at creation.",
                                  string_VulkanObjectType(object_type), object_handle);
             } else if (!allocated_with_custom && custom_allocator && expected_default_allocator_code != kVUIDUndefined) {
                 skip |= LogError(expected_default_allocator_code, object, loc,
-                                 "Custom allocator specified while destroying %s Object 0x%" PRIxLEAST64
+                                 "Custom allocator specified while destroying {} Object 0x{:x}"
                                  ", but it was not specified at creation.",
                                  string_VulkanObjectType(object_type), object_handle);
             }
@@ -331,7 +332,7 @@ void Tracker::DestroyObjectSilently(VulkanTypedHandle object, const Location& lo
         // We've already checked that the object exists. If we couldn't find and atomically remove it
         // from the map, there must have been a race condition in the app. Report an error and move on.
         (void)LogError("UNASSIGNED-ObjectTracker-Destroy", handle_, loc,
-                       "Couldn't destroy %s Object 0x%" PRIxLEAST64
+                       "Couldn't destroy {} Object 0x{:x}"
                        ", not found. This should not happen and may indicate a race condition in the application.",
                        string_VulkanObjectType(object.type), object.handle);
 
@@ -374,13 +375,12 @@ bool Device::ValidateCommandBuffer(VkCommandPool command_pool, VkCommandBuffer c
             const auto parent_pool = CastFromUint64<VkCommandPool>(node->parent_object);
             const LogObjectList objlist(command_buffer, parent_pool, command_pool);
             skip |= LogError("VUID-vkFreeCommandBuffers-pCommandBuffers-parent", objlist, loc,
-                             "attempting to use %s to free %s, but the command buffer belongs to %s.",
-                             FormatHandle(command_pool).c_str(), FormatHandle(command_buffer).c_str(),
-                             FormatHandle(parent_pool).c_str());
+                             "attempting to use {} to free {}, but the command buffer belongs to {}.", Handle(command_pool),
+                             Handle(command_buffer), Handle(parent_pool));
         }
     } else {
-        skip |= LogError("VUID-vkFreeCommandBuffers-pCommandBuffers-00048", command_buffer, loc, "Invalid %s.",
-                         FormatHandle(command_buffer).c_str());
+        skip |=
+            LogError("VUID-vkFreeCommandBuffers-pCommandBuffers-00048", command_buffer, loc, "Invalid {}.", Handle(command_buffer));
     }
     return skip;
 }
@@ -403,14 +403,13 @@ bool Device::ValidateDescriptorSet(VkDescriptorPool descriptor_pool, VkDescripto
             const auto parent_pool = CastFromUint64<VkDescriptorPool>(ds_item->second->parent_object);
             const LogObjectList objlist(descriptor_set, parent_pool, descriptor_pool);
             skip |= LogError("VUID-vkFreeDescriptorSets-pDescriptorSets-parent", objlist, loc,
-                             "attempting to free %s"
-                             " belonging to %s from %s.",
-                             FormatHandle(descriptor_set).c_str(), FormatHandle(parent_pool).c_str(),
-                             FormatHandle(descriptor_pool).c_str());
+                             "attempting to free {}"
+                             " belonging to {} from {}.",
+                             Handle(descriptor_set), Handle(parent_pool), Handle(descriptor_pool));
         }
     } else {
-        skip |= LogError("VUID-vkFreeDescriptorSets-pDescriptorSets-00310", descriptor_set, loc, "Invalid %s.",
-                         FormatHandle(descriptor_set).c_str());
+        skip |=
+            LogError("VUID-vkFreeDescriptorSets-pDescriptorSets-00310", descriptor_set, loc, "Invalid {}.", Handle(descriptor_set));
     }
     return skip;
 }
@@ -436,7 +435,7 @@ bool Device::ValidateDescriptorWrite(VkWriteDescriptorSet const* desc, bool is_p
                     if (!enabled_features.nullDescriptor && desc->pTexelBufferView[i] == VK_NULL_HANDLE) {
                         skip |= LogError("VUID-VkWriteDescriptorSet-descriptorType-02995", desc->dstSet,
                                          loc.dot(Field::pTexelBufferView, i),
-                                         "is VK_NULL_HANDLE, and descriptorType is %s.\nHint: This can be allowed if the "
+                                         "is VK_NULL_HANDLE, and descriptorType is {}.\nHint: This can be allowed if the "
                                          "nullDescriptor feature is enabled.",
                                          string_VkDescriptorType(desc->descriptorType));
                     }
@@ -456,7 +455,7 @@ bool Device::ValidateDescriptorWrite(VkWriteDescriptorSet const* desc, bool is_p
                     if (!enabled_features.nullDescriptor && desc->pImageInfo[i].imageView == VK_NULL_HANDLE) {
                         skip |= LogError("VUID-VkWriteDescriptorSet-descriptorType-02997", desc->dstSet,
                                          loc.dot(Field::pImageInfo, i).dot(Field::imageView),
-                                         "is VK_NULL_HANDLE, and descriptorType is %s.\nHint: This can be allowed if the "
+                                         "is VK_NULL_HANDLE, and descriptorType is {}.\nHint: This can be allowed if the "
                                          "nullDescriptor feature is enabled.",
                                          string_VkDescriptorType(desc->descriptorType));
                     }
@@ -491,7 +490,7 @@ bool Device::ValidateDescriptorWrite(VkWriteDescriptorSet const* desc, bool is_p
                     if (!enabled_features.nullDescriptor && desc->pBufferInfo[i].buffer == VK_NULL_HANDLE) {
                         skip |= LogError("VUID-VkDescriptorBufferInfo-buffer-02998", desc->dstSet,
                                          loc.dot(Field::pBufferInfo, i).dot(Field::buffer),
-                                         "is VK_NULL_HANDLE, and descriptorType is %s.\nHint: This can be allowed if the "
+                                         "is VK_NULL_HANDLE, and descriptorType is {}.\nHint: This can be allowed if the "
                                          "nullDescriptor feature is enabled.",
                                          string_VkDescriptorType(desc->descriptorType));
                     }
@@ -660,7 +659,7 @@ bool Instance::ReportLeakedObjects(std::vector<VulkanTypedHandle>& leaked_list, 
         ss << FormatHandle(object);
         count++;
     }
-    return LogError("VUID-vkDestroyInstance-instance-00629", instance, loc, "%s", ss.str().c_str());
+    return LogError("VUID-vkDestroyInstance-instance-00629", instance, loc, "{}", ss.str().c_str());
 }
 
 void Device::FindLeakedObjects(VulkanObjectType object_type, std::vector<VulkanTypedHandle>& leaked_list) const {
@@ -708,7 +707,7 @@ bool Device::ReportLeakedObjects(std::vector<VulkanTypedHandle>& leaked_list, co
         ss << FormatHandle(object);
         count++;
     }
-    return LogError("VUID-vkDestroyDevice-device-05137", device, loc, "%s", ss.str().c_str());
+    return LogError("VUID-vkDestroyDevice-device-05137", device, loc, "{}", ss.str().c_str());
 }
 
 bool Instance::PreCallValidateDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator,
@@ -725,8 +724,8 @@ bool Instance::PreCallValidateDestroyInstance(VkInstance instance, const VkAlloc
         VkDebugReportObjectTypeEXT debug_object_type = GetDebugReport(node->object_type);
 
         skip |=
-            LogError("VUID-vkDestroyInstance-instance-00629", instance, error_obj.location, "%s object %s has not been destroyed.",
-                     string_VkDebugReportObjectTypeEXT(debug_object_type), FormatHandle(ObjTrackStateTypedHandle(*node)).c_str());
+            LogError("VUID-vkDestroyInstance-instance-00629", instance, error_obj.location, "{} object {} has not been destroyed.",
+                     string_VkDebugReportObjectTypeEXT(debug_object_type), Handle(ObjTrackStateTypedHandle(*node)));
 
         // Throw errors if any device objects belonging to this instance have not been destroyed
         auto device_data = vvl::GetDispatchDevice(device);
@@ -1390,7 +1389,8 @@ bool Device::PreCallValidateDebugMarkerSetObjectTagEXT(VkDevice device, const Vk
         } else if (!tracker.object_map[object_type].contains(pTagInfo->object)) {
             skip |= LogError("VUID-VkDebugMarkerObjectTagInfoEXT-object-01495", device,
                              error_obj.location.dot(Field::pTagInfo).dot(Field::objectType),
-                             "(%s) doesn't match the object (0x%" PRIx64 ").",
+                             "({}) doesn't match the object (0x{:x}"
+                             ").",
                              string_VkDebugReportObjectTypeEXT(pTagInfo->objectType), pTagInfo->object);
         }
     }
@@ -1413,7 +1413,8 @@ bool Device::PreCallValidateDebugMarkerSetObjectNameEXT(VkDevice device, const V
         } else if (!tracker.object_map[object_type].contains(pNameInfo->object)) {
             skip |= LogError("VUID-VkDebugMarkerObjectNameInfoEXT-object-01492", device,
                              error_obj.location.dot(Field::pNameInfo).dot(Field::objectType),
-                             "(%s) doesn't match the object (0x%" PRIx64 ").",
+                             "({}) doesn't match the object (0x{:x}"
+                             ").",
                              string_VkDebugReportObjectTypeEXT(pNameInfo->objectType), pNameInfo->object);
         }
     }
@@ -1433,8 +1434,9 @@ bool Device::PreCallValidateSetDebugUtilsObjectNameEXT(VkDevice device, const Vk
     } else if (object_type == VK_OBJECT_TYPE_DEVICE) {
         if (HandleToUint64(device) != object_handle) {
             skip |= LogError("VUID-vkSetDebugUtilsObjectNameEXT-pNameInfo-07874", device, error_obj.location.dot(Field::objectType),
-                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x%" PRIx64 ") is not equal to device (%s).",
-                             object_handle, FormatHandle(device).c_str());
+                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x{:x}"
+                             ") is not equal to device ({}).",
+                             object_handle, Handle(device));
         }
     } else {
         skip |= ValidateAnonymousObject(object_handle, object_type, "VUID-VkDebugUtilsObjectNameInfoEXT-objectType-02590",
@@ -1460,8 +1462,9 @@ bool Device::PreCallValidateSetDebugUtilsObjectTagEXT(VkDevice device, const VkD
         if (HandleToUint64(device) != object_handle) {
             skip |= LogError("VUID-vkSetDebugUtilsObjectTagEXT-pNameInfo-07877", device,
                              error_obj.location.dot(Field::pTagInfo).dot(Field::objectType),
-                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x%" PRIx64 ") is not equal to device (%s).",
-                             object_handle, FormatHandle(device).c_str());
+                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x{:x}"
+                             ") is not equal to device ({}).",
+                             object_handle, Handle(device));
         }
     } else {
         skip |= ValidateAnonymousObject(object_handle, object_type, "VUID-VkDebugUtilsObjectTagInfoEXT-objectHandle-01910",
@@ -1768,13 +1771,14 @@ bool Device::PreCallValidateSetPrivateData(VkDevice device, VkObjectType objectT
 
     if (IsInstanceVkObjectType(objectType) || objectType == VK_OBJECT_TYPE_UNKNOWN) {
         skip |= LogError("VUID-vkSetPrivateData-objectHandle-04016", device, error_obj.location.dot(Field::objectType),
-                         "is %s, but must be a device-level object type.", string_VkObjectType(objectType));
+                         "is {}, but must be a device-level object type.", string_VkObjectType(objectType));
     } else if (objectType == VK_OBJECT_TYPE_DEVICE) {
         // Need to check device handle as has no parent to check as the caller is the same device object
         if (HandleToUint64(device) != objectHandle) {
             skip |= LogError("VUID-vkSetPrivateData-objectHandle-04016", device, error_obj.location.dot(Field::objectType),
-                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x%" PRIx64 ") is not equal to device (%s).", objectHandle,
-                             FormatHandle(device).c_str());
+                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x{:x}"
+                             ") is not equal to device ({}).",
+                             objectHandle, Handle(device));
         }
     } else {
         skip |= ValidateAnonymousObject(objectHandle, objectType, "VUID-vkSetPrivateData-objectHandle-04017",
@@ -1793,13 +1797,14 @@ bool Device::PreCallValidateGetPrivateData(VkDevice device, VkObjectType objectT
     bool skip = false;
     if (IsInstanceVkObjectType(objectType) || objectType == VK_OBJECT_TYPE_UNKNOWN) {
         skip |= LogError("VUID-vkGetPrivateData-objectType-04018", device, error_obj.location.dot(Field::objectType),
-                         "is %s, but must be a device-level object type.", string_VkObjectType(objectType));
+                         "is {}, but must be a device-level object type.", string_VkObjectType(objectType));
     } else if (objectType == VK_OBJECT_TYPE_DEVICE) {
         // Need to check device handle as has no parent to check as the caller is the same device object
         if (HandleToUint64(device) != objectHandle) {
             skip |= LogError("VUID-vkGetPrivateData-objectType-04018", device, error_obj.location.dot(Field::objectType),
-                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x%" PRIx64 ") is not equal to device (%s).", objectHandle,
-                             FormatHandle(device).c_str());
+                             "is VK_OBJECT_TYPE_DEVICE but objectHandle (0x{:x}"
+                             ") is not equal to device ({}).",
+                             objectHandle, Handle(device));
         }
     } else {
         skip |= ValidateAnonymousObject(objectHandle, objectType, "VUID-vkGetPrivateData-objectHandle-09498",
@@ -2004,7 +2009,9 @@ bool Device::PreCallValidateCreateShadersEXT(VkDevice device, uint32_t createInf
                                            index0_loc.dot(Field::pSetLayouts, index1));
                 }
             } else {
-                skip |= LogError(vuid, device, index0_loc.dot(Field::pSetLayouts), "is NULL, but setLayoutCount is %" PRIu32 ".",
+                skip |= LogError(vuid, device, index0_loc.dot(Field::pSetLayouts),
+                                 "is NULL, but setLayoutCount is {}"
+                                 ".",
                                  pCreateInfos[index0].setLayoutCount);
             }
         }

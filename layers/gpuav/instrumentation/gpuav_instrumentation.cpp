@@ -323,7 +323,7 @@ bool LogInstrumentationError(Validator& gpuav, const VkCommandBuffer cb_handle, 
         std::string debug_info_message = gpuav.GenerateDebugInfoMessage(
             cb_handle, error_record, instrumented_shader, error_info.pipeline_bind_point, error_info.action_command_index);
 
-        gpuav.LogError(vuid_msg.c_str(), objlist, loc_with_debug_region, "%s\n%s", error_msg.c_str(), debug_info_message.c_str());
+        gpuav.LogError(vuid_msg.c_str(), objlist, loc_with_debug_region, "{}\n{}", error_msg.c_str(), debug_info_message.c_str());
     }
 
     return error_found;

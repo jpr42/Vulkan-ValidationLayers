@@ -56,9 +56,9 @@ bool BestPractices::CheckEventSignalingState(const bp_state::CommandBufferSubSta
     if (auto* signaling_info = vvl::Find(command_buffer.event_signaling_state, event); signaling_info && signaling_info->signaled) {
         const LogObjectList objlist(command_buffer.VkHandle(), event);
         skip |= LogWarning("BestPractices-Event-SignalSignaledEvent", objlist, cb_loc,
-                           "%s sets event %s which was already set (in this command buffer or in the executed secondary command "
+                           "{} sets event {} which was already set (in this command buffer or in the executed secondary command "
                            "buffers). If this is not the desired behavior, the event must be reset before it is set again.",
-                           FormatHandle(command_buffer.Handle()).c_str(), FormatHandle(event).c_str());
+                           Handle(command_buffer.Handle()), Handle(event));
     }
     return skip;
 }
@@ -229,14 +229,14 @@ bool BestPractices::ValidateAccessLayoutCombination(const Location& loc, VkImage
         const Location access_loc = loc.dot(is_src ? Field::srcAccessMask : Field::dstAccessMask);
         const Location layout_loc = loc.dot(is_src ? Field::oldLayout : Field::newLayout);
         skip |= LogWarning("BestPractices-ImageBarrierAccessLayout", image, access_loc,
-                           "(%s) contains %s, which is not an access expected for an image in %s (%s) (aspectMask is %s).\n"
-                           "The accesses expected for %s are %s.\n"
-                           "Either remove the unexpected access from %s, or check that %s is the layout %s is in when the "
+                           "({}) contains {}, which is not an access expected for an image in {} ({}) (aspectMask is {}).\n"
+                           "The accesses expected for {} are {}.\n"
+                           "Either remove the unexpected access from {}, or check that {} is the layout {} is in when the "
                            "access happens.",
-                           string_VkAccessFlags2(access).c_str(), string_VkAccessFlags2(unexpected).c_str(),
-                           layout_loc.Fields().c_str(), string_VkImageLayout(layout), string_VkImageAspectFlags(aspect).c_str(),
-                           string_VkImageLayout(layout), allowed == 0 ? "none (0)" : string_VkAccessFlags2(allowed).c_str(),
-                           access_loc.Fields().c_str(), string_VkImageLayout(layout), FormatHandle(image).c_str());
+                           vvl::Flags::AccessFlags2(access), vvl::Flags::AccessFlags2(unexpected), layout_loc,
+                           string_VkImageLayout(layout), vvl::Flags::ImageAspectFlags(aspect), string_VkImageLayout(layout),
+                           allowed == 0 ? "none (0)" : string_VkAccessFlags2(allowed).c_str(), access_loc,
+                           string_VkImageLayout(layout), Handle(image));
     }
 
     return skip;
@@ -251,7 +251,7 @@ bool BestPractices::ValidateImageMemoryBarrier(const Location& loc, VkCommandBuf
     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && IsImageLayoutReadOnly(newLayout)) {
         skip |= LogWarning("BestPractices-ImageMemoryBarrier-TransitionUndefinedToReadOnly", image, loc,
                            "VkImageMemoryBarrier is being submitted with oldLayout VK_IMAGE_LAYOUT_UNDEFINED and the contents "
-                           "may be discarded, but the newLayout is %s, which is read only.",
+                           "may be discarded, but the newLayout is {}, which is read only.",
                            string_VkImageLayout(newLayout));
     }
 
@@ -264,9 +264,9 @@ bool BestPractices::ValidateImageMemoryBarrier(const Location& loc, VkCommandBuf
                                   : "could be omitted, if maintenance9 (which is supported by the physical device) were enabled";
         if (image_state->GetTiling() == VK_IMAGE_TILING_LINEAR) {
             skip |= LogPerformanceWarning("BestPractices-PipelineBarrier-unneeded-QFOT", image, loc,
-                                          "A queue family ownership transfer is being performed on %s, but this %s. Image was "
+                                          "A queue family ownership transfer is being performed on {}, but this {}. Image was "
                                           "created with VK_IMAGE_TILING_LINEAR.",
-                                          FormatHandle(image).c_str(), warning);
+                                          Handle(image), warning);
         } else if ((image_state->usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
                                           VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
                                           VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT |
@@ -282,14 +282,15 @@ bool BestPractices::ValidateImageMemoryBarrier(const Location& loc, VkCommandBuf
             if (qfot_props.optimalImageTransferToQueueFamilies & (1 << dstQueueFamilyIndex)) {
                 skip |= LogPerformanceWarning(
                     "BestPractices-PipelineBarrier-unneeded-QFOT", image, loc,
-                    "A queue family ownership transfer is being performed on %s, but this %s. Image was created with "
+                    "A queue family ownership transfer is being performed on {}, but this {}. Image was created with "
                     "VK_IMAGE_TILING_OPTIMAL, image usage does not contain any of VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | "
                     "VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | "
                     "VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT | "
                     "VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR and "
-                    "VkQueueFamilyOwnershipTransferPropertiesKHR::optimalImageTransferToQueueFamilies (%" PRIu32
-                    ") has bit set for destination queue family index %" PRIu32 ".",
-                    FormatHandle(image).c_str(), warning, qfot_props.optimalImageTransferToQueueFamilies, dstQueueFamilyIndex);
+                    "VkQueueFamilyOwnershipTransferPropertiesKHR::optimalImageTransferToQueueFamilies ({}"
+                    ") has bit set for destination queue family index {}"
+                    ".",
+                    Handle(image), warning, qfot_props.optimalImageTransferToQueueFamilies, dstQueueFamilyIndex);
             }
         }
     }
@@ -311,8 +312,8 @@ bool BestPractices::ValidateBufferMemoryBarrier(const Location& loc, VkCommandBu
                                   ? "is not required, because maintenance9 is enabled"
                                   : "could be omitted, if maintenance9 (which is supported by the physical device) were enabled";
         skip |= LogPerformanceWarning("BestPractices-PipelineBarrier-unneeded-QFOT", buffer, loc,
-                                      "A queue family ownership transfer is being performed on %s, but this %s.",
-                                      FormatHandle(buffer).c_str(), warning);
+                                      "A queue family ownership transfer is being performed on {}, but this {}.", Handle(buffer),
+                                      warning);
     }
 
     return skip;
@@ -343,9 +344,10 @@ bool BestPractices::PreCallValidateCmdPipelineBarrier(
         const uint32_t total_barriers = num + imageMemoryBarrierCount + bufferMemoryBarrierCount;
         if (total_barriers > kMaxRecommendedBarriersSizeAMD) {
             skip |= LogPerformanceWarning("BestPractices-AMD-CmdBuffer-highBarrierCount", commandBuffer, error_obj.location,
-                                          "%s In this frame, %" PRIu32 " barriers were already submitted (%" PRIu32
+                                          "{} In this frame, {}"
+                                          " barriers were already submitted ({}"
                                           " if you include image and buffer barriers too). Barriers have a high cost and can "
-                                          "stall the GPU.\nTotal recommended max is %" PRIu32
+                                          "stall the GPU.\nTotal recommended max is {}"
                                           ". Consider consolidating and re-organizing the frame to use fewer barriers.",
                                           VendorSpecificTag(kBPVendorAMD), num, total_barriers, kMaxRecommendedBarriersSizeAMD);
         }
@@ -358,7 +360,7 @@ bool BestPractices::PreCallValidateCmdPipelineBarrier(
                     const LogObjectList objlist(commandBuffer, pImageMemoryBarriers[i].image);
                     skip |= LogPerformanceWarning("BestPractices-AMD-vkImage-AvoidGeneral", objlist,
                                                   error_obj.location.dot(Field::pImageMemoryBarriers, i).dot(Field::image),
-                                                  "%s VK_IMAGE_LAYOUT_GENERAL should only be used with "
+                                                  "{} VK_IMAGE_LAYOUT_GENERAL should only be used with "
                                                   "VK_IMAGE_USAGE_STORAGE_BIT images.",
                                                   VendorSpecificTag(kBPVendorAMD));
                 }
@@ -428,8 +430,8 @@ bool BestPractices::PreCallValidateCreateSemaphore(VkDevice device, const VkSema
         const size_t count = Count<vvl::Semaphore>() + 1;
         if (count > kMaxRecommendedSemaphoreObjectsSizeAMD) {
             skip |= LogPerformanceWarning("BestPractices-SyncObjects-HighNumberOfSemaphores", device, error_obj.location,
-                                          "%s High number of vkSemaphore objects created. "
-                                          "%zu created, but recommended max is %" PRIu32
+                                          "{} High number of vkSemaphore objects created. "
+                                          "{} created, but recommended max is {}"
                                           ".\nMinimize the amount of queue synchronization that is used. "
                                           "Each semaphore has a CPU and GPU overhead cost with it.",
                                           VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), count,
@@ -449,8 +451,8 @@ bool BestPractices::PreCallValidateCreateFence(VkDevice device, const VkFenceCre
         const size_t count = Count<vvl::Fence>() + 1;
         if (count > kMaxRecommendedFenceObjectsSizeAMD) {
             skip |= LogPerformanceWarning("BestPractices-SyncObjects-HighNumberOfFences", device, error_obj.location,
-                                          "%s High number of VkFence objects created. "
-                                          "%zu created, but recommended max is %" PRIu32
+                                          "{} High number of VkFence objects created. "
+                                          "{} created, but recommended max is {}"
                                           ".\nMinimize the amount of CPU-GPU synchronization that is used. "
                                           "Each fence has a CPU and GPU overhead cost with it.",
                                           VendorSpecificTag(kBPVendorAMD | kBPVendorNVIDIA).c_str(), count,

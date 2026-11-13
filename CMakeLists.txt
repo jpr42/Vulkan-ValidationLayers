@@ -25,9 +25,16 @@ project(VVL VERSION 1.4.368 LANGUAGES CXX)
 # variant (e.g. Vulkan SC)
 set(API_TYPE "vulkan")
 
+# Formatting backend for validation messages. Defined before scripts/ so update_deps only fetches fmt when it is used.
+set(VVL_FORMAT_BACKEND "std" CACHE STRING "Formatting backend for validation messages: std (C++20 std::format) or fmt (fmtlib)")
+set_property(CACHE VVL_FORMAT_BACKEND PROPERTY STRINGS std fmt)
+if (NOT VVL_FORMAT_BACKEND MATCHES "^(std|fmt)$")
+    message(FATAL_ERROR "VVL_FORMAT_BACKEND must be std or fmt, not '${VVL_FORMAT_BACKEND}'")
+endif()
+
 add_subdirectory(scripts)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

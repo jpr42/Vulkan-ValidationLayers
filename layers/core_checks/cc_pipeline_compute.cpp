@@ -85,8 +85,9 @@ bool CoreChecks::ValidateComputePipelineDerivatives(PipelineStates& pipeline_sta
         if (base_index != -1 && base_index < static_cast<int32_t>(pipeline_states.size())) {
             if (static_cast<uint32_t>(base_index) >= pipe_index) {
                 skip |= LogError("VUID-vkCreateComputePipelines-flags-00695", base_handle, loc,
-                                 "base pipeline (index %" PRId32
-                                 ") must occur earlier in array than derivative pipeline (index %" PRIu32 ").",
+                                 "base pipeline (index {}"
+                                 ") must occur earlier in array than derivative pipeline (index {}"
+                                 ").",
                                  base_index, pipe_index);
             } else {
                 base_pipeline = pipeline_states[base_index];

@@ -176,13 +176,13 @@ void Validator::PreCallRecordBeginCommandBuffer(VkCommandBuffer commandBuffer, c
 // Dedicated warning VUID that likely can be ignored.
 // We want to always warn the user when adjusting settings/limits/features/etc on them
 void Instance::AdjustmentWarning(LogObjectList objlist, const Location& loc, const char* const specific_message) const {
-    LogWarning("WARNING-Setting-Limit-Adjusted", objlist, loc, "Warning that validation is adjusting settings:\n%s",
+    LogWarning("WARNING-Setting-Limit-Adjusted", objlist, loc, "Warning that validation is adjusting settings:\n{}",
                specific_message);
 }
 
 void Instance::InternalWarning(LogObjectList objlist, const Location& loc, const char* const specific_message) const {
     const char* vuid = gpuav_settings.debug_printf_only ? "WARNING-DEBUG-PRINTF" : "WARNING-GPU-Assisted-Validation";
-    LogWarning(vuid, objlist, loc, "Internal Warning: %s", specific_message);
+    LogWarning(vuid, objlist, loc, "Internal Warning: {}", specific_message);
 }
 
 void Instance::ReserveBindingSlot(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits& limits, const Location& loc) {
@@ -939,9 +939,12 @@ bool Validator::PreCallValidateCmdPushDataEXT(VkCommandBuffer commandBuffer, con
     const uint32_t final_byte = (uint32_t)(pPushDataInfo->offset + pPushDataInfo->data.size);
     if (final_byte > push_data_offset_) {
         skip |= LogError("UNASSIGNED-GPU-Assisted-Validation", commandBuffer, error_obj.location,
-                         "is trying to set push data at [%" PRIu32 ":%" PRIu32
-                         ") however GPU-AV needs to reserve 8 bytes at [%" PRIu32 ":%" PRIu32
-                         ") for internal use. Therefore only push data at byte [0:%" PRIu32 "] are available to the application.",
+                         "is trying to set push data at [{}"
+                         ":{}"
+                         ") however GPU-AV needs to reserve 8 bytes at [{}"
+                         ":{}"
+                         ") for internal use. Therefore only push data at byte [0:{}"
+                         "] are available to the application.",
                          pPushDataInfo->offset, final_byte - 1, push_data_offset_, push_data_offset_ + 7, push_data_offset_ - 1);
     }
     return skip;
@@ -956,8 +959,8 @@ bool Validator::ValidateProtectedBuffer(const vvl::CommandBuffer& cb_state, cons
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == true) && (buffer_state.unprotected == false)) {
         const LogObjectList objlist(cb_state.Handle(), buffer_state.Handle());
         skip |= LogError(vvl::GetProtectedVUID(buffer_loc), objlist, buffer_loc,
-                         "(%s) is a protected buffer, but command buffer (%s) is unprotected.%s",
-                         FormatHandle(buffer_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is a protected buffer, but command buffer ({}) is unprotected.{}", Handle(buffer_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -971,8 +974,8 @@ bool Validator::ValidateUnprotectedBuffer(const vvl::CommandBuffer& cb_state, co
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == false) && (buffer_state.unprotected == true)) {
         const LogObjectList objlist(cb_state.Handle(), buffer_state.Handle());
         skip |= LogError(vvl::GetUnprotectedVUID(buffer_loc), objlist, buffer_loc,
-                         "(%s) is an unprotected buffer, but command buffer (%s) is protected.%s",
-                         FormatHandle(buffer_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is an unprotected buffer, but command buffer ({}) is protected.{}", Handle(buffer_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -986,8 +989,8 @@ bool Validator::ValidateProtectedImage(const vvl::CommandBuffer& cb_state, const
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == true) && (image_state.unprotected == false)) {
         const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
         skip |= LogError(vvl::GetProtectedVUID(loc), objlist, loc,
-                         "(%s) is a protected image, but command buffer (%s) is unprotected.%s", FormatHandle(image_state).c_str(),
-                         FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is a protected image, but command buffer ({}) is unprotected.{}", Handle(image_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -1001,8 +1004,8 @@ bool Validator::ValidateUnprotectedImage(const vvl::CommandBuffer& cb_state, con
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == false) && (image_state.unprotected == true)) {
         const LogObjectList objlist(cb_state.Handle(), image_state.Handle());
         skip |= LogError(vvl::GetUnprotectedVUID(loc), objlist, loc,
-                         "(%s) is an unprotected image, but command buffer (%s) is protected.%s", FormatHandle(image_state).c_str(),
-                         FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is an unprotected image, but command buffer ({}) is protected.{}", Handle(image_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -1019,8 +1022,8 @@ bool Validator::ValidateProtectedTensor(const vvl::CommandBuffer& cb_state, cons
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == true)) {
         const LogObjectList objlist(cb_state.Handle(), tensor_state.Handle());
         skip |= LogError("VUID-vkCmdDispatchDataGraphARM-commandBuffer-02707", objlist, tensor_loc,
-                         "(%s) is a protected tensor, but command buffer (%s) is unprotected.%s",
-                         FormatHandle(tensor_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is a protected tensor, but command buffer ({}) is unprotected.{}", Handle(tensor_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -1037,8 +1040,8 @@ bool Validator::ValidateUnprotectedTensor(const vvl::CommandBuffer& cb_state, co
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == false)) {
         const LogObjectList objlist(cb_state.Handle(), tensor_state.Handle());
         skip |= LogError("VUID-vkCmdDispatchDataGraphARM-commandBuffer-09801", objlist, tensor_loc,
-                         "(%s) is an unprotected tensor, but command buffer (%s) is protected.%s",
-                         FormatHandle(tensor_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is an unprotected tensor, but command buffer ({}) is protected.{}", Handle(tensor_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }

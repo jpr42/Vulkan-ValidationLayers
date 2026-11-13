@@ -31,9 +31,9 @@ bool Device::manual_PreCallValidateGetMemoryFdKHR(VkDevice device, const VkMemor
     if (0 == (pGetFdInfo->handleType & allowed_types)) {
         skip |= LogError("VUID-VkMemoryGetFdInfoKHR-handleType-00672", pGetFdInfo->memory,
                          error_obj.location.dot(Field::pGetFdInfo).dot(Field::handleType),
-                         "(%s) is not one of the supported handle types (%s).",
+                         "({}) is not one of the supported handle types ({}).",
                          string_VkExternalMemoryHandleTypeFlagBits(pGetFdInfo->handleType),
-                         string_VkExternalMemoryHandleTypeFlags(allowed_types).c_str());
+                         vvl::Flags::ExternalMemoryHandleTypeFlags(allowed_types));
     }
     return skip;
 }
@@ -45,7 +45,7 @@ bool Device::manual_PreCallValidateGetMemoryFdPropertiesKHR(VkDevice device, VkE
     const auto& error_obj = context.error_obj;
     if (fd < 0) {
         skip |= LogError("VUID-vkGetMemoryFdPropertiesKHR-fd-00673", device, error_obj.location.dot(Field::fd),
-                         "(%d) is not a valid POSIX file descriptor.", fd);
+                         "({}) is not a valid POSIX file descriptor.", fd);
     }
     if (handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT) {
         skip |= LogError("VUID-vkGetMemoryFdPropertiesKHR-handleType-00674", device, error_obj.location.dot(Field::handleType),
@@ -59,9 +59,9 @@ bool Device::ValidateExternalSemaphoreHandleType(VkSemaphore semaphore, const ch
                                                  VkExternalSemaphoreHandleTypeFlags allowed_types) const {
     bool skip = false;
     if (0 == (handle_type & allowed_types)) {
-        skip |= LogError(vuid, semaphore, handle_type_loc, "(%s) is not one of the supported handleTypes (%s).",
+        skip |= LogError(vuid, semaphore, handle_type_loc, "({}) is not one of the supported handleTypes ({}).",
                          string_VkExternalSemaphoreHandleTypeFlagBits(handle_type),
-                         string_VkExternalSemaphoreHandleTypeFlags(allowed_types).c_str());
+                         vvl::Flags::ExternalSemaphoreHandleTypeFlags(allowed_types));
     }
     return skip;
 }
@@ -71,9 +71,9 @@ bool Device::ValidateExternalFenceHandleType(VkFence fence, const char* vuid, co
                                              VkExternalFenceHandleTypeFlags allowed_types) const {
     bool skip = false;
     if (0 == (handle_type & allowed_types)) {
-        skip |= LogError(vuid, fence, handle_type_loc, "(%s) is not one of the supported handleTypes (%s).",
+        skip |= LogError(vuid, fence, handle_type_loc, "({}) is not one of the supported handleTypes ({}).",
                          string_VkExternalFenceHandleTypeFlagBits(handle_type),
-                         string_VkExternalFenceHandleTypeFlags(allowed_types).c_str());
+                         vvl::Flags::ExternalFenceHandleTypeFlags(allowed_types));
     }
     return skip;
 }
@@ -103,8 +103,8 @@ bool Device::manual_PreCallValidateImportSemaphoreFdKHR(VkDevice device, const V
         skip |= LogError("VUID-VkImportSemaphoreFdInfoKHR-handleType-07307", pImportSemaphoreFdInfo->semaphore,
                          info_loc.dot(Field::handleType),
                          "is VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT, so VK_SEMAPHORE_IMPORT_TEMPORARY_BIT must be set, "
-                         "but flags is %s.",
-                         string_VkSemaphoreImportFlags(pImportSemaphoreFdInfo->flags).c_str());
+                         "but flags is {}.",
+                         vvl::Flags::SemaphoreImportFlags(pImportSemaphoreFdInfo->flags));
     }
     return skip;
 }
@@ -131,8 +131,8 @@ bool Device::manual_PreCallValidateImportFenceFdKHR(VkDevice device, const VkImp
         (pImportFenceFdInfo->flags & VK_FENCE_IMPORT_TEMPORARY_BIT) == 0) {
         skip |= LogError("VUID-VkImportFenceFdInfoKHR-handleType-07306", pImportFenceFdInfo->fence, info_loc.dot(Field::handleType),
                          "is VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT, so VK_FENCE_IMPORT_TEMPORARY_BIT must be set, but "
-                         "flags is %s.",
-                         string_VkFenceImportFlags(pImportFenceFdInfo->flags).c_str());
+                         "flags is {}.",
+                         vvl::Flags::FenceImportFlags(pImportFenceFdInfo->flags));
     }
     return skip;
 }
@@ -147,14 +147,15 @@ bool Device::manual_PreCallValidateGetMemoryHostPointerPropertiesEXT(VkDevice de
         handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_MAPPED_FOREIGN_MEMORY_BIT_EXT) {
         skip |=
             LogError("VUID-vkGetMemoryHostPointerPropertiesEXT-handleType-01752", device, error_obj.location.dot(Field::handleType),
-                     "is %s.", string_VkExternalMemoryHandleTypeFlagBits(handleType));
+                     "is {}.", string_VkExternalMemoryHandleTypeFlagBits(handleType));
     }
 
     if (!IsPointerAligned(pHostPointer, phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment)) {
-        skip |= LogError("VUID-vkGetMemoryHostPointerPropertiesEXT-pHostPointer-01753", device,
-                         error_obj.location.dot(Field::pHostPointer),
-                         "(%p) is not aligned to minImportedHostPointerAlignment (%" PRIuLEAST64 ")", pHostPointer,
-                         phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment);
+        skip |= LogError(
+            "VUID-vkGetMemoryHostPointerPropertiesEXT-pHostPointer-01753", device, error_obj.location.dot(Field::pHostPointer),
+            "({}) is not aligned to minImportedHostPointerAlignment ({}"
+            ")",
+            static_cast<const void*>(pHostPointer), phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment);
     }
 
     return skip;
@@ -173,9 +174,9 @@ bool Device::manual_PreCallValidateGetMemoryWin32HandleKHR(VkDevice device,
     if ((pGetWin32HandleInfo->handleType & (nt_handles | global_share_handles)) == 0) {
         skip |= LogError("VUID-VkMemoryGetWin32HandleInfoKHR-handleType-00664", pGetWin32HandleInfo->memory,
                          context.error_obj.location.dot(Field::pGetWin32HandleInfo).dot(Field::handleType),
-                         "(%s) is not one of the supported handle types (%s).",
+                         "({}) is not one of the supported handle types ({}).",
                          string_VkExternalMemoryHandleTypeFlagBits(pGetWin32HandleInfo->handleType),
-                         string_VkExternalMemoryHandleTypeFlags(nt_handles | global_share_handles).c_str());
+                         vvl::Flags::ExternalMemoryHandleTypeFlags(nt_handles | global_share_handles));
     }
     return skip;
 }
@@ -189,13 +190,15 @@ bool Device::manual_PreCallValidateGetMemoryWin32HandlePropertiesKHR(VkDevice de
     if (handle == NULL || handle == INVALID_HANDLE_VALUE) {
         static_assert(sizeof(HANDLE) == sizeof(uintptr_t));  // to use PRIxPTR for HANDLE formatting
         skip |= LogError("VUID-vkGetMemoryWin32HandlePropertiesKHR-handle-00665", device, error_obj.location.dot(Field::handle),
-                         "(0x%" PRIxPTR ") is not a valid Windows handle.", reinterpret_cast<std::uintptr_t>(handle));
+                         "(0x{:x}"
+                         ") is not a valid Windows handle.",
+                         reinterpret_cast<std::uintptr_t>(handle));
     }
     if (handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT ||
         handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT) {
         skip |=
             LogError("VUID-vkGetMemoryWin32HandlePropertiesKHR-handleType-00666", device, error_obj.location.dot(Field::handleType),
-                     "is %s, which is not allowed.", string_VkExternalMemoryHandleTypeFlagBits(handleType));
+                     "is {}, which is not allowed.", string_VkExternalMemoryHandleTypeFlagBits(handleType));
     }
     return skip;
 }
@@ -217,15 +220,17 @@ bool Device::manual_PreCallValidateImportSemaphoreWin32HandleKHR(VkDevice device
     static constexpr auto kNameAllowedTypes =
         VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT | VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT;
     if ((info->handleType & kNameAllowedTypes) == 0 && info->name) {
-        skip |= LogError("VUID-VkImportSemaphoreWin32HandleInfoKHR-handleType-01466", info->semaphore,
-                         error_obj.location.dot(Field::pImportSemaphoreWin32HandleInfo).dot(Field::name),
-                         "(%p) must be NULL if handleType is %s", reinterpret_cast<const void*>(info->name),
-                         string_VkExternalSemaphoreHandleTypeFlagBits(info->handleType));
+        skip |=
+            LogError("VUID-VkImportSemaphoreWin32HandleInfoKHR-handleType-01466", info->semaphore,
+                     error_obj.location.dot(Field::pImportSemaphoreWin32HandleInfo).dot(Field::name),
+                     "({}) must be NULL if handleType is {}", static_cast<const void*>(reinterpret_cast<const void*>(info->name)),
+                     string_VkExternalSemaphoreHandleTypeFlagBits(info->handleType));
     }
     if (info->handle && info->name) {
-        skip |= LogError("VUID-VkImportSemaphoreWin32HandleInfoKHR-handle-01469", info->semaphore,
-                         error_obj.location.dot(Field::pImportSemaphoreWin32HandleInfo),
-                         "has both handle (%p) and name (%p) non-NULL.", info->handle, reinterpret_cast<const void*>(info->name));
+        skip |=
+            LogError("VUID-VkImportSemaphoreWin32HandleInfoKHR-handle-01469", info->semaphore,
+                     error_obj.location.dot(Field::pImportSemaphoreWin32HandleInfo), "has both handle ({}) and name ({}) non-NULL.",
+                     static_cast<const void*>(info->handle), static_cast<const void*>(reinterpret_cast<const void*>(info->name)));
     }
     return skip;
 }
@@ -250,15 +255,17 @@ bool Device::manual_PreCallValidateImportFenceWin32HandleKHR(VkDevice device, co
 
     static constexpr auto kNameAllowedTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
     if ((info->handleType & kNameAllowedTypes) == 0 && info->name) {
-        skip |= LogError("VUID-VkImportFenceWin32HandleInfoKHR-handleType-01459", info->fence,
-                         error_obj.location.dot(Field::pImportFenceWin32HandleInfo).dot(Field::name),
-                         "(%p) must be NULL if handleType is %s", reinterpret_cast<const void*>(info->name),
-                         string_VkExternalFenceHandleTypeFlagBits(info->handleType));
+        skip |=
+            LogError("VUID-VkImportFenceWin32HandleInfoKHR-handleType-01459", info->fence,
+                     error_obj.location.dot(Field::pImportFenceWin32HandleInfo).dot(Field::name),
+                     "({}) must be NULL if handleType is {}", static_cast<const void*>(reinterpret_cast<const void*>(info->name)),
+                     string_VkExternalFenceHandleTypeFlagBits(info->handleType));
     }
     if (info->handle && info->name) {
-        skip |= LogError("VUID-VkImportFenceWin32HandleInfoKHR-handle-01462", info->fence,
-                         error_obj.location.dot(Field::pImportFenceWin32HandleInfo), "has both handle (%p) and name (%p) non-NULL.",
-                         info->handle, reinterpret_cast<const void*>(info->name));
+        skip |=
+            LogError("VUID-VkImportFenceWin32HandleInfoKHR-handle-01462", info->fence,
+                     error_obj.location.dot(Field::pImportFenceWin32HandleInfo), "has both handle ({}) and name ({}) non-NULL.",
+                     static_cast<const void*>(info->handle), static_cast<const void*>(reinterpret_cast<const void*>(info->name)));
     }
     return skip;
 }
@@ -280,8 +287,8 @@ bool Device::ExportMetalObjectsPNextUtil(VkExportMetalObjectTypeFlagBitsEXT bit,
     while (export_metal_object_info) {
         if (export_metal_object_info->exportObjectType != bit) {
             skip |= LogError(vuid, device, loc,
-                             "The pNext chain contains a VkExportMetalObjectCreateInfoEXT whose exportObjectType = %s, but only "
-                             "VkExportMetalObjectCreateInfoEXT structs with exportObjectType of %s are allowed.",
+                             "The pNext chain contains a VkExportMetalObjectCreateInfoEXT whose exportObjectType = {}, but only "
+                             "VkExportMetalObjectCreateInfoEXT structs with exportObjectType of {} are allowed.",
                              string_VkExportMetalObjectTypeFlagBitsEXT(export_metal_object_info->exportObjectType), sType);
         }
         export_metal_object_info = vku::FindStructInPNextChain<VkExportMetalObjectCreateInfoEXT>(export_metal_object_info->pNext);
@@ -397,7 +404,7 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
             allocate_info_loc.pNext(Struct::VkMemoryOpaqueCaptureAddressAllocateInfo, Field::opaqueCaptureAddress);
         if (!(flags & VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
             skip |= LogError("VUID-VkMemoryAllocateInfo-opaqueCaptureAddress-03329", device, address_loc,
-                             "is non-zero (%" PRIu64
+                             "is non-zero ({}"
                              ") so VkMemoryAllocateFlagsInfo::flags must include "
                              "VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT.",
                              opaque_alloc_info->opaqueCaptureAddress);
@@ -405,20 +412,24 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
 
         if (ext.import_info_host_pointer) {
             skip |= LogError("VUID-VkMemoryAllocateInfo-pNext-03332", device, address_loc,
-                             "is non-zero (%" PRIu64 ") but the pNext chain includes a VkImportMemoryHostPointerInfoEXT structure.",
+                             "is non-zero ({}"
+                             ") but the pNext chain includes a VkImportMemoryHostPointerInfoEXT structure.",
                              opaque_alloc_info->opaqueCaptureAddress);
         }
 
         if (ext.total_import_ops > 0) {
-            skip |=
-                LogError("VUID-VkMemoryAllocateInfo-opaqueCaptureAddress-03333", device, address_loc,
-                         "is non-zero (%" PRIu64 ") but an import operation is defined.", opaque_alloc_info->opaqueCaptureAddress);
+            skip |= LogError("VUID-VkMemoryAllocateInfo-opaqueCaptureAddress-03333", device, address_loc,
+                             "is non-zero ({}"
+                             ") but an import operation is defined.",
+                             opaque_alloc_info->opaqueCaptureAddress);
         }
     }
 
     if (ext.total_import_ops > 1) {
         skip |= LogError("VUID-VkMemoryAllocateInfo-None-06657", device, allocate_info_loc,
-                         "pNext chain defines %" PRIu32 " import operations, but only one is allowed.", ext.total_import_ops);
+                         "pNext chain defines {}"
+                         " import operations, but only one is allowed.",
+                         ext.total_import_ops);
     }
 
     if (ext.export_info) {
@@ -444,14 +455,14 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
         if (ext.import_info_fd->fd < 0) {
             skip |= LogError("VUID-VkImportMemoryFdInfoKHR-handleType-00670", device,
                              allocate_info_loc.pNext(Struct::VkImportMemoryFdInfoKHR, Field::fd),
-                             "(%d) is not a valid POSIX file descriptor.", ext.import_info_fd->fd);
+                             "({}) is not a valid POSIX file descriptor.", ext.import_info_fd->fd);
         }
         if (ext.import_info_fd->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT &&
             ext.import_info_fd->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT) {
             skip |=
                 LogError("VUID-VkImportMemoryFdInfoKHR-handleType-00669", device,
                          allocate_info_loc.pNext(Struct::VkImportMemoryFdInfoKHR, Field::handleType),
-                         "is %s, which is not allowed.", string_VkExternalMemoryHandleTypeFlagBits(ext.import_info_fd->handleType));
+                         "is {}, which is not allowed.", string_VkExternalMemoryHandleTypeFlagBits(ext.import_info_fd->handleType));
         }
     }
 
@@ -459,7 +470,7 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
         if (ext.import_info_host_pointer->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT &&
             ext.import_info_host_pointer->handleType != VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_MAPPED_FOREIGN_MEMORY_BIT_EXT) {
             skip |= LogError("VUID-VkImportMemoryHostPointerInfoEXT-handleType-01748", device,
-                             allocate_info_loc.pNext(Struct::VkImportMemoryHostPointerInfoEXT, Field::handleType), "is %s.",
+                             allocate_info_loc.pNext(Struct::VkImportMemoryHostPointerInfoEXT, Field::handleType), "is {}.",
                              string_VkExternalMemoryHandleTypeFlagBits(ext.import_info_host_pointer->handleType));
         }
 
@@ -467,16 +478,19 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
                               phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment)) {
             skip |= LogError("VUID-VkImportMemoryHostPointerInfoEXT-pHostPointer-01749", device,
                              allocate_info_loc.pNext(Struct::VkImportMemoryHostPointerInfoEXT, Field::pHostPointer),
-                             "(%p) is not aligned "
-                             "to minImportedHostPointerAlignment (%" PRIuLEAST64 ")",
-                             ext.import_info_host_pointer->pHostPointer,
+                             "({}) is not aligned "
+                             "to minImportedHostPointerAlignment ({}"
+                             ")",
+                             static_cast<const void*>(ext.import_info_host_pointer->pHostPointer),
                              phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment);
         }
 
         if (!IsIntegerMultipleOf(allocate_info.allocationSize,
                                  phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment)) {
             skip |= LogError("VUID-VkMemoryAllocateInfo-allocationSize-01745", device, allocate_info_loc.dot(Field::allocationSize),
-                             "(%" PRIuLEAST64 ") is not a multiple of minImportedHostPointerAlignment (%" PRIuLEAST64 ")",
+                             "({}"
+                             ") is not a multiple of minImportedHostPointerAlignment ({}"
+                             ")",
                              allocate_info.allocationSize,
                              phys_dev_ext_props.external_memory_host_props.minImportedHostPointerAlignment);
         }
@@ -487,11 +501,13 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
             DispatchGetMemoryHostPointerPropertiesEXT(device, ext.import_info_host_pointer->handleType,
                                                       ext.import_info_host_pointer->pHostPointer, &host_pointer_props);
             if (((1 << allocate_info.memoryTypeIndex) & host_pointer_props.memoryTypeBits) == 0) {
-                skip |= LogError(
-                    "VUID-VkMemoryAllocateInfo-memoryTypeIndex-01744", device, allocate_info_loc.dot(Field::memoryTypeIndex),
-                    "is %" PRIu32 " but VkMemoryHostPointerPropertiesEXT::memoryTypeBits is 0x%" PRIx32 " with handleType %s.",
-                    allocate_info.memoryTypeIndex, host_pointer_props.memoryTypeBits,
-                    string_VkExternalMemoryHandleTypeFlagBits(ext.import_info_host_pointer->handleType));
+                skip |= LogError("VUID-VkMemoryAllocateInfo-memoryTypeIndex-01744", device,
+                                 allocate_info_loc.dot(Field::memoryTypeIndex),
+                                 "is {}"
+                                 " but VkMemoryHostPointerPropertiesEXT::memoryTypeBits is 0x{:x}"
+                                 " with handleType {}.",
+                                 allocate_info.memoryTypeIndex, host_pointer_props.memoryTypeBits,
+                                 string_VkExternalMemoryHandleTypeFlagBits(ext.import_info_host_pointer->handleType));
             }
         }
 
@@ -500,13 +516,13 @@ bool Device::ValidateAllocateMemoryExternal(VkDevice device, const VkMemoryAlloc
             if (dedicated_allocate_info->buffer != VK_NULL_HANDLE) {
                 skip |= LogError("VUID-VkMemoryAllocateInfo-pNext-02806", device,
                                  allocate_info_loc.pNext(Struct::VkMemoryDedicatedAllocateInfo, Field::buffer),
-                                 "is %s but also using a host import with VkImportMemoryHostPointerInfoEXT.",
-                                 FormatHandle(dedicated_allocate_info->buffer).c_str());
+                                 "is {} but also using a host import with VkImportMemoryHostPointerInfoEXT.",
+                                 Handle(dedicated_allocate_info->buffer));
             } else if (dedicated_allocate_info->image != VK_NULL_HANDLE) {
                 skip |= LogError("VUID-VkMemoryAllocateInfo-pNext-02806", device,
                                  allocate_info_loc.pNext(Struct::VkMemoryDedicatedAllocateInfo, Field::image),
-                                 "is %s but also using a host import with VkImportMemoryHostPointerInfoEXT.",
-                                 FormatHandle(dedicated_allocate_info->image).c_str());
+                                 "is {} but also using a host import with VkImportMemoryHostPointerInfoEXT.",
+                                 Handle(dedicated_allocate_info->image));
             }
         }
     }

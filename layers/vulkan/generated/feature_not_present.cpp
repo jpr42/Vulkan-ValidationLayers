@@ -4457,6 +4457,6 @@ void DispatchInstance::ReportErrorFeatureNotPresent(VkPhysicalDevice gpu, const 
     }
 
     Location loc(vvl::Func::vkCreateDevice);
-    LogWarning("WARNING-vkCreateDevice-FeatureNotPresent", instance, loc, "%s", ss.str().c_str());
+    LogWarning("WARNING-vkCreateDevice-FeatureNotPresent", instance, loc, "{}", ss.str());
 }  // ReportErrorFeatureNotPresent
 }  // namespace vvl

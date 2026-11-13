@@ -4532,7 +4532,7 @@ void InstanceState::PostCallRecordCreateDisplayModeKHR(VkPhysicalDevice physical
                    << (float)mode_prop.parameters.refreshRate / 1000.0f << " Hz)\n";
             }
         }
-        LogWarning("WARNING-CreateDisplayModeKHR-Failed", display, record_obj.location, "%s", ss.str().c_str());
+        LogWarning("WARNING-CreateDisplayModeKHR-Failed", display, record_obj.location, "{}", ss.str().c_str());
         return;
     }
     if (!pMode) {

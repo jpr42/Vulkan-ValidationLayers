@@ -48,9 +48,9 @@ bool CoreChecks::ValidateBufferUsageFlags(const LogObjectList& objlist, vvl::Buf
     }
 
     if (!correct_usage) {
-        skip |= LogError(vuid, objlist, buffer_loc, "(%s) was created with %s but requires %s%s.",
-                         FormatHandle(buffer_state.Handle()).c_str(), string_VkBufferUsageFlags2(buffer_state.usage).c_str(),
-                         strict ? "" : "at least one of ", string_VkBufferUsageFlags2(desired).c_str());
+        skip |= LogError(vuid, objlist, buffer_loc, "({}) was created with {} but requires {}{}.", Handle(buffer_state.Handle()),
+                         vvl::Flags::BufferUsageFlags2(buffer_state.usage), strict ? "" : "at least one of ",
+                         vvl::Flags::BufferUsageFlags2(desired));
     }
     return skip;
 }
@@ -66,11 +66,12 @@ bool CoreChecks::ValidateBufferViewRange(const vvl::Buffer& buffer_state, const 
             const VkDeviceSize remaining_space =
                 (create_info.offset <= buffer_state.GetSize()) ? (buffer_state.GetSize() - create_info.offset) : 0;
             skip |= LogError("VUID-VkBufferViewCreateInfo-offset-00931", buffer_state.Handle(), loc.dot(Field::range),
-                             "(%" PRIuLEAST64 ") does not equal VK_WHOLE_SIZE, so the sum of offset (%" PRIuLEAST64
-                             ") and range must be less than or equal to the size of %s (%" PRIuLEAST64
-                             "), which allows a maximum range of (%" PRIuLEAST64 ") at this offset.",
-                             range, create_info.offset, FormatHandle(buffer_state.Handle()).c_str(), buffer_state.GetSize(),
-                             remaining_space);
+                             "({}"
+                             ") does not equal VK_WHOLE_SIZE, so the sum of offset ({}"
+                             ") and range must be less than or equal to the size of {} ({}"
+                             "), which allows a maximum range of ({}"
+                             ") at this offset.",
+                             range, create_info.offset, Handle(buffer_state.Handle()), buffer_state.GetSize(), remaining_space);
         }
     } else if (create_info.offset < buffer_state.GetSize()) {
         // If offset is over, will be caught elsewhere (00925)
@@ -82,10 +83,13 @@ bool CoreChecks::ValidateBufferViewRange(const vvl::Buffer& buffer_state, const 
         const VkDeviceSize texels = SafeDivision(offset_range, texel_block_size) * texels_per_block;
         if (texels > static_cast<VkDeviceSize>(phys_dev_props.limits.maxTexelBufferElements)) {
             skip |= LogError("VUID-VkBufferViewCreateInfo-range-04059", buffer_state.Handle(), loc.dot(Field::range),
-                             "is VK_WHOLE_SIZE, but the buffer's size (%" PRIuLEAST64 "), offset (%" PRIuLEAST64
-                             "), %s texel block size (%" PRIuLEAST64 "), and texels per block (%" PRIuLEAST64
-                             ") is a total of (%" PRIuLEAST64
-                             ") texels which is more than VkPhysicalDeviceLimits::maxTexelBufferElements (%" PRIuLEAST32 ").",
+                             "is VK_WHOLE_SIZE, but the buffer's size ({}"
+                             "), offset ({}"
+                             "), {} texel block size ({}"
+                             "), and texels per block ({}"
+                             ") is a total of ({}"
+                             ") texels which is more than VkPhysicalDeviceLimits::maxTexelBufferElements ({}"
+                             ").",
                              buffer_state.GetSize(), create_info.offset, string_VkFormat(format), texel_block_size,
                              texels_per_block, texels, phys_dev_props.limits.maxTexelBufferElements);
         }
@@ -100,17 +104,20 @@ bool CoreChecks::ValidateCreateBufferDescriptorBuffer(const VkBufferCreateInfo& 
     if (usage & VK_BUFFER_USAGE_2_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT) {
         if (create_info.size + device_state->descriptor_buffer_address_space.sampler >
             phys_dev_ext_props.descriptor_buffer_props.samplerDescriptorBufferAddressSpaceSize) {
-            skip |= LogError(
-                "VUID-VkBufferCreateInfo-usage-08097", device, create_info_loc.dot(Field::size),
-                "(%" PRIuLEAST64 ") + current total (%" PRIuLEAST64
-                ") is greater than specified in properties field samplerDescriptorBufferAddressSpaceSize (%" PRIuLEAST64 ").",
-                create_info.size, device_state->descriptor_buffer_address_space.sampler.load(),
-                phys_dev_ext_props.descriptor_buffer_props.samplerDescriptorBufferAddressSpaceSize);
+            skip |= LogError("VUID-VkBufferCreateInfo-usage-08097", device, create_info_loc.dot(Field::size),
+                             "({}"
+                             ") + current total ({}"
+                             ") is greater than specified in properties field samplerDescriptorBufferAddressSpaceSize ({}"
+                             ").",
+                             create_info.size, device_state->descriptor_buffer_address_space.sampler.load(),
+                             phys_dev_ext_props.descriptor_buffer_props.samplerDescriptorBufferAddressSpaceSize);
         } else if (create_info.size + device_state->descriptor_buffer_address_space.all >
                    phys_dev_ext_props.descriptor_buffer_props.descriptorBufferAddressSpaceSize) {
             skip |= LogError("VUID-VkBufferCreateInfo-usage-08097", device, create_info_loc.dot(Field::size),
-                             "(%" PRIuLEAST64 ") + current total (%" PRIuLEAST64
-                             ") is greater than specified in properties field descriptorBufferAddressSpaceSize (%" PRIuLEAST64 ")",
+                             "({}"
+                             ") + current total ({}"
+                             ") is greater than specified in properties field descriptorBufferAddressSpaceSize ({}"
+                             ")",
                              create_info.size, device_state->descriptor_buffer_address_space.all.load(),
                              phys_dev_ext_props.descriptor_buffer_props.descriptorBufferAddressSpaceSize);
         }
@@ -119,17 +126,20 @@ bool CoreChecks::ValidateCreateBufferDescriptorBuffer(const VkBufferCreateInfo& 
     if (usage & VK_BUFFER_USAGE_2_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT) {
         if (create_info.size + device_state->descriptor_buffer_address_space.resource >
             phys_dev_ext_props.descriptor_buffer_props.resourceDescriptorBufferAddressSpaceSize) {
-            skip |= LogError(
-                "VUID-VkBufferCreateInfo-usage-08098", device, create_info_loc.dot(Field::size),
-                "(%" PRIuLEAST64 ") + current total (%" PRIuLEAST64
-                ") is greater than specified in properties field resourceDescriptorBufferAddressSpaceSize (%" PRIuLEAST64 ").",
-                create_info.size, device_state->descriptor_buffer_address_space.resource.load(),
-                phys_dev_ext_props.descriptor_buffer_props.resourceDescriptorBufferAddressSpaceSize);
+            skip |= LogError("VUID-VkBufferCreateInfo-usage-08098", device, create_info_loc.dot(Field::size),
+                             "({}"
+                             ") + current total ({}"
+                             ") is greater than specified in properties field resourceDescriptorBufferAddressSpaceSize ({}"
+                             ").",
+                             create_info.size, device_state->descriptor_buffer_address_space.resource.load(),
+                             phys_dev_ext_props.descriptor_buffer_props.resourceDescriptorBufferAddressSpaceSize);
         } else if (create_info.size + device_state->descriptor_buffer_address_space.all >
                    phys_dev_ext_props.descriptor_buffer_props.descriptorBufferAddressSpaceSize) {
             skip |= LogError("VUID-VkBufferCreateInfo-usage-08098", device, create_info_loc.dot(Field::size),
-                             "(%" PRIuLEAST64 ") + current total (%" PRIuLEAST64
-                             ") is greater than specified in properties field descriptorBufferAddressSpaceSize (%" PRIuLEAST64 ").",
+                             "({}"
+                             ") + current total ({}"
+                             ") is greater than specified in properties field descriptorBufferAddressSpaceSize ({}"
+                             ").",
                              create_info.size, device_state->descriptor_buffer_address_space.all.load(),
                              phys_dev_ext_props.descriptor_buffer_props.descriptorBufferAddressSpaceSize);
         }
@@ -145,9 +155,9 @@ bool CoreChecks::ValidateCreateBufferDescriptorBuffer(const VkBufferCreateInfo& 
     if (vku::FindStructInPNextChain<VkOpaqueCaptureDescriptorDataCreateInfoEXT>(create_info.pNext)) {
         if (!(create_info.flags & VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
             skip |= LogError("VUID-VkBufferCreateInfo-pNext-08100", device, create_info_loc.dot(Field::flags),
-                             "(%s) is missing VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT but "
-                             "VkOpaqueCaptureDescriptorDataCreateInfoEXT is in pNext chain.\n%s",
-                             string_VkBufferCreateFlags(create_info.flags).c_str(),
+                             "({}) is missing VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT but "
+                             "VkOpaqueCaptureDescriptorDataCreateInfoEXT is in pNext chain.\n{}",
+                             vvl::Flags::BufferCreateFlags(create_info.flags),
                              PrintPNextChain(Struct::VkBufferCreateInfo, create_info.pNext).c_str());
         }
     }
@@ -168,8 +178,8 @@ bool CoreChecks::ValidateCreateBufferDescriptorBuffer(const VkBufferCreateInfo& 
 
         if (!(usage &
               (VK_BUFFER_USAGE_2_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_2_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT))) {
-            skip |= LogError("VUID-VkBufferCreateInfo-usage-08103", device, create_info_loc.dot(Field::usage), "is (%s).",
-                             string_VkBufferUsageFlags2(usage).c_str());
+            skip |= LogError("VUID-VkBufferCreateInfo-usage-08103", device, create_info_loc.dot(Field::usage), "is ({}).",
+                             vvl::Flags::BufferUsageFlags2(usage));
         }
     }
 
@@ -227,8 +237,8 @@ bool CoreChecks::PreCallValidateCreateBuffer(VkDevice device, const VkBufferCrea
         if ((external_memory_info->handleTypes & compatible_types) != external_memory_info->handleTypes) {
             skip |= LogError("VUID-VkBufferCreateInfo-pNext-00920", device,
                              create_info_loc.pNext(Struct::VkExternalMemoryBufferCreateInfo, Field::handleTypes),
-                             "(%s) is not reported as compatible by vkGetPhysicalDeviceExternalBufferProperties.",
-                             string_VkExternalMemoryHandleTypeFlags(external_memory_info->handleTypes).c_str());
+                             "({}) is not reported as compatible by vkGetPhysicalDeviceExternalBufferProperties.",
+                             vvl::Flags::ExternalMemoryHandleTypeFlags(external_memory_info->handleTypes));
         }
     }
 
@@ -263,8 +273,10 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
     // Buffer view offset must be less than the size of buffer
     if (pCreateInfo->offset >= buffer_state.GetSize()) {
         skip |= LogError("VUID-VkBufferViewCreateInfo-offset-00925", buffer_state.Handle(), create_info_loc.dot(Field::offset),
-                         "(%" PRIuLEAST64 ") must be less than the size of the buffer (%" PRIuLEAST64 ").", pCreateInfo->offset,
-                         buffer_state.GetSize());
+                         "({}"
+                         ") must be less than the size of the buffer ({}"
+                         ").",
+                         pCreateInfo->offset, buffer_state.GetSize());
     }
 
     if (enabled_features.texelBufferAlignment) {
@@ -298,7 +310,7 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
                        << phys_dev_props_core13.storageTexelBufferOffsetAlignmentBytes;
                 }
 
-                skip |= LogError("VUID-VkBufferViewCreateInfo-buffer-02750", objlist, create_info_loc.dot(Field::buffer), "%s",
+                skip |= LogError("VUID-VkBufferViewCreateInfo-buffer-02750", objlist, create_info_loc.dot(Field::buffer), "{}",
                                  ss.str().c_str());
             }
         }
@@ -326,7 +338,7 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
                        << phys_dev_props_core13.uniformTexelBufferOffsetAlignmentBytes;
                 }
 
-                skip |= LogError("VUID-VkBufferViewCreateInfo-buffer-02751", objlist, create_info_loc.dot(Field::buffer), "%s",
+                skip |= LogError("VUID-VkBufferViewCreateInfo-buffer-02751", objlist, create_info_loc.dot(Field::buffer), "{}",
                                  ss.str().c_str());
             }
         }
@@ -335,8 +347,9 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
                                ? "VUID-VkBufferViewCreateInfo-buffer-02750"
                                : "VUID-VkBufferViewCreateInfo-buffer-02751";
         skip |= LogError(vuid, pCreateInfo->buffer, create_info_loc.dot(Field::offset),
-                         "(%" PRIuLEAST64
-                         ") must be a multiple of VkPhysicalDeviceLimits::minTexelBufferOffsetAlignment (%" PRIuLEAST64 ").",
+                         "({}"
+                         ") must be a multiple of VkPhysicalDeviceLimits::minTexelBufferOffsetAlignment ({}"
+                         ").",
                          pCreateInfo->offset, phys_dev_props.limits.minTexelBufferOffsetAlignment);
     }
 
@@ -347,14 +360,13 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
     if (usage_flags2) {
         if ((buffer_view_usage & ~(VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT)) != 0) {
             skip |= LogError("VUID-VkBufferViewCreateInfo-pNext-08780", objlist,
-                             create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage), "is %s.",
-                             string_VkBufferUsageFlags2(buffer_view_usage).c_str());
+                             create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage), "is {}.",
+                             vvl::Flags::BufferUsageFlags2(buffer_view_usage));
         } else if ((buffer_view_usage & buffer_state.usage) != buffer_view_usage) {
-            skip |=
-                LogError("VUID-VkBufferViewCreateInfo-pNext-08781", objlist,
-                         create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage),
-                         "(%s) is not a subset of the buffer's usage (%s).", string_VkBufferUsageFlags2(buffer_view_usage).c_str(),
-                         string_VkBufferUsageFlags2(buffer_state.usage).c_str());
+            skip |= LogError("VUID-VkBufferViewCreateInfo-pNext-08781", objlist,
+                             create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage),
+                             "({}) is not a subset of the buffer's usage ({}).", vvl::Flags::BufferUsageFlags2(buffer_view_usage),
+                             vvl::Flags::BufferUsageFlags2(buffer_state.usage));
         }
     }
 
@@ -363,25 +375,23 @@ bool CoreChecks::PreCallValidateCreateBufferView(VkDevice device, const VkBuffer
         !(format_properties.bufferFeatures & VK_FORMAT_FEATURE_2_UNIFORM_TEXEL_BUFFER_BIT)) {
         const Location usage_loc = usage_flags2 ? create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage)
                                                 : create_info_loc.dot(Field::buffer);
-        skip |=
-            LogError("VUID-VkBufferViewCreateInfo-format-08778", objlist, usage_loc,
-                     "%s(%s) containing VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT.\n"
-                     "Format (%s) doesn't support VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT.\n"
-                     "(supported bufferFeatures: %s)",
-                     usage_flags2 ? "" : "was created with usage ", string_VkBufferUsageFlags2(buffer_view_usage).c_str(),
-                     string_VkFormat(pCreateInfo->format), string_VkFormatFeatureFlags2(format_properties.bufferFeatures).c_str());
+        skip |= LogError("VUID-VkBufferViewCreateInfo-format-08778", objlist, usage_loc,
+                         "{}({}) containing VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT.\n"
+                         "Format ({}) doesn't support VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT.\n"
+                         "(supported bufferFeatures: {})",
+                         usage_flags2 ? "" : "was created with usage ", vvl::Flags::BufferUsageFlags2(buffer_view_usage),
+                         string_VkFormat(pCreateInfo->format), vvl::Flags::FormatFeatureFlags2(format_properties.bufferFeatures));
     }
     if ((buffer_view_usage & VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT) &&
         !(format_properties.bufferFeatures & VK_FORMAT_FEATURE_2_STORAGE_TEXEL_BUFFER_BIT)) {
         const Location usage_loc = usage_flags2 ? create_info_loc.pNext(Struct::VkBufferUsageFlags2CreateInfo, Field::usage)
                                                 : create_info_loc.dot(Field::buffer);
-        skip |=
-            LogError("VUID-VkBufferViewCreateInfo-format-08779", objlist, usage_loc,
-                     "%s(%s) containing VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT.\n"
-                     "Format (%s) doesn't support VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT.\n"
-                     "(supported bufferFeatures: %s)",
-                     usage_flags2 ? "" : "was created with usage ", string_VkBufferUsageFlags2(buffer_view_usage).c_str(),
-                     string_VkFormat(pCreateInfo->format), string_VkFormatFeatureFlags2(format_properties.bufferFeatures).c_str());
+        skip |= LogError("VUID-VkBufferViewCreateInfo-format-08779", objlist, usage_loc,
+                         "{}({}) containing VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT.\n"
+                         "Format ({}) doesn't support VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT.\n"
+                         "(supported bufferFeatures: {})",
+                         usage_flags2 ? "" : "was created with usage ", vvl::Flags::BufferUsageFlags2(buffer_view_usage),
+                         string_VkFormat(pCreateInfo->format), vvl::Flags::FormatFeatureFlags2(format_properties.bufferFeatures));
     }
 
     skip |= ValidateBufferViewRange(buffer_state, *pCreateInfo, create_info_loc);
@@ -434,14 +444,19 @@ bool CoreChecks::PreCallValidateCmdFillBuffer(VkCommandBuffer commandBuffer, VkB
 
     if (dstOffset >= buffer_state->GetSize()) {
         skip |= LogError("VUID-vkCmdFillBuffer-dstOffset-00024", objlist, error_obj.location.dot(Field::dstOffset),
-                         "(%" PRIu64 ") is not less than destination buffer (%s) size (%" PRIu64 ").", dstOffset,
-                         FormatHandle(dstBuffer).c_str(), buffer_state->GetSize());
+                         "({}"
+                         ") is not less than destination buffer ({}) size ({}"
+                         ").",
+                         dstOffset, Handle(dstBuffer), buffer_state->GetSize());
     }
 
     if ((size != VK_WHOLE_SIZE) && (size > (buffer_state->GetSize() - dstOffset))) {
         skip |= LogError("VUID-vkCmdFillBuffer-size-00027", objlist, error_obj.location.dot(Field::size),
-                         "(%" PRIu64 ") is greater than dstBuffer (%s) size (%" PRIu64 ") minus dstOffset (%" PRIu64 ").", size,
-                         FormatHandle(dstBuffer).c_str(), buffer_state->GetSize(), dstOffset);
+                         "({}"
+                         ") is greater than dstBuffer ({}) size ({}"
+                         ") minus dstOffset ({}"
+                         ").",
+                         size, Handle(dstBuffer), buffer_state->GetSize(), dstOffset);
     }
 
     if (!IsExtEnabled(extensions.vk_khr_maintenance1)) {
@@ -449,7 +464,7 @@ bool CoreChecks::PreCallValidateCmdFillBuffer(VkCommandBuffer commandBuffer, VkB
         if (!HasRequiredQueueFlags(cb_state, *physical_device_state, required_flags)) {
             const LogObjectList objlist_pool(cb_state.Handle(), cb_state.command_pool.Handle());
             skip |= LogError("VUID-vkCmdFillBuffer-apiVersion-07894", objlist_pool, error_obj.location,
-                             "%s\nHint: This can be allowed in some cases if VK_KHR_maintenance1 (or Vulkan 1.1) is enabled.",
+                             "{}\nHint: This can be allowed in some cases if VK_KHR_maintenance1 (or Vulkan 1.1) is enabled.",
                              DescribeRequiredQueueFlag(cb_state, *physical_device_state, required_flags).c_str());
         }
     }
@@ -474,20 +489,20 @@ bool CoreChecks::ValidateDeviceAddressCommands(const LogObjectList& objlist, VkD
                           VK_ADDRESS_COMMAND_UNKNOWN_STORAGE_BUFFER_USAGE_BIT_KHR)) == 0) {
                 skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Storage_13122), objlist,
                                  loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created with VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, but address "
-                                 "flags (%s) do not contain VK_ADDRESS_COMMAND_STORAGE_BUFFER_USAGE_BIT_KHR or "
+                                 "(0x{:x}"
+                                 ") belongs to {}, which was created with VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, but address "
+                                 "flags ({}) do not contain VK_ADDRESS_COMMAND_STORAGE_BUFFER_USAGE_BIT_KHR or "
                                  "VK_ADDRESS_COMMAND_UNKNOWN_STORAGE_BUFFER_USAGE_BIT_KHR.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                                 address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
             }
         } else {
             if ((flags & VK_ADDRESS_COMMAND_STORAGE_BUFFER_USAGE_BIT_KHR) != 0) {
                 skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Storage_13123), objlist,
                                  loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created without VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, but address "
-                                 "flags (%s) contain VK_ADDRESS_COMMAND_STORAGE_BUFFER_USAGE_BIT_KHR.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                                 "(0x{:x}"
+                                 ") belongs to {}, which was created without VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, but address "
+                                 "flags ({}) contain VK_ADDRESS_COMMAND_STORAGE_BUFFER_USAGE_BIT_KHR.",
+                                 address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
             }
         }
 
@@ -496,47 +511,46 @@ bool CoreChecks::ValidateDeviceAddressCommands(const LogObjectList& objlist, VkD
                           VK_ADDRESS_COMMAND_UNKNOWN_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR)) == 0) {
                 skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Xfb_13124), objlist,
                                  loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created with "
+                                 "(0x{:x}"
+                                 ") belongs to {}, which was created with "
                                  "VK_BUFFER_USAGE_2_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT, but address "
-                                 "flags (%s) do not contain VK_ADDRESS_COMMAND_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR or "
+                                 "flags ({}) do not contain VK_ADDRESS_COMMAND_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR or "
                                  "VK_ADDRESS_COMMAND_UNKNOWN_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                                 address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
             }
         } else {
             if ((flags & VK_ADDRESS_COMMAND_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR) != 0) {
                 skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Xfb_13125), objlist,
                                  loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created without "
+                                 "(0x{:x}"
+                                 ") belongs to {}, which was created without "
                                  "VK_BUFFER_USAGE_2_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT, but address "
-                                 "flags (%s) contain VK_ADDRESS_COMMAND_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                                 "flags ({}) contain VK_ADDRESS_COMMAND_TRANSFORM_FEEDBACK_BUFFER_USAGE_BIT_KHR.",
+                                 address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
             }
         }
 
         if (!phys_dev_props_core11.protectedNoFault) {
             if ((buffer->GetFlags() & VK_BUFFER_CREATE_PROTECTED_BIT) != 0) {
                 if ((flags & VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR) == 0) {
-                    skip |=
-                        LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Protected_13098), objlist,
-                                 loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created with "
-                                 "VK_BUFFER_CREATE_PROTECTED_BIT, but address "
-                                 "flags (%s) does not contain VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR.\nHint: This is valid if "
-                                 "protectedNoFault is supported.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                    skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Protected_13098),
+                                     objlist, loc.dot(Field::address),
+                                     "(0x{:x}"
+                                     ") belongs to {}, which was created with "
+                                     "VK_BUFFER_CREATE_PROTECTED_BIT, but address "
+                                     "flags ({}) does not contain VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR.\nHint: This is valid if "
+                                     "protectedNoFault is supported.",
+                                     address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
                 }
             } else if ((flags & VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR) != 0) {
                 skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::Protected_13099), objlist,
                                  loc.dot(Field::address),
-                                 "(0x%" PRIx64
-                                 ") belongs to %s, which was created without "
+                                 "(0x{:x}"
+                                 ") belongs to {}, which was created without "
                                  "VK_BUFFER_CREATE_PROTECTED_BIT, but address "
-                                 "flags (%s) contains VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR.\nHint: This is valid if "
+                                 "flags ({}) contains VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR.\nHint: This is valid if "
                                  "protectedNoFault is supported.",
-                                 address, FormatHandle(buffer->Handle()).c_str(), string_VkAddressCommandFlagsKHR(flags).c_str());
+                                 address, Handle(buffer->Handle()), vvl::Flags::AddressCommandFlagsKHR(flags));
             }
         }
 
@@ -552,10 +566,13 @@ bool CoreChecks::ValidateDeviceAddressCommands(const LogObjectList& objlist, VkD
                 if (!buffer->IsRangeFullyBound(buffer_range)) {
                     skip |= LogError(vvl::GetDeviceAddressCommandVUID(loc, vvl::DeviceAddressCommandError::CompletelyBound_13097),
                                      objlist, loc.dot(Field::address),
-                                     "(0x%" PRIx64 ") with size (%" PRIu64
-                                     ") is used with VK_ADDRESS_COMMAND_FULLY_BOUND_BIT_KHR, but the sparse %s is not fully backed "
-                                     "by memory over the corresponding buffer range [%" PRIu64 ", %" PRIu64 ").",
-                                     address, size, FormatHandle(buffer->Handle()).c_str(), offset, offset + size);
+                                     "(0x{:x}"
+                                     ") with size ({}"
+                                     ") is used with VK_ADDRESS_COMMAND_FULLY_BOUND_BIT_KHR, but the sparse {} is not fully backed "
+                                     "by memory over the corresponding buffer range [{}"
+                                     ", {}"
+                                     ").",
+                                     address, size, Handle(buffer->Handle()), offset, offset + size);
                     break;
                 }
             }
@@ -581,17 +598,17 @@ bool CoreChecks::PreCallValidateCmdFillMemoryKHR(VkCommandBuffer commandBuffer, 
             if ((dstFlags & VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR) != 0) {
                 skip |=
                     LogError("VUID-vkCmdFillMemoryKHR-commandBuffer-13003", commandBuffer, error_obj.location.dot(Field::dstFlags),
-                             "(%s) contains VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR, but command buffer (%s) is unprotected and "
+                             "({}) contains VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR, but command buffer ({}) is unprotected and "
                              "protectedNoFault is not supported.",
-                             string_VkAddressCommandFlagsKHR(dstFlags).c_str(), FormatHandle(cb_state).c_str());
+                             vvl::Flags::AddressCommandFlagsKHR(dstFlags), Handle(cb_state));
             }
         } else {
             if ((dstFlags & VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR) == 0) {
                 skip |=
                     LogError("VUID-vkCmdFillMemoryKHR-commandBuffer-13004", commandBuffer, error_obj.location.dot(Field::dstFlags),
-                             "(%s) does not include VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR, but command buffer (%s) is protected and "
+                             "({}) does not include VK_ADDRESS_COMMAND_PROTECTED_BIT_KHR, but command buffer ({}) is protected and "
                              "protectedNoFault is not supported.",
-                             string_VkAddressCommandFlagsKHR(dstFlags).c_str(), FormatHandle(cb_state).c_str());
+                             vvl::Flags::AddressCommandFlagsKHR(dstFlags), Handle(cb_state));
             }
         }
     }
@@ -611,8 +628,8 @@ bool CoreChecks::ValidateProtectedBuffer(const vvl::CommandBuffer& cb_state, con
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == true) && (buffer_state.unprotected == false)) {
         const LogObjectList objlist(cb_state.Handle(), buffer_state.Handle());
         skip |= LogError(vvl::GetProtectedVUID(buffer_loc), objlist, buffer_loc,
-                         "(%s) is a protected buffer, but command buffer (%s) is unprotected.%s",
-                         FormatHandle(buffer_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is a protected buffer, but command buffer ({}) is unprotected.{}", Handle(buffer_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }
@@ -626,8 +643,8 @@ bool CoreChecks::ValidateUnprotectedBuffer(const vvl::CommandBuffer& cb_state, c
     if ((!phys_dev_props_core11.protectedNoFault) && (cb_state.unprotected == false) && (buffer_state.unprotected == true)) {
         const LogObjectList objlist(cb_state.Handle(), buffer_state.Handle());
         skip |= LogError(vvl::GetUnprotectedVUID(buffer_loc), objlist, buffer_loc,
-                         "(%s) is an unprotected buffer, but command buffer (%s) is protected.%s",
-                         FormatHandle(buffer_state).c_str(), FormatHandle(cb_state).c_str(), more_message);
+                         "({}) is an unprotected buffer, but command buffer ({}) is protected.{}", Handle(buffer_state),
+                         Handle(cb_state), more_message);
     }
     return skip;
 }

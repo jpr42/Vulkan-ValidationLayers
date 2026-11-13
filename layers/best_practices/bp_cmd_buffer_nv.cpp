@@ -112,11 +112,11 @@ bool BestPractices::ValidateZcull(const bp_state::CommandBufferSubState& cb_stat
     if (is_balanced) {
         skip |= LogPerformanceWarning(
             "BestPractices-NVIDIA-Zcull-LessGreaterRatio", cb_state.Handle(), loc,
-            "%s Depth attachment %s is primarily rendered with depth compare op %s, but some draws use %s. "
+            "{} Depth attachment {} is primarily rendered with depth compare op {}, but some draws use {}. "
             "Z-cull is disabled for the least used direction, which harms depth testing performance. "
             "The Z-cull direction can be reset by clearing the depth attachment, transitioning from VK_IMAGE_LAYOUT_UNDEFINED, "
             "using VK_ATTACHMENT_LOAD_OP_DONT_CARE, or using VK_ATTACHMENT_STORE_OP_DONT_CARE.",
-            VendorSpecificTag(kBPVendorNVIDIA), FormatHandle(cb_state.nv.zcull_scope.image).c_str(), good_mode, bad_mode);
+            VendorSpecificTag(kBPVendorNVIDIA), Handle(cb_state.nv.zcull_scope.image), good_mode, bad_mode);
     }
 
     return skip;
@@ -179,10 +179,10 @@ bool BestPractices::ValidateClearColor(VkCommandBuffer commandBuffer, VkFormat f
         }
 
         skip |= LogPerformanceWarning("BestPractices-NVIDIA-ClearColor-NotCompressed", commandBuffer, loc,
-                                      "%s Clearing image with format %s without a 1.0f or 0.0f clear color. "
+                                      "{} Clearing image with format {} without a 1.0f or 0.0f clear color. "
                                       "The clear will not get compressed in the GPU, harming performance. "
-                                      "This can be fixed using a clear color of VkClearColorValue{0.0f, 0.0f, 0.0f, 0.0f}, or "
-                                      "VkClearColorValue{1.0f, 1.0f, 1.0f, 1.0f}. Alternatively, use %s.",
+                                      "This can be fixed using a clear color of VkClearColorValue{{0.0f, 0.0f, 0.0f, 0.0f}}, or "
+                                      "VkClearColorValue{{1.0f, 1.0f, 1.0f, 1.0f}}. Alternatively, use {}.",
                                       VendorSpecificTag(kBPVendorNVIDIA), string_VkFormat(format), format_list.c_str());
     } else {
         // The format is compressible
@@ -212,11 +212,11 @@ bool BestPractices::ValidateClearColor(VkCommandBuffer commandBuffer, VkFormat f
 
             skip |= LogPerformanceWarning(
                 "BestPractices-NVIDIA-ClearColor-NotCompressed", commandBuffer, loc,
-                "%s Clearing image with unregistered VkClearColorValue{%s}. "
+                "{} Clearing image with unregistered VkClearColorValue{{{}}}. "
                 "This clear will not get compressed in the GPU, harming performance. "
                 "The clear color is not registered because too many unique colors have been used. "
                 "Select a discrete set of clear colors and stick to those. "
-                "VkClearColorValue{0, 0, 0, 0} and VkClearColorValue{1.0f, 1.0f, 1.0f, 1.0f} are always registered.",
+                "VkClearColorValue{{0, 0, 0, 0}} and VkClearColorValue{{1.0f, 1.0f, 1.0f, 1.0f}} are always registered.",
                 VendorSpecificTag(kBPVendorNVIDIA), clear_color_str.c_str());
         }
     }

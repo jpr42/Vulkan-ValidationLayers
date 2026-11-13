@@ -56,9 +56,9 @@ bool CoreChecks::ValidateDataGraphCommandPoolCreateInfo(const VkCommandPoolCreat
     if (!engine_ci) {
         skip |=
             LogError("VUID-VkCommandPoolCreateInfo-queueFamilyIndex-11830", device, create_info_loc.dot(Field::queueFamilyIndex),
-                     "(%" PRIu32
+                     "({}"
                      ") enumerates a foreign QCOM processing engine, but pNext chain does not include "
-                     "VkDataGraphProcessingEngineCreateInfoARM.\n%s",
+                     "VkDataGraphProcessingEngineCreateInfoARM.\n{}",
                      create_info.queueFamilyIndex, PrintPNextChain(Struct::VkCommandPoolCreateInfo, create_info.pNext).c_str());
     } else {
         for (uint32_t i = 0; i < engine_ci->processingEngineCount; ++i) {
@@ -67,7 +67,8 @@ bool CoreChecks::ValidateDataGraphCommandPoolCreateInfo(const VkCommandPoolCreat
                                  create_info_loc.pNext(Struct::VkDataGraphProcessingEngineCreateInfoARM)
                                      .dot(Field::pProcessingEngines, i)
                                      .dot(Field::isForeign),
-                                 "is VK_FALSE, but queueFamilyIndex (%" PRIu32 ") enumerates a foreign QCOM processing engine.",
+                                 "is VK_FALSE, but queueFamilyIndex ({}"
+                                 ") enumerates a foreign QCOM processing engine.",
                                  create_info.queueFamilyIndex);
                 break;  // only report once
             }
@@ -86,8 +87,8 @@ bool CoreChecks::ValidateDataGraphPipelineBuiltinModelCreateInfo(const VkDataGra
     if (!engine_ci) {
         skip |= LogError("VUID-VkDataGraphPipelineBuiltinModelCreateInfoQCOM-pOperation-11842", device,
                          create_info_loc.pNext(Struct::VkDataGraphPipelineBuiltinModelCreateInfoQCOM, Field::pOperation),
-                         "is %s, but no processing engine is selected because pNext chain does not include "
-                         "VkDataGraphProcessingEngineCreateInfoARM.\n%s",
+                         "is {}, but no processing engine is selected because pNext chain does not include "
+                         "VkDataGraphProcessingEngineCreateInfoARM.\n{}",
                          string_VkPhysicalDeviceDataGraphOperationSupportARM(operation).c_str(),
                          PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
         return skip;
@@ -121,7 +122,7 @@ bool CoreChecks::ValidateDataGraphPipelineBuiltinModelCreateInfo(const VkDataGra
     }
 
     skip |= LogError("VUID-VkDataGraphPipelineBuiltinModelCreateInfoQCOM-pOperation-11842", device,
-                     create_info_loc.pNext(Struct::VkDataGraphPipelineBuiltinModelCreateInfoQCOM, Field::pOperation), "%s",
+                     create_info_loc.pNext(Struct::VkDataGraphPipelineBuiltinModelCreateInfoQCOM, Field::pOperation), "{}",
                      ss.str().c_str());
 
     return skip;
@@ -138,8 +139,8 @@ bool CoreChecks::ValidateDataGraphPipelineShaderModuleCreateInfo(VkDevice device
             if (dg_shader_ci.pSpecializationInfo) {
                 skip |= LogError("VUID-VkDataGraphPipelineShaderModuleCreateInfoARM-dataGraphSpecializationConstants-09849", device,
                                  dg_shader_ci_loc.dot(Field::pSpecializationInfo),
-                                 "(%p) is not null but dataGraphSpecializationConstants feature is not enabled",
-                                 dg_shader_ci.pSpecializationInfo);
+                                 "({}) is not null but dataGraphSpecializationConstants feature is not enabled",
+                                 static_cast<const void*>(dg_shader_ci.pSpecializationInfo));
             }
         }
     }
@@ -161,7 +162,9 @@ bool CoreChecks::ValidateDataGraphPipelineCreateInfo(VkDevice device, const VkDa
             skip |= LogError(
                 "VUID-VkDataGraphPipelineCreateInfoARM-pNext-09804", device,
                 create_info_loc.pNext(Struct::VkPipelineCreationFeedbackCreateInfo, Field::pipelineStageCreationFeedbackCount),
-                "(%" PRIu32 ") must be zero", pipeline_feedback->pipelineStageCreationFeedbackCount);
+                "({}"
+                ") must be zero",
+                pipeline_feedback->pipelineStageCreationFeedbackCount);
         }
     }
 
@@ -172,7 +175,7 @@ bool CoreChecks::ValidateDataGraphPipelineCreateInfo(VkDevice device, const VkDa
     if (!pipeline_layout->push_constant_ranges_layout->empty()) {
         skip |=
             LogError("VUID-VkDataGraphPipelineCreateInfoARM-layout-09767", device, layout_loc.dot(Field::pushConstantRangeCount),
-                     "(%zu) must be zero", pipeline_layout->push_constant_ranges_layout->size());
+                     "({}) must be zero", pipeline_layout->push_constant_ranges_layout->size());
     }
     for (uint32_t j = 0; j < pipeline_layout->set_layouts.list.size(); j++) {
         auto dsl = pipeline_layout->set_layouts.list[j];
@@ -180,8 +183,8 @@ bool CoreChecks::ValidateDataGraphPipelineCreateInfo(VkDevice device, const VkDa
             if (!enabled_features.dataGraphUpdateAfterBind) {
                 skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-dataGraphUpdateAfterBind-09768", device,
                                  layout_loc.dot(Field::pSetLayouts, j),
-                                 "created with flags (%s) but the dataGraphUpdateAfterBind feature was not enabled",
-                                 string_VkDescriptorSetLayoutCreateFlags(dsl->GetCreateFlags()).c_str());
+                                 "created with flags ({}) but the dataGraphUpdateAfterBind feature was not enabled",
+                                 vvl::Flags::DescriptorSetLayoutCreateFlags(dsl->GetCreateFlags()));
             }
         }
         auto bindings = dsl->GetBindings();
@@ -215,7 +218,7 @@ bool CoreChecks::ValidateTensorSemiStructuredSparsityInfo(VkDevice device, const
     if (!tensor_desc) {
         skip |= LogError("VUID-VkDataGraphPipelineConstantARM-pNext-09775", device,
                          constant_loc.pNext(Struct::VkDataGraphPipelineConstantTensorSemiStructuredSparsityInfoARM),
-                         "exists but the pNext chain doesn't include a VkTensorDescriptionARM.\n%s",
+                         "exists but the pNext chain doesn't include a VkTensorDescriptionARM.\n{}",
                          PrintPNextChain(Struct::VkDataGraphPipelineConstantARM, constant.pNext).c_str());
         return skip;
     }
@@ -226,13 +229,17 @@ bool CoreChecks::ValidateTensorSemiStructuredSparsityInfo(VkDevice device, const
             skip |= LogError(
                 "VUID-VkDataGraphPipelineConstantARM-pNext-09776", device,
                 constant_loc.pNext(Struct::VkDataGraphPipelineConstantTensorSemiStructuredSparsityInfoARM, Field::dimension),
-                "(%" PRIu32 ") must be less than the tensor rank (dimensionCount = %" PRIu32 ")", sparsity->dimension,
-                tensor_desc->dimensionCount);
+                "({}"
+                ") must be less than the tensor rank (dimensionCount = {}"
+                ")",
+                sparsity->dimension, tensor_desc->dimensionCount);
         } else if (!IsIntegerMultipleOf(tensor_desc->pDimensions[sparsity->dimension], sparsity->groupSize)) {
             skip |= LogError("VUID-VkDataGraphPipelineConstantARM-pNext-09777", device,
                              constant_loc.pNext(Struct::VkDataGraphPipelineConstantTensorSemiStructuredSparsityInfoARM,
                                                 Field::pDimensions, sparsity->dimension),
-                             "(%" PRIi64 ") must be a multiple of groupSize (%" PRIu32 ")",
+                             "({}"
+                             ") must be a multiple of groupSize ({}"
+                             ")",
                              tensor_desc->pDimensions[sparsity->dimension], sparsity->groupSize);
         }
         auto insert_ok = sparsity_dimensions.insert(sparsity->dimension).second;
@@ -240,7 +247,9 @@ bool CoreChecks::ValidateTensorSemiStructuredSparsityInfo(VkDevice device, const
             skip |= LogError(
                 "VUID-VkDataGraphPipelineConstantARM-pNext-09870", device,
                 constant_loc.pNext(Struct::VkDataGraphPipelineConstantTensorSemiStructuredSparsityInfoARM, Field::dimension),
-                "(%" PRIu32 ") already has a defined sparsity", sparsity->dimension);
+                "({}"
+                ") already has a defined sparsity",
+                sparsity->dimension);
         }
         // We can have multiple Sparsity structures in the pNext chain.
         sparsity = vku::FindStructInPNextChain<VkDataGraphPipelineConstantTensorSemiStructuredSparsityInfoARM>(sparsity->pNext);
@@ -274,15 +283,17 @@ bool CoreChecks::ValidateOpticalFlowFormats(const VkDataGraphPipelineOpticalFlow
     const vvl::PhysicalDevice::DataGraph::OpticalFlowFormats& of_formats = physical_device_state->data_graph.optical_flow_formats;
     vvl::unordered_set<VkFormat> formats = all_values(of_formats.input);
     if (std::find(formats.begin(), formats.end(), optical_flow_ci.imageFormat) == formats.end()) {
-        skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-imageFormat-09968", device,
-                         optical_flow_ci_loc.dot(Field::imageFormat), "(%s) is not supported for input images.\nSupported formats: %s.",
-                         string_VkFormat(optical_flow_ci.imageFormat), list_formats(formats).c_str());
+        skip |=
+            LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-imageFormat-09968", device,
+                     optical_flow_ci_loc.dot(Field::imageFormat), "({}) is not supported for input images.\nSupported formats: {}.",
+                     string_VkFormat(optical_flow_ci.imageFormat), list_formats(formats).c_str());
     }
 
     formats = all_values(of_formats.output);
     if (std::find(formats.begin(), formats.end(), optical_flow_ci.flowVectorFormat) == formats.end()) {
         skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-flowVectorFormat-09969", device,
-                         optical_flow_ci_loc.dot(Field::flowVectorFormat), "(%s) is not supported for output images.\nSupported formats: %s.",
+                         optical_flow_ci_loc.dot(Field::flowVectorFormat),
+                         "({}) is not supported for output images.\nSupported formats: {}.",
                          string_VkFormat(optical_flow_ci.flowVectorFormat), list_formats(formats).c_str());
     }
 
@@ -290,7 +301,8 @@ bool CoreChecks::ValidateOpticalFlowFormats(const VkDataGraphPipelineOpticalFlow
         formats = all_values(of_formats.cost);
         if (std::find(formats.begin(), formats.end(), optical_flow_ci.costFormat) == formats.end()) {
             skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-costFormat-09970", device,
-                             optical_flow_ci_loc.dot(Field::costFormat), "(%s) is not supported for cost images.\nSupported formats: %s.",
+                             optical_flow_ci_loc.dot(Field::costFormat),
+                             "({}) is not supported for cost images.\nSupported formats: {}.",
                              string_VkFormat(optical_flow_ci.costFormat), list_formats(formats).c_str());
         }
     }
@@ -312,14 +324,14 @@ bool CoreChecks::ValidateOpticalFlowFlags(const VkDataGraphPipelineOpticalFlowCr
     if (optical_flow_ci.flags & VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM && !any_queue_supports_hint) {
         skip |= LogError(
             "VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-flags-09974", objList, optical_flow_ci_loc.dot(Field::flags),
-            "(%s) includes VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM which is not supported by the physical device.",
-            string_VkDataGraphOpticalFlowCreateFlagsARM(optical_flow_ci.flags).c_str());
+            "({}) includes VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM which is not supported by the physical device.",
+            vvl::Flags::DataGraphOpticalFlowCreateFlagsARM(optical_flow_ci.flags));
     }
     if (optical_flow_ci.flags & VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_COST_BIT_ARM && !any_queue_supports_cost) {
         skip |= LogError(
             "VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-flags-09975", objList, optical_flow_ci_loc.dot(Field::flags),
-            "(%s) includes VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_COST_BIT_ARM which is not supported by the physical device.",
-            string_VkDataGraphOpticalFlowCreateFlagsARM(optical_flow_ci.flags).c_str());
+            "({}) includes VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_COST_BIT_ARM which is not supported by the physical device.",
+            vvl::Flags::DataGraphOpticalFlowCreateFlagsARM(optical_flow_ci.flags));
     }
 
     return skip;
@@ -365,27 +377,36 @@ bool CoreChecks::ValidateOpticalFlowConnections(const VkDataGraphPipelineSingleN
         }
         if (input_connection_idx.size() != 1) {
             skip |= LogError("VUID-VkDataGraphPipelineSingleNodeCreateInfoARM-nodeType-09978", device,
-                single_node_ci_loc.dot(Field::pConnections), "includes %" PRIu32 " input connections "
-                "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_INPUT_ARM)%s",
-                static_cast<uint32_t>(input_connection_idx.size()), print_connections(input_connection_idx).c_str());
+                             single_node_ci_loc.dot(Field::pConnections),
+                             "includes {}"
+                             " input connections "
+                             "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_INPUT_ARM){}",
+                             static_cast<uint32_t>(input_connection_idx.size()), print_connections(input_connection_idx).c_str());
         }
         if (reference_connection_idx.size() != 1) {
             skip |= LogError("VUID-VkDataGraphPipelineSingleNodeCreateInfoARM-nodeType-09978", device,
-                single_node_ci_loc.dot(Field::pConnections), "includes %" PRIu32 " reference connections "
-                "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_REFERENCE_ARM)%s",
-                static_cast<uint32_t>(reference_connection_idx.size()), print_connections(reference_connection_idx).c_str());
+                             single_node_ci_loc.dot(Field::pConnections),
+                             "includes {}"
+                             " reference connections "
+                             "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_REFERENCE_ARM){}",
+                             static_cast<uint32_t>(reference_connection_idx.size()),
+                             print_connections(reference_connection_idx).c_str());
         }
         if (output_connection_idx.size() != 1) {
             skip |= LogError("VUID-VkDataGraphPipelineSingleNodeCreateInfoARM-nodeType-09978", device,
-                single_node_ci_loc.dot(Field::pConnections), "includes %" PRIu32 " output connections "
-                "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_FLOW_VECTOR_ARM)%s",
-                static_cast<uint32_t>(output_connection_idx.size()), print_connections(output_connection_idx).c_str());
+                             single_node_ci_loc.dot(Field::pConnections),
+                             "includes {}"
+                             " output connections "
+                             "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_FLOW_VECTOR_ARM){}",
+                             static_cast<uint32_t>(output_connection_idx.size()), print_connections(output_connection_idx).c_str());
         }
         if (hint_grid_size > 0 && hint_connection_idx.size() != 1) {
             skip |= LogError("VUID-VkDataGraphPipelineSingleNodeCreateInfoARM-nodeType-09979", device,
-                single_node_ci_loc.dot(Field::pConnections), "includes %" PRIu32 " hint connections "
-                "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_HINT_ARM)%s",
-                static_cast<uint32_t>(hint_connection_idx.size()), print_connections(hint_connection_idx).c_str());
+                             single_node_ci_loc.dot(Field::pConnections),
+                             "includes {}"
+                             " hint connections "
+                             "(type VK_DATA_GRAPH_PIPELINE_NODE_CONNECTION_TYPE_OPTICAL_FLOW_HINT_ARM){}",
+                             static_cast<uint32_t>(hint_connection_idx.size()), print_connections(hint_connection_idx).c_str());
         }
     }
 
@@ -400,9 +421,9 @@ bool CoreChecks::ValidateOpticalFlowGridSizes(const VkDataGraphPipelineOpticalFl
     const VkDataGraphOpticalFlowGridSizeFlagsARM output_grid_size = optical_flow_ci.outputGridSize;
     if (hint_grid_size != 0 && hint_grid_size != output_grid_size) {
         skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-hintGridSize-09973", device,
-                         optical_flow_ci_loc.dot(Field::hintGridSize), "(%s) is not the same as outputGridSize (%s).",
-                         string_VkDataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size).c_str(),
-                         string_VkDataGraphOpticalFlowGridSizeFlagsARM(output_grid_size).c_str());
+                         optical_flow_ci_loc.dot(Field::hintGridSize), "({}) is not the same as outputGridSize ({}).",
+                         vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size),
+                         vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(output_grid_size));
     }
 
     VkDataGraphOpticalFlowGridSizeFlagsARM supported_output_grid_sizes = VK_DATA_GRAPH_OPTICAL_FLOW_GRID_SIZE_UNKNOWN_ARM;
@@ -416,13 +437,13 @@ bool CoreChecks::ValidateOpticalFlowGridSizes(const VkDataGraphPipelineOpticalFl
     auto matching_output_grid_sizes = output_grid_size & supported_output_grid_sizes;
     if (matching_output_grid_sizes == 0) {
         skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-outputGridSize-09971", device,
-                         optical_flow_ci_loc.dot(Field::outputGridSize), "(%s) not included in supported bits (%s).",
-                         string_VkDataGraphOpticalFlowGridSizeFlagsARM(output_grid_size).c_str(),
-                         string_VkDataGraphOpticalFlowGridSizeFlagsARM(supported_output_grid_sizes).c_str());
+                         optical_flow_ci_loc.dot(Field::outputGridSize), "({}) not included in supported bits ({}).",
+                         vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(output_grid_size),
+                         vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(supported_output_grid_sizes));
     } else if (!IsSingleBitSet(matching_output_grid_sizes)) {
         skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-outputGridSize-09971", device,
-                         optical_flow_ci_loc.dot(Field::outputGridSize), "(%s) has multiple bits selected.",
-                         string_VkDataGraphOpticalFlowGridSizeFlagsARM(output_grid_size).c_str());
+                         optical_flow_ci_loc.dot(Field::outputGridSize), "({}) has multiple bits selected.",
+                         vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(output_grid_size));
     }
 
     const bool hint_enabled = (optical_flow_ci.flags & VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM) != 0;
@@ -430,20 +451,20 @@ bool CoreChecks::ValidateOpticalFlowGridSizes(const VkDataGraphPipelineOpticalFl
         if (hint_grid_size != 0) {
             skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-hintGridSize-09972", device,
                              optical_flow_ci_loc.dot(Field::hintGridSize),
-                             "(%s) is not zero while VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM is not set.",
-                             string_VkDataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size).c_str());
+                             "({}) is not zero while VK_DATA_GRAPH_OPTICAL_FLOW_CREATE_ENABLE_HINT_BIT_ARM is not set.",
+                             vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size));
         }
     } else {
         auto matching_hint_grid_sizes = hint_grid_size & supported_hint_grid_sizes;
         if (matching_hint_grid_sizes == 0) {
             skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-hintGridSize-09972", device,
-                             optical_flow_ci_loc.dot(Field::hintGridSize), "(%s) not included in supported bits (%s).",
-                             string_VkDataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size).c_str(),
-                             string_VkDataGraphOpticalFlowGridSizeFlagsARM(supported_hint_grid_sizes).c_str());
+                             optical_flow_ci_loc.dot(Field::hintGridSize), "({}) not included in supported bits ({}).",
+                             vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size),
+                             vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(supported_hint_grid_sizes));
         } else if (!IsSingleBitSet(matching_hint_grid_sizes)) {
             skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-hintGridSize-09972", device,
-                             optical_flow_ci_loc.dot(Field::hintGridSize), "(%s) has multiple bits selected.",
-                             string_VkDataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size).c_str());
+                             optical_flow_ci_loc.dot(Field::hintGridSize), "({}) has multiple bits selected.",
+                             vvl::Flags::DataGraphOpticalFlowGridSizeFlagsARM(hint_grid_size));
         }
     }
 
@@ -471,15 +492,23 @@ bool CoreChecks::ValidateOpticalFlowImageSizes(const VkDataGraphPipelineOpticalF
     }
 
     if (width < min_width || width > max_width) {
-        skip |= LogError(
-            "VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-width-09966", device, optical_flow_ci_loc.dot(Field::width),
-            "(%" PRIu32 ") is outside the [minWidth, maxWidth] (%" PRIu32 ", %" PRIu32 ") range", width, min_width, max_width);
+        skip |=
+            LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-width-09966", device, optical_flow_ci_loc.dot(Field::width),
+                     "({}"
+                     ") is outside the [minWidth, maxWidth] ({}"
+                     ", {}"
+                     ") range",
+                     width, min_width, max_width);
     }
 
     if (height < min_height || height > max_height) {
-        skip |= LogError(
-            "VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-height-09967", device, optical_flow_ci_loc.dot(Field::height),
-            "(%" PRIu32 ") is outside the [minHeight, maxHeight] (%" PRIu32 ", %" PRIu32 ") range", height, min_height, max_height);
+        skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowCreateInfoARM-height-09967", device,
+                         optical_flow_ci_loc.dot(Field::height),
+                         "({}"
+                         ") is outside the [minHeight, maxHeight] ({}"
+                         ", {}"
+                         ") range",
+                         height, min_height, max_height);
     }
 
     return skip;
@@ -523,7 +552,8 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceQueueFamilyDataGraphEngineO
         skip |= LogError(
             "VUID-vkGetPhysicalDeviceQueueFamilyDataGraphEngineOperationPropertiesARM-pQueueFamilyDataGraphProperties-09957",
             physicalDevice, error_obj.location.dot(Field::pQueueFamilyDataGraphProperties),
-            "(%s) is not a property of the given physical device for queueFamilyIndex %" PRIu32 ".\nSupported properties:\n%s",
+            "({}) is not a property of the given physical device for queueFamilyIndex {}"
+            ".\nSupported properties:\n{}",
             string_VkQueueFamilyDataGraphPropertiesARM(*pQueueFamilyDataGraphProperties).c_str(), queueFamilyIndex,
             describe_properties(pd_state->data_graph.queue_family_properties, queueFamilyIndex).c_str());
     }
@@ -533,7 +563,7 @@ bool core::Instance::PreCallValidateGetPhysicalDeviceQueueFamilyDataGraphEngineO
         skip |= LogError(
             "VUID-vkGetPhysicalDeviceQueueFamilyDataGraphEngineOperationPropertiesARM-pProperties-09958", physicalDevice,
             error_obj.location.dot(Field::pProperties).dot(Field::sType),
-            "(%s) is not one of the allowed structures types:\n  VK_STRUCTURE_TYPE_QUEUE_FAMILY_DATA_GRAPH_TOSA_PROPERTIES_ARM\n  "
+            "({}) is not one of the allowed structures types:\n  VK_STRUCTURE_TYPE_QUEUE_FAMILY_DATA_GRAPH_TOSA_PROPERTIES_ARM\n  "
             "VK_STRUCTURE_TYPE_QUEUE_FAMILY_DATA_GRAPH_OPTICAL_FLOW_PROPERTIES_ARM",
             string_VkStructureType(pProperties->sType));
     }
@@ -567,7 +597,8 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
             (qcom_model_ci ? 1 : 0) + (dg_pipeline_identifier_ci ? 1 : 0) + (dg_shader_ci ? 1 : 0) + (single_node_ci ? 1 : 0);
         if (defined_structs != 1) {
             skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-pNext-09977", device, create_info_loc,
-                             "%" PRIu32 " of the possible required structures are included in the pNext chain%s.\n%s",
+                             "{}"
+                             " of the possible required structures are included in the pNext chain{}.\n{}",
                              defined_structs, (defined_structs > 1) ? " (only 1 is allowed)" : "",
                              PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             return skip;
@@ -577,18 +608,18 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
             if (!(create_info.flags & VK_PIPELINE_CREATE_2_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT)) {
                 skip |=
                     LogError("VUID-VkDataGraphPipelineCreateInfoARM-None-11840", device, create_info_loc.dot(Field::flags),
-                             "(%s) does not include VK_PIPELINE_CREATE_2_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT, but the pNext "
+                             "({}) does not include VK_PIPELINE_CREATE_2_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT, but the pNext "
                              "chain include one "
-                             "of VkDataGraphPipelineIdentifierCreateInfoARM or VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n%s",
-                             string_VkPipelineCreateFlags2(create_info.flags).c_str(),
+                             "of VkDataGraphPipelineIdentifierCreateInfoARM or VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n{}",
+                             vvl::Flags::PipelineCreateFlags2(create_info.flags),
                              PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             }
             if (create_info.resourceInfoCount) {
                 skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-None-12363", device,
                                  create_info_loc.dot(Field::resourceInfoCount),
-                                 "(%" PRIu32
+                                 "({}"
                                  ") is not zero, but the pNext chain includes one of VkDataGraphPipelineIdentifierCreateInfoARM or "
-                                 "VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n%s",
+                                 "VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n{}",
                                  create_info.resourceInfoCount,
                                  PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             }
@@ -596,15 +627,16 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
             skip |=
                 LogError("VUID-VkDataGraphPipelineCreateInfoARM-None-12365", device, create_info_loc.dot(Field::resourceInfoCount),
                          "is 0, but the pNext chain doesn't include VkDataGraphPipelineIdentifierCreateInfoARM or "
-                         "VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n%s",
+                         "VkDataGraphPipelineBuiltinModelCreateInfoQCOM.\n{}",
                          PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
         }
 
         if (create_info.resourceInfoCount == 0 && create_info.pResourceInfos) {
-            skip |=
-                LogError("VUID-VkDataGraphPipelineCreateInfoARM-resourceInfoCount-12364", device,
-                         create_info_loc.dot(Field::resourceInfoCount), "(%" PRIu32 ") is 0, but pResourceInfos (%p) is not NULL.",
-                         create_info.resourceInfoCount, create_info.pResourceInfos);
+            skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-resourceInfoCount-12364", device,
+                             create_info_loc.dot(Field::resourceInfoCount),
+                             "({}"
+                             ") is 0, but pResourceInfos ({}) is not NULL.",
+                             create_info.resourceInfoCount, static_cast<const void*>(create_info.pResourceInfos));
         }
 
         if (dg_shader_ci) {
@@ -613,7 +645,7 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
             const Location dg_shader_ci_loc = create_info_loc.pNext(Struct::VkDataGraphPipelineShaderModuleCreateInfoARM);
             if (!enabled_features.dataGraphShaderModule) {
                 skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-dataGraphShaderModule-09886", device, dg_shader_ci_loc,
-                                 "is in the pNext chain, but the dataGraphShaderModule feature is not enabled.\n%s",
+                                 "is in the pNext chain, but the dataGraphShaderModule feature is not enabled.\n{}",
                                  PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             }
 
@@ -624,8 +656,8 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
                 if (dg_shader_ci->module) {
                     skip |= LogError("VUID-VkDataGraphPipelineShaderModuleCreateInfoARM-pNext-09873", device,
                                      dg_shader_ci_loc.dot(Field::module),
-                                     "(%s) is not NULL but the pNext chain includes a VkShaderModuleCreateInfo.\n%s",
-                                     FormatHandle(dg_shader_ci->module).c_str(),
+                                     "({}) is not NULL but the pNext chain includes a VkShaderModuleCreateInfo.\n{}",
+                                     Handle(dg_shader_ci->module),
                                      PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
                 }
                 skip |= ValidateShaderModuleCreateInfo(*shader_module_ci, create_info_loc.pNext(Struct::VkShaderModuleCreateInfo));
@@ -633,8 +665,8 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
                 // there is no shader module: both dg_shader_ci->module and shader_module_ci are NULL
                 skip |= LogError(
                     "VUID-VkDataGraphPipelineShaderModuleCreateInfoARM-pNext-09874", device, dg_shader_ci_loc.dot(Field::module),
-                    "(%s) is not a valid VkShaderModule and the pNext chain doesn't include a VkShaderModuleCreateInfo.\n%s",
-                    FormatHandle(dg_shader_ci->module).c_str(),
+                    "({}) is not a valid VkShaderModule and the pNext chain doesn't include a VkShaderModuleCreateInfo.\n{}",
+                    Handle(dg_shader_ci->module),
                     PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
             }
 
@@ -661,7 +693,7 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
             } else if (VK_DATA_GRAPH_PIPELINE_NODE_TYPE_OPTICAL_FLOW_ARM == single_node_ci->nodeType) {
                 skip |= LogError("VUID-VkDataGraphPipelineSingleNodeCreateInfoARM-nodeType-09963", device, create_info_loc,
                                  "Datagraph create info includes a node for optical flow, but there is no optical flow create info "
-                                 "in the pNext chain.\n%s",
+                                 "in the pNext chain.\n{}",
                                  PrintPNextChain(Struct::VkDataGraphPipelineSingleNodeCreateInfoARM, create_info.pNext).c_str());
             }
         }
@@ -670,12 +702,12 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelinesARM(VkDevice device, VkD
 
         if ((create_info.flags & VK_PIPELINE_CREATE_2_PROTECTED_ACCESS_ONLY_BIT_EXT) &&
             vku::FindStructInPNextChain<VkDataGraphPipelineNeuralStatisticsCreateInfoARM>(create_info.pNext)) {
-                skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-flags-09848", device, create_info_loc.dot(Field::flags),
-                                 "(%s) contains VK_PIPELINE_CREATE_2_PROTECTED_ACCESS_ONLY_BIT_EXT, and a "
-                                 "VkDataGraphPipelineNeuralStatisticsCreateInfoARM structure is "
-                                 "present in the pNext chain.\n%s",
-                                 string_VkPipelineCreateFlags2(create_info.flags).c_str(),
-                                 PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
+            skip |= LogError("VUID-VkDataGraphPipelineCreateInfoARM-flags-09848", device, create_info_loc.dot(Field::flags),
+                             "({}) contains VK_PIPELINE_CREATE_2_PROTECTED_ACCESS_ONLY_BIT_EXT, and a "
+                             "VkDataGraphPipelineNeuralStatisticsCreateInfoARM structure is "
+                             "present in the pNext chain.\n{}",
+                             vvl::Flags::PipelineCreateFlags2(create_info.flags),
+                             PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, create_info.pNext).c_str());
         }
     }
 
@@ -693,7 +725,7 @@ bool CoreChecks::PreCallValidateGetDataGraphPipelinePropertiesARM(VkDevice devic
     if (VK_STRUCTURE_TYPE_DATA_GRAPH_PIPELINE_CREATE_INFO_ARM != pipeline_ptr->GetCreateInfoSType()) {
         skip |= LogError("VUID-VkDataGraphPipelineInfoARM-dataGraphPipeline-09803", device,
                          error_obj.location.dot(Field::pPipelineInfo).dot(Field::dataGraphPipeline),
-                         "was not created with vkCreateDataGraphPipelinesARM. The create info structure type was %s",
+                         "was not created with vkCreateDataGraphPipelinesARM. The create info structure type was {}",
                          string_VkStructureType(pipeline_ptr->GetCreateInfoSType()));
     }
     for (uint32_t i = 0; i < propertiesCount; i++) {
@@ -703,8 +735,9 @@ bool CoreChecks::PreCallValidateGetDataGraphPipelinePropertiesARM(VkDevice devic
             if (prop1.property == prop2.property) {
                 skip |= LogError("VUID-vkGetDataGraphPipelinePropertiesARM-pProperties-09889", device,
                                  error_obj.location.dot(Field::pProperties, i).dot(Field::property),
-                                 "and pProperties[%" PRIu32 "].property are the same (%s).", j,
-                                 string_VkDataGraphPipelinePropertyARM(prop1.property));
+                                 "and pProperties[{}"
+                                 "].property are the same ({}).",
+                                 j, string_VkDataGraphPipelinePropertyARM(prop1.property));
             }
         }
 
@@ -716,7 +749,7 @@ bool CoreChecks::PreCallValidateGetDataGraphPipelinePropertiesARM(VkDevice devic
                     "VUID-vkGetDataGraphPipelinePropertiesARM-pProperties-09856", device,
                     error_obj.location.dot(Field::pPipelineInfo).dot(Field::dataGraphPipeline),
                     "was not created with VkDataGraphPipelineNeuralStatisticsCreateInfoARM in the pNext chain of the pipeline "
-                    "create info.\n%s",
+                    "create info.\n{}",
                     PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, pipeline_ptr->DataGraphCreateInfo().pNext).c_str());
             } else if (ne_stats_info->allowNeuralStatistics == VK_FALSE) {
                 skip |= LogError(
@@ -742,7 +775,7 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelineSessionARM(VkDevice devic
     if (VK_STRUCTURE_TYPE_DATA_GRAPH_PIPELINE_CREATE_INFO_ARM != pipeline_ptr->GetCreateInfoSType()) {
         skip |= LogError("VUID-VkDataGraphPipelineSessionCreateInfoARM-dataGraphPipeline-09781", device,
                          error_obj.location.dot(Field::pCreateInfo).dot(Field::dataGraphPipeline),
-                         "was not created with vkCreateDataGraphPipelinesARM. The create info structure type was %s",
+                         "was not created with vkCreateDataGraphPipelinesARM. The create info structure type was {}",
                          string_VkStructureType(pipeline_ptr->GetCreateInfoSType()));
         return skip;  // no point continuing if the pipeline isn't valid
     }
@@ -756,7 +789,7 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelineSessionARM(VkDevice devic
                 "VUID-VkDataGraphPipelineSessionCreateInfoARM-pNext-09852", device,
                 error_obj.location.dot(Field::pCreateInfo).dot(Field::dataGraphPipeline),
                 "was not created with VkDataGraphPipelineNeuralStatisticsCreateInfoARM in the pNext chain of the pipeline create "
-                "info.\n%s",
+                "info.\n{}",
                 PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, pipeline_ptr->DataGraphCreateInfo().pNext).c_str());
         } else if (ne_stats_create_info->allowNeuralStatistics == VK_FALSE) {
             skip |= LogError(
@@ -770,18 +803,18 @@ bool CoreChecks::PreCallValidateCreateDataGraphPipelineSessionARM(VkDevice devic
         if (!enabled_features.protectedMemory) {
             skip |= LogError("VUID-VkDataGraphPipelineSessionCreateInfoARM-protectedMemory-09782", device,
                              error_obj.location.dot(Field::pCreateInfo).dot(Field::flags),
-                             "(%s) contains VK_DATA_GRAPH_PIPELINE_SESSION_CREATE_PROTECTED_BIT_ARM but the protectedMemory "
+                             "({}) contains VK_DATA_GRAPH_PIPELINE_SESSION_CREATE_PROTECTED_BIT_ARM but the protectedMemory "
                              "feature is not enabled",
-                             string_VkDataGraphPipelineSessionCreateFlagsARM(pCreateInfo->flags).c_str());
+                             vvl::Flags::DataGraphPipelineSessionCreateFlagsARM(pCreateInfo->flags));
         }
 
         if (ne_stats_create_info) {
             skip |= LogError(
                 "VUID-VkDataGraphPipelineSessionCreateInfoARM-flags-09853", device, error_obj.location.dot(Field::flags),
-                "(%s) contains VK_DATA_GRAPH_PIPELINE_SESSION_CREATE_PROTECTED_BIT_ARM, and a "
+                "({}) contains VK_DATA_GRAPH_PIPELINE_SESSION_CREATE_PROTECTED_BIT_ARM, and a "
                 "VkDataGraphPipelineNeuralStatisticsCreateInfoARM structure is "
-                "present in the pNext chain of the pipeline create info.\n%s",
-                string_VkDataGraphPipelineSessionCreateFlagsARM(pCreateInfo->flags).c_str(),
+                "present in the pNext chain of the pipeline create info.\n{}",
+                vvl::Flags::DataGraphPipelineSessionCreateFlagsARM(pCreateInfo->flags),
                 PrintPNextChain(Struct::VkDataGraphPipelineCreateInfoARM, pipeline_ptr->DataGraphCreateInfo().pNext).c_str());
         }
     }
@@ -814,7 +847,7 @@ bool CoreChecks::PreCallValidateGetDataGraphPipelineSessionMemoryRequirementsARM
         if (VK_DATA_GRAPH_PIPELINE_SESSION_BIND_POINT_TYPE_MEMORY_ARM != bpr->bindPointType) {
             skip |= LogError("VUID-vkGetDataGraphPipelineSessionMemoryRequirementsARM-bindPoint-09784", device,
                              pinfo_loc.dot(Field::bindPoint),
-                             "%s has type %s, expected VK_DATA_GRAPH_PIPELINE_SESSION_BIND_POINT_TYPE_MEMORY_ARM",
+                             "{} has type {}, expected VK_DATA_GRAPH_PIPELINE_SESSION_BIND_POINT_TYPE_MEMORY_ARM",
                              string_VkDataGraphPipelineSessionBindPointARM(pInfo->bindPoint),
                              string_VkDataGraphPipelineSessionBindPointTypeARM(bpr->bindPointType));
         }
@@ -823,15 +856,15 @@ bool CoreChecks::PreCallValidateGetDataGraphPipelineSessionMemoryRequirementsARM
             skip |= LogError(
                 "VUID-VkDataGraphPipelineSessionMemoryRequirementsInfoARM-objectIndex-09855", device,
                 pinfo_loc.dot(Field::objectIndex),
-                "(%" PRIu32
+                "({}"
                 ") must be less than the number of objects returned by vkGetDataGraphPipelineSessionBindPointRequirementsARM via "
-                "VkDataGraphPipelineSessionBindPointRequirementARM::numObjects (%" PRIu32
-                ") with VkDataGraphPipelineSessionMemoryRequirementsInfoARM::bindPoint equal to (%s)",
+                "VkDataGraphPipelineSessionBindPointRequirementARM::numObjects ({}"
+                ") with VkDataGraphPipelineSessionMemoryRequirementsInfoARM::bindPoint equal to ({})",
                 pInfo->objectIndex, bpr->numObjects, string_VkDataGraphPipelineSessionBindPointARM(pInfo->bindPoint));
         }
     } else {
         skip |= LogError("VUID-vkGetDataGraphPipelineSessionMemoryRequirementsARM-bindPoint-09784", device,
-                         pinfo_loc.dot(Field::bindPoint), "(%s) not found in session memory requirements",
+                         pinfo_loc.dot(Field::bindPoint), "({}) not found in session memory requirements",
                          string_VkDataGraphPipelineSessionBindPointARM(pInfo->bindPoint));
     }
 
@@ -889,9 +922,9 @@ bool CoreChecks::ValidateResourceInfoImageLayouts(const LastBound& last_bound_st
 
                 skip |= LogError("VUID-VkDataGraphPipelineResourceInfoARM-descriptorSet-09962",
                                  LogObjectList(obj_list, ds_slot.ds_state->VkHandle()), error_obj.location,
-                                 "VkDataGraphPipelineCreateInfoARM::%s does not contain a "
+                                 "VkDataGraphPipelineCreateInfoARM::{} does not contain a "
                                  "VkDataGraphPipelineResourceInfoImageLayoutARM structure in its pNext chain but the "
-                                 "unifiedImageLayouts feature is not enabled.\n%s.",
+                                 "unifiedImageLayouts feature is not enabled.\n{}.",
                                  field.c_str(),
                                  PrintPNextChain(Struct::VkDataGraphPipelineResourceInfoARM, data_graph_ri.pNext).c_str());
             }
@@ -977,7 +1010,7 @@ bool CoreChecks::ValidateOpticalFlowImageLayouts(const LastBound& last_bound_sta
                     }
                     skip |=
                         LogError("VUID-vkCmdDispatchDataGraphARM-nodeType-09981",
-                                 LogObjectList(obj_list, ds_slot.ds_state->VkHandle()), error_obj.location, "%s", ss.str().c_str());
+                                 LogObjectList(obj_list, ds_slot.ds_state->VkHandle()), error_obj.location, "{}", ss.str().c_str());
                 }
             }
         }
@@ -1005,9 +1038,10 @@ bool CoreChecks::PreCallValidateCmdDispatchDataGraphARM(VkCommandBuffer commandB
             bound_memory_map.find(bpr.bindPoint) == bound_memory_map.end() ? 0 : bound_memory_map.at(bpr.bindPoint).size();
         if (bpr.numObjects != n_bound) {
             skip |= LogError("VUID-vkCmdDispatchDataGraphARM-session-09796", objlist, error_obj.location,
-                             "%zu objects bound at bind point %s, required numObjects %" PRIu32 "; session %s.", n_bound,
-                             string_VkDataGraphPipelineSessionBindPointARM(bpr.bindPoint), bpr.numObjects,
-                             FormatHandle(session_state).c_str());
+                             "{} objects bound at bind point {}, required numObjects {}"
+                             "; session {}.",
+                             n_bound, string_VkDataGraphPipelineSessionBindPointARM(bpr.bindPoint), bpr.numObjects,
+                             Handle(session_state));
         }
         if (n_bound > 0) {
             for (const auto& binding : bound_memory_map.at(bpr.bindPoint)) {
@@ -1026,9 +1060,8 @@ bool CoreChecks::PreCallValidateCmdDispatchDataGraphARM(VkCommandBuffer commandB
     if (session_state.create_info.dataGraphPipeline != cb_pipeline) {
         skip |= LogError(
             "VUID-vkCmdDispatchDataGraphARM-dataGraphPipeline-09951", objlist, error_obj.location,
-            "The pipeline bound to the command buffer (%s) is different from the pipeline bound to the session (%s); session %s.",
-            FormatHandle(cb_pipeline).c_str(), FormatHandle(session_state.create_info.dataGraphPipeline).c_str(),
-            FormatHandle(session_state).c_str());
+            "The pipeline bound to the command buffer ({}) is different from the pipeline bound to the session ({}); session {}.",
+            Handle(cb_pipeline), Handle(session_state.create_info.dataGraphPipeline), Handle(session_state));
     }
 
     skip |=
@@ -1059,7 +1092,9 @@ bool CoreChecks::PreCallValidateCmdDispatchDataGraphARM(VkCommandBuffer commandB
                 skip |= LogError("VUID-VkDataGraphPipelineOpticalFlowDispatchInfoARM-meanFlowL1NormHint-09976", objlist,
                                  error_obj.location.dot(Field::pInfo)
                                      .pNext(Struct::VkDataGraphPipelineOpticalFlowDispatchInfoARM, Field::meanFlowL1NormHint),
-                                 "(%" PRIu32 ") is greater than the maximum of the width (%" PRIu32 ") or height (%" PRIu32
+                                 "({}"
+                                 ") is greater than the maximum of the width ({}"
+                                 ") or height ({}"
                                  ") of the input image.",
                                  optical_flow_di->meanFlowL1NormHint, optical_flow_ci->width, optical_flow_ci->height);
             }
@@ -1076,8 +1111,7 @@ bool CoreChecks::PreCallValidateCmdDispatchDataGraphARM(VkCommandBuffer commandB
             skip |= LogError(
                 "VUID-vkCmdDispatchDataGraphARM-pInfo-09964", objlist,
                 error_obj.location.dot(Field::pInfo).pNext(Struct::VkDataGraphPipelineOpticalFlowDispatchInfoARM, Field::flags),
-                "contains disallowed bits (%s).",
-                string_VkDataGraphOpticalFlowExecuteFlagsARM(optical_flow_di->flags & mask).c_str());
+                "contains disallowed bits ({}).", vvl::Flags::DataGraphOpticalFlowExecuteFlagsARM(optical_flow_di->flags & mask));
         }
     }
 

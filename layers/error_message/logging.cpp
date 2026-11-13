@@ -19,6 +19,10 @@
 
 #include <csignal>
 #include <algorithm>
+#include <atomic>
+#include <iterator>
+#include <shared_mutex>
+#include <type_traits>
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 #include <debugapi.h>
 #endif
@@ -97,21 +101,74 @@ void DebugReport::RemoveDebugUtilsCallback(uint64_t callback) {
     SetDebugUtilsSeverityFlags(callbacks);
 }
 
-// We try to return as early as we can if we know we don't need to spend time logging the message
+namespace {
+// Per-thread buffers reused across messages. Never freed: thread_local destructors bring destruction-order and library
+// unloading problems (see thread_safety_validation.cpp), so each thread that ever logged leaks one set.
+struct FormatBuffers {
+    std::string message;       // the formatted main message
+    std::string full_message;  // the assembled text or JSON the callbacks receive
+    std::string fields;        // Location fields for JSON
+    std::string names;         // the object names, each followed by '\0'
+    std::vector<uint32_t> name_offsets;
+    std::vector<VkDebugUtilsObjectNameInfoEXT> object_name_infos;
+    std::vector<VkDebugUtilsLabelEXT> queue_labels;
+    std::vector<VkDebugUtilsLabelEXT> cmd_buf_labels;
+    FormatBuffers* next = nullptr;
+};
+
+// Keeps every thread's buffers reachable, so leak checkers do not report the buffers of threads that have exited
+std::atomic<FormatBuffers*> all_format_buffers{nullptr};
+
+FormatBuffers& ThreadFormatBuffers() {
+    thread_local FormatBuffers* buffers = nullptr;
+    static_assert(std::is_trivially_destructible_v<decltype(buffers)>);
+    if (!buffers) {
+        buffers = new FormatBuffers();
+        buffers->next = all_format_buffers.load(std::memory_order_relaxed);
+        while (!all_format_buffers.compare_exchange_weak(buffers->next, buffers, std::memory_order_release,
+                                                         std::memory_order_relaxed)) {
+        }
+    }
+    return *buffers;
+}
+}  // namespace
+
 bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects, const Location& loc,
-                             const std::string& main_message) {
+                             std::string_view format, vvl::format::format_args args) {
+    const std::optional<PassedFilters> passed = FilterMessage(msg_flags, vuid_text);
+    if (!passed) {
+        return false;  // never formatted
+    }
+    // Formatted outside debug_output_mutex, so threads that log at the same time only serialize on delivery
+    std::string& main_message = ThreadFormatBuffers().message;
+    main_message.clear();
+    vvl::format::VFormatTo(main_message, format, args);
+    return DeliverMessage(*passed, msg_flags, vuid_text, objects, loc, main_message);
+}
+
+bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects, const Location& loc,
+                             std::string_view main_message) {
+    const std::optional<PassedFilters> passed = FilterMessage(msg_flags, vuid_text);
+    if (!passed) {
+        return false;
+    }
+    return DeliverMessage(*passed, msg_flags, vuid_text, objects, loc, main_message);
+}
+
+// We try to return as early as we can if we know we don't need to spend time logging the message
+std::optional<DebugReport::PassedFilters> DebugReport::FilterMessage(VkFlags msg_flags, std::string_view vuid_text) {
     // Convert the info to the VK_EXT_debug_utils format
     VkDebugUtilsMessageSeverityFlagsEXT msg_severity;
     VkDebugUtilsMessageTypeFlagsEXT msg_type;
     DebugReportFlagsToAnnotFlags(msg_flags, &msg_severity, &msg_type);
     if (!(active_msg_severities & msg_severity) || !(active_msg_types & msg_type)) {
-        return false;
+        return std::nullopt;
     }
 
     // If message is in filter list, bail out very early
     const uint32_t vuid_hash = hash_util::VuidHash(vuid_text);
     if (filter_message_ids.find(vuid_hash) != filter_message_ids.end()) {
-        return false;
+        return std::nullopt;
     }
 
     // We have a few special VUID we never actually want to suppress.
@@ -124,13 +181,12 @@ bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, cons
         // Want to always keep dumping, similar to DebugPrintf
         (vuid_hash == 0xe5c5edc1);
 
-    // This lock needs to be here, duplicate_message_count_map is not safe to update on multiple threads
-    // see https://issues.angleproject.org/issues/450466850
-    std::unique_lock<std::mutex> lock(debug_output_mutex);
-
     // Count for this particular message is over the limit, ignore it
     bool at_message_limit = false;
     if (duplicate_message_limit > 0 && !skip_checking_limit) {
+        // duplicate_message_count_map is not safe to update on multiple threads
+        // see https://issues.angleproject.org/issues/450466850
+        std::lock_guard<std::mutex> lock(duplicate_message_count_mutex);
         auto vuid_count_it = duplicate_message_count_map.find(vuid_hash);
         if (vuid_count_it == duplicate_message_count_map.end()) {
             duplicate_message_count_map.emplace(vuid_hash, 1);
@@ -138,54 +194,87 @@ bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, cons
                 at_message_limit = true;
             }
         } else if (vuid_count_it->second >= duplicate_message_limit) {
-            return false;
+            return std::nullopt;
         } else {
-            // In theory we have not locked the mutex yet
-            // 1. Its hard to have 2 exact VUID be called at same time
-            // 2. This limit is rarely, if ever, used to get an exact amount and really just there to stop spamming the user
             vuid_count_it->second++;
             if (vuid_count_it->second >= duplicate_message_limit) {
                 at_message_limit = true;
             }
         }
     }
+    return PassedFilters{msg_severity, msg_type, vuid_hash, at_message_limit};
+}
 
-    std::vector<VkDebugUtilsLabelEXT> queue_labels;
-    std::vector<VkDebugUtilsLabelEXT> cmd_buf_labels;
+bool DebugReport::DeliverMessage(const PassedFilters& passed, VkFlags msg_flags, std::string_view vuid_text,
+                                 const LogObjectList& objects, const Location& loc, std::string_view main_message) {
+    const VkDebugUtilsMessageSeverityFlagsEXT msg_severity = passed.severity;
+    const VkDebugUtilsMessageTypeFlagsEXT msg_type = passed.type;
+    const uint32_t vuid_hash = passed.vuid_hash;
 
-    std::vector<std::string> object_labels;
-    // Ensures that push_back will not reallocate, thereby providing pointer
-    // stability for pushed strings.
-    object_labels.reserve(objects.object_list.size());
-
-    std::vector<VkDebugUtilsObjectNameInfoEXT> object_name_infos;
-    object_name_infos.reserve(objects.object_list.size());
-    for (uint32_t i = 0; i < objects.object_list.size(); i++) {
-        const VulkanTypedHandle& current_object = objects.object_list[i];
-        // If only one VkDevice was created, it is just noise to print it out in the error message.
-        // Also avoid printing unknown objects, likely if new function is calling error with null LogObjectList
-        if ((current_object.type == kVulkanObjectTypeDevice && device_created <= 1) ||
-            (current_object.type == kVulkanObjectTypeUnknown) || (current_object.handle == 0)) {
-            continue;
+    FormatBuffers& buffers = ThreadFormatBuffers();
+    std::vector<VkDebugUtilsObjectNameInfoEXT>& object_name_infos = buffers.object_name_infos;
+    object_name_infos.clear();
+    buffers.names.clear();
+    buffers.name_offsets.clear();
+    constexpr uint32_t kNoName = vvl::kU32Max;
+    {
+        // Copy the names out under the leaf lock, and release it before anything else is locked. Most applications never
+        // name an object; they skip the lock.
+        std::shared_lock<std::shared_mutex> name_lock(object_name_mutex, std::defer_lock);
+        const bool has_names = has_object_names.load();
+        if (has_names) {
+            name_lock.lock();
         }
+        for (const VulkanTypedHandle& current_object : objects.object_list) {
+            // If only one VkDevice was created, it is just noise to print it out in the error message.
+            // Also avoid printing unknown objects, likely if new function is calling error with null LogObjectList
+            if ((current_object.type == kVulkanObjectTypeDevice && device_created <= 1) ||
+                (current_object.type == kVulkanObjectTypeUnknown) || (current_object.handle == 0)) {
+                continue;
+            }
 
-        VkDebugUtilsObjectNameInfoEXT object_name_info = vku::InitStructHelper();
-        object_name_info.objectType = ConvertVulkanObjectToCoreObject(current_object.type);
-        object_name_info.objectHandle = current_object.handle;
-        object_name_info.pObjectName = nullptr;
+            VkDebugUtilsObjectNameInfoEXT object_name_info = vku::InitStructHelper();
+            object_name_info.objectType = ConvertVulkanObjectToCoreObject(current_object.type);
+            object_name_info.objectHandle = current_object.handle;
+            object_name_info.pObjectName = nullptr;
+            object_name_infos.push_back(object_name_info);
 
-        std::string object_label = {};
-        // Look for any debug utils or marker names to use for this object
-        // NOTE: the lock (debug_output_mutex) is held by the caller (LogMsg)
-        object_label = GetUtilsObjectNameNoLock(current_object.handle);
-        if (object_label.empty()) {
-            object_label = GetMarkerObjectNameNoLock(current_object.handle);
+            // Look for any debug utils or marker names to use for this object
+            const std::string* name = has_names ? FindObjectNameNoLock(current_object.handle) : nullptr;
+            if (name) {
+                buffers.name_offsets.push_back(static_cast<uint32_t>(buffers.names.size()));
+                buffers.names.append(*name).push_back('\0');
+            } else {
+                buffers.name_offsets.push_back(kNoName);
+            }
         }
-        if (!object_label.empty()) {
-            object_labels.push_back(std::move(object_label));
-            object_name_info.pObjectName = object_labels.back().c_str();
+    }
+    // Only now: appending names may have moved the buffer
+    for (size_t i = 0; i < object_name_infos.size(); ++i) {
+        if (buffers.name_offsets[i] != kNoName) {
+            object_name_infos[i].pObjectName = buffers.names.c_str() + buffers.name_offsets[i];
         }
+    }
 
+    // The text format is more minimal and will have other information in the callback, the JSON is designed to contain everything.
+    // Assembly only reads per-thread copies and settings, so it runs before debug_output_mutex is taken.
+    std::string& full_message = buffers.full_message;
+    full_message.clear();
+    if (message_format_settings.json) {
+        AppendMessageJson(full_message, buffers.fields, msg_flags, loc, object_name_infos, vuid_hash, vuid_text, main_message,
+                          passed.at_message_limit);
+    } else {
+        AppendMessageText(full_message, loc, vuid_text, main_message, passed.at_message_limit);
+    }
+
+    // Labels and the callback list are read under this lock, and callbacks are called under it
+    std::unique_lock<std::mutex> lock(debug_output_mutex);
+
+    std::vector<VkDebugUtilsLabelEXT>& queue_labels = buffers.queue_labels;
+    std::vector<VkDebugUtilsLabelEXT>& cmd_buf_labels = buffers.cmd_buf_labels;
+    queue_labels.clear();
+    cmd_buf_labels.clear();
+    for (const VkDebugUtilsObjectNameInfoEXT& object_name_info : object_name_infos) {
         // If this is a queue, add any queue labels to the callback data.
         if (VK_OBJECT_TYPE_QUEUE == object_name_info.objectType) {
             auto label_iter = debug_utils_queue_labels.find(reinterpret_cast<VkQueue>(object_name_info.objectHandle));
@@ -200,8 +289,6 @@ bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, cons
                 label_iter->second->Export(cmd_buf_labels);
             }
         }
-
-        object_name_infos.push_back(object_name_info);
     }
 
     VkDebugUtilsMessengerCallbackDataEXT callback_data = vku::InitStructHelper();
@@ -215,11 +302,6 @@ bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, cons
     callback_data.pCmdBufLabels = cmd_buf_labels.empty() ? nullptr : cmd_buf_labels.data();
     callback_data.objectCount = static_cast<uint32_t>(object_name_infos.size());
     callback_data.pObjects = object_name_infos.data();
-
-    // The text format is more minimal and will have other information in the callback, the JSON is designed to contain everything
-    std::string full_message = message_format_settings.json ? CreateMessageJson(msg_flags, loc, object_name_infos, vuid_hash,
-                                                                                vuid_text, main_message, at_message_limit)
-                                                            : CreateMessageText(loc, vuid_text, main_message, at_message_limit);
 
     const auto callback_list = &debug_callback_list;
     // We only output to default callbacks if there are no non-default callbacks
@@ -268,24 +350,28 @@ bool DebugReport::LogMessage(VkFlags msg_flags, std::string_view vuid_text, cons
     return bail;
 }
 
-std::string DebugReport::CreateMessageText(const Location& loc, std::string_view vuid_text, const std::string& main_message,
-                                           bool at_message_limit) {
-    std::ostringstream oss;
-
+void DebugReport::AppendMessageText(std::string& out, const Location& loc, std::string_view vuid_text,
+                                    std::string_view main_message, bool at_message_limit) const {
 #if defined(BUILD_SELF_VVL)
-    oss << "[Self Validation] ";  // How we know if the error is from Self Validation when debugging GPU-AV
+    out += "[Self Validation] ";  // How we know if the error is from Self Validation when debugging GPU-AV
 #endif
 
     if (message_format_settings.display_application_name && !message_format_settings.application_name.empty()) {
-        oss << "[AppName: " << message_format_settings.application_name << "] ";
+        out += "[AppName: ";
+        out += message_format_settings.application_name;
+        out += "] ";
     }
 
     if (at_message_limit) {
-        oss << "(Warning - This VUID has now been reported " << duplicate_message_limit
-            << " times, which is the duplicate_message_limit value, this will be the last time reporting it).\n";
+        VVL_FMT_NS::format_to(std::back_inserter(out),
+                              "(Warning - This VUID has now been reported {} times, which is the duplicate_message_limit value, "
+                              "this will be the last time reporting it).\n",
+                              duplicate_message_limit);
     }
 
-    oss << loc.Message() << " " << main_message;
+    loc.AppendMessage(out);
+    out += ' ';
+    out += main_message;
 
     // Append the spec error text to the error message, unless it contains a word treated as special
     if ((vuid_text.find("VUID-") != std::string::npos)) {
@@ -312,40 +398,41 @@ std::string DebugReport::CreateMessageText(const Location& loc, std::string_view
             // This provides better separation between error message and spec text
             // (Don't add if end with a number, otherwise it looks like a floating point number)
             if (last_char != '.' && last_char != '\n' && (last_char < '0' || last_char > '9')) {
-                oss << '.';
+                out += '.';
             }
 
             // Start Vulkan spec text with a new line to make it easier visually
             if (last_char != '\n') {
-                oss << '\n';
+                out += '\n';
             }
 
-            oss << "The Vulkan spec states: " << spec_text << " (" << spec_url_base << spec_url_section << "#" << vuid_text << ")";
+            VVL_FMT_NS::format_to(std::back_inserter(out), "The Vulkan spec states: {} ({}{}#{})", spec_text, spec_url_base,
+                                  spec_url_section, vuid_text);
         }
     }
-
-    return oss.str();
 }
 
 // Anything that ends up inside a JSON string has to be escaped
-static void AppendJsonEscaped(std::ostringstream& oss, std::string_view text) {
+static void AppendJsonEscaped(std::string& out, std::string_view text) {
     // clang-format off
     for (char c : text) {
         switch (c) {
-            case '"':  oss << "\\\""; break;
-            case '\\': oss << "\\\\"; break;
-            case '\n': oss << "\\n";  break;
-            case '\r': oss << "\\r";  break;
-            case '\t': oss << "\\t";  break;
-            case '\b': oss << "\\b";  break;
-            case '\f': oss << "\\f";  break;
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            case '\b': out += "\\b";  break;
+            case '\f': out += "\\f";  break;
             default:
                 if (static_cast<unsigned char>(c) < 0x20) {
                     // JSON requires the remaining control characters use the \u form
                     const char* hex_digits = "0123456789abcdef";
-                    oss << "\\u00" << hex_digits[(c >> 4) & 0xf] << hex_digits[c & 0xf];
+                    out += "\\u00";
+                    out += hex_digits[(c >> 4) & 0xf];
+                    out += hex_digits[c & 0xf];
                 } else {
-                    oss << c;
+                    out += c;
                 }
                 break;
         }
@@ -353,156 +440,158 @@ static void AppendJsonEscaped(std::ostringstream& oss, std::string_view text) {
     // clang-format on
 }
 
-std::string DebugReport::CreateMessageJson(VkFlags msg_flags, const Location& loc,
-                                           const std::vector<VkDebugUtilsObjectNameInfoEXT>& object_name_infos,
-                                           const uint32_t vuid_hash, std::string_view vuid_text, const std::string& main_message,
-                                           bool at_message_limit) {
-    std::ostringstream oss;
+void DebugReport::AppendMessageJson(std::string& out, std::string& fields, VkFlags msg_flags, const Location& loc,
+                                    const std::vector<VkDebugUtilsObjectNameInfoEXT>& object_name_infos, const uint32_t vuid_hash,
+                                    std::string_view vuid_text, std::string_view main_message, bool at_message_limit) const {
     // For now we just list each JSON field as a new line as it is "pretty-print enough".
     // For Android, things get logged in logcat and having the JSON as a single line is easier to grab from the terminal.
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    char new_line = ' ';
-    char line_start = ' ';
+    const char new_line = ' ';
+    const char line_start = ' ';
 #else
-    char new_line = '\n';
-    char line_start = '\t';
+    const char new_line = '\n';
+    const char line_start = '\t';
 #endif
+    auto field_start = [&](const char* name) {
+        out += line_start;
+        out += '"';
+        out += name;
+        out += "\" : \"";
+    };
+    auto field_end = [&](bool last = false) {
+        out += last ? "\"" : "\",";
+        out += new_line;
+    };
 
-    oss << "{" << new_line;
+    out += '{';
+    out += new_line;
 
     if (message_format_settings.display_application_name && !message_format_settings.application_name.empty()) {
-        oss << line_start << "\"AppName\" : \"";
-        AppendJsonEscaped(oss, message_format_settings.application_name);
-        oss << "\"," << new_line;
+        field_start("AppName");
+        AppendJsonEscaped(out, message_format_settings.application_name);
+        field_end();
     }
 
-    {
-        oss << line_start << "\"Severity\" : \"";
-        if (msg_flags & kErrorBit) {
-            oss << "Error";
-        } else if (msg_flags & kWarningBit) {
-            oss << "Warning";
-        } else if (msg_flags & kPerformanceWarningBit) {
-            oss << "Performance Warning";
-        } else if (msg_flags & kInformationBit) {
-            oss << "Information";
-        } else if (msg_flags & kVerboseBit) {
-            oss << "Verbose";
-        }
-        oss << "\"," << new_line;
+    field_start("Severity");
+    if (msg_flags & kErrorBit) {
+        out += "Error";
+    } else if (msg_flags & kWarningBit) {
+        out += "Warning";
+    } else if (msg_flags & kPerformanceWarningBit) {
+        out += "Performance Warning";
+    } else if (msg_flags & kInformationBit) {
+        out += "Information";
+    } else if (msg_flags & kVerboseBit) {
+        out += "Verbose";
     }
+    field_end();
 
-    {
-        oss << line_start << "\"VUID\" : \"";
-        AppendJsonEscaped(oss, vuid_text);
-        oss << "\"," << new_line;
-    }
+    field_start("VUID");
+    AppendJsonEscaped(out, vuid_text);
+    field_end();
 
-    {
-        oss << line_start << "\"Objects\" : [" << new_line;
-        for (uint32_t i = 0; i < object_name_infos.size(); i++) {
-            const VkDebugUtilsObjectNameInfoEXT& src_object = object_name_infos[i];
+    out += line_start;
+    out += "\"Objects\" : [";
+    out += new_line;
+    for (uint32_t i = 0; i < object_name_infos.size(); i++) {
+        const VkDebugUtilsObjectNameInfoEXT& src_object = object_name_infos[i];
 
-            oss << line_start << line_start;
-            oss << "{\"type\" : \"" << string_VkObjectTypeHandleName(src_object.objectType) << "\", \"handle\" : \"";
-            if (0 != src_object.objectHandle) {
-                oss << "0x" << std::hex << src_object.objectHandle << std::dec;
-                oss << "\", \"name\" : \"";
-                if (src_object.pObjectName) {
-                    AppendJsonEscaped(oss, src_object.pObjectName);
-                }
-                oss << "\"}";
-            } else {
-                oss << "VK_NULL_HANDLE\", \"name\" : \"\"}";
+        out += line_start;
+        out += line_start;
+        out += "{\"type\" : \"";
+        out += string_VkObjectTypeHandleName(src_object.objectType);
+        out += "\", \"handle\" : \"";
+        if (0 != src_object.objectHandle) {
+            VVL_FMT_NS::format_to(std::back_inserter(out), "0x{:x}", src_object.objectHandle);
+            out += "\", \"name\" : \"";
+            if (src_object.pObjectName) {
+                AppendJsonEscaped(out, src_object.pObjectName);
             }
-            if (i + 1 != object_name_infos.size()) {
-                oss << ",";
-            }
-            oss << new_line;
+            out += "\"}";
+        } else {
+            out += "VK_NULL_HANDLE\", \"name\" : \"\"}";
         }
-        oss << line_start << "]," << new_line;
-    }
-
-    {
-        oss << line_start << "\"MessageID\" : \"0x" << std::hex << vuid_hash << std::dec << "\"," << new_line;
-    }
-    {
-        oss << line_start << "\"Function\" : \"" << loc.StringFunc() << "\"," << new_line;
-    }
-    {
-        oss << line_start << "\"Location\" : \"";
-        AppendJsonEscaped(oss, loc.Fields());
-        oss << "\"," << new_line;
-    }
-    {
-        oss << line_start << "\"MainMessage\" : \"";
-
-        if (at_message_limit) {
-            oss << "(Warning - This VUID has now been reported " << duplicate_message_limit
-                << " times, which is the duplicate_message_limit value, this will be the last time reporting it). ";
+        if (i + 1 != object_name_infos.size()) {
+            out += ',';
         }
+        out += new_line;
+    }
+    out += line_start;
+    out += "],";
+    out += new_line;
 
-        // For cases where we have multi-lines in the message, we need to escape them.
-        // The idea is the JSON is machine readable and when someone prints the value out, the new lines will resolve then.
-        AppendJsonEscaped(oss, main_message);
-        oss << "\"," << new_line;
-    }
-    {
-        oss << line_start << "\"VkFrameBoundaryEXT::frameID\" : \"";
-        if (loc.frame_id != vvl::kNoIndex64) {
-            oss << loc.frame_id;
-        }
-        oss << "\"," << new_line;
-    }
-    {
-        oss << line_start << "\"DebugRegion\" : \"";
-        if (loc.debug_region && !loc.debug_region->empty()) {
-            AppendJsonEscaped(oss, *loc.debug_region);
-        }
-        oss << "\"," << new_line;
-    }
+    field_start("MessageID");
+    VVL_FMT_NS::format_to(std::back_inserter(out), "0x{:x}", vuid_hash);
+    field_end();
 
+    field_start("Function");
+    out += loc.StringFunc();
+    field_end();
+
+    field_start("Location");
+    fields.clear();
+    loc.AppendFields(fields);
+    AppendJsonEscaped(out, fields);
+    field_end();
+
+    field_start("MainMessage");
+    if (at_message_limit) {
+        VVL_FMT_NS::format_to(std::back_inserter(out),
+                              "(Warning - This VUID has now been reported {} times, which is the duplicate_message_limit value, "
+                              "this will be the last time reporting it). ",
+                              duplicate_message_limit);
+    }
+    // For cases where we have multi-lines in the message, we need to escape them.
+    // The idea is the JSON is machine readable and when someone prints the value out, the new lines will resolve then.
+    AppendJsonEscaped(out, main_message);
+    field_end();
+
+    field_start("VkFrameBoundaryEXT::frameID");
+    if (loc.frame_id != vvl::kNoIndex64) {
+        VVL_FMT_NS::format_to(std::back_inserter(out), "{}", loc.frame_id);
+    }
+    field_end();
+
+    field_start("DebugRegion");
+    if (loc.debug_region && !loc.debug_region->empty()) {
+        AppendJsonEscaped(out, *loc.debug_region);
+    }
+    field_end();
+
+    const char* spec_text = nullptr;
+    // Only the Antora site will make use of the sections
+    const char* spec_url_section = nullptr;
     if ((vuid_text.find("VUID-") != std::string::npos)) {
-        const char* spec_text = nullptr;
-        // Only the Antora site will make use of the sections
-        const char* spec_url_section = nullptr;
         const auto found_vuid = GetVuidMap().find(vuid_text);
         if (found_vuid != GetVuidMap().end()) {
             spec_text = found_vuid->second.spec_text.data();
             spec_url_section = found_vuid->second.url_id.data();
         }
-        if (spec_text) {
-            oss << line_start << "\"SpecText\" : \"";
-            AppendJsonEscaped(oss, spec_text);
-            oss << "\"," << new_line;
-        } else {
-            oss << line_start << "\"SpecText\" : \"\"," << new_line;
-        }
-
-        // Construct and append the specification text and link to the appropriate version of the spec
-        if (spec_text && spec_url_section) {
-#ifdef ANNOTATED_SPEC_LINK
-            std::string spec_url_base = ANNOTATED_SPEC_LINK;
-#else
-            std::string spec_url_base = "https://docs.vulkan.org/spec/latest/";
-#endif
-            oss << line_start << "\"SpecUrl\" : \"" << spec_url_base << spec_url_section << "#";
-            AppendJsonEscaped(oss, vuid_text);
-            oss << "\"" << new_line;
-
-        } else {
-            oss << line_start << "\"SpecUrl\" : \"\"" << new_line;
-        }
-    } else {
-        oss << line_start << "\"SpecText\" : \"\"," << new_line;
-        oss << line_start << "\"SpecUrl\" : \"\"" << new_line;
     }
-    oss << "}";
-    return oss.str();
+    field_start("SpecText");
+    if (spec_text) {
+        AppendJsonEscaped(out, spec_text);
+    }
+    field_end();
+
+    // Construct and append the specification text and link to the appropriate version of the spec
+    field_start("SpecUrl");
+    if (spec_text && spec_url_section) {
+#ifdef ANNOTATED_SPEC_LINK
+        out += ANNOTATED_SPEC_LINK;
+#else
+        out += "https://docs.vulkan.org/spec/latest/";
+#endif
+        out += spec_url_section;
+        out += '#';
+        AppendJsonEscaped(out, vuid_text);
+    }
+    field_end(true);
+    out += '}';
 }
 
 void DebugReport::SetUtilsObjectName(const VkDebugUtilsObjectNameInfoEXT* pNameInfo) {
-    std::unique_lock<std::mutex> lock(debug_output_mutex);
+    std::unique_lock<std::shared_mutex> lock(object_name_mutex);
     if (pNameInfo->pObjectName) {
         debug_utils_object_name_map[pNameInfo->objectHandle] = pNameInfo->pObjectName;
         has_object_names.store(true);
@@ -512,7 +601,7 @@ void DebugReport::SetUtilsObjectName(const VkDebugUtilsObjectNameInfoEXT* pNameI
 }
 
 void DebugReport::SetMarkerObjectName(const VkDebugMarkerObjectNameInfoEXT* pNameInfo) {
-    std::unique_lock<std::mutex> lock(debug_output_mutex);
+    std::unique_lock<std::shared_mutex> lock(object_name_mutex);
     if (pNameInfo->pObjectName) {
         debug_object_name_map[pNameInfo->object] = pNameInfo->pObjectName;
         has_object_names.store(true);
@@ -522,15 +611,37 @@ void DebugReport::SetMarkerObjectName(const VkDebugMarkerObjectNameInfoEXT* pNam
 }
 
 void DebugReport::EraseObjectName(uint64_t object_handle) {
-    // Skip using the |debug_output_mutex| lock for a fast return if there is no name
+    // Skip using the |object_name_mutex| lock for a fast return if there is no name
     if (has_object_names.load()) {
-        std::unique_lock<std::mutex> lock(debug_output_mutex);
+        std::unique_lock<std::shared_mutex> lock(object_name_mutex);
         debug_utils_object_name_map.erase(object_handle);
         debug_object_name_map.erase(object_handle);
     }
 }
 
-// NoLock suffix means that the function itself does not hold debug_output_mutex lock,
+std::string DebugReport::GetUtilsObjectName(uint64_t object) const {
+    std::shared_lock<std::shared_mutex> lock(object_name_mutex);
+    return GetUtilsObjectNameNoLock(object);
+}
+
+std::string DebugReport::GetMarkerObjectName(uint64_t object) const {
+    std::shared_lock<std::shared_mutex> lock(object_name_mutex);
+    return GetMarkerObjectNameNoLock(object);
+}
+
+const std::string* DebugReport::FindObjectNameNoLock(uint64_t object) const {
+    const auto utils_name_iter = debug_utils_object_name_map.find(object);
+    if (utils_name_iter != debug_utils_object_name_map.end() && !utils_name_iter->second.empty()) {
+        return &utils_name_iter->second;
+    }
+    const auto marker_name_iter = debug_object_name_map.find(object);
+    if (marker_name_iter != debug_object_name_map.end() && !marker_name_iter->second.empty()) {
+        return &marker_name_iter->second;
+    }
+    return nullptr;
+}
+
+// NoLock suffix means that the function itself does not hold object_name_mutex,
 // and it's **mandatory responsibility** of the caller to hold this lock.
 std::string DebugReport::GetUtilsObjectNameNoLock(const uint64_t object) const {
     std::string label = "";
@@ -541,7 +652,7 @@ std::string DebugReport::GetUtilsObjectNameNoLock(const uint64_t object) const {
     return label;
 }
 
-// NoLock suffix means that the function itself does not hold debug_output_mutex lock,
+// NoLock suffix means that the function itself does not hold object_name_mutex,
 // and it's **mandatory responsibility** of the caller to hold this lock.
 std::string DebugReport::GetMarkerObjectNameNoLock(const uint64_t object) const {
     std::string label = "";
@@ -553,11 +664,8 @@ std::string DebugReport::GetMarkerObjectNameNoLock(const uint64_t object) const 
 }
 
 std::string DebugReport::FormatHandle(const char* handle_type_name, uint64_t handle) const {
-    std::unique_lock<std::mutex> lock(debug_output_mutex);
-    std::string handle_name = GetUtilsObjectNameNoLock(handle);
-    if (handle_name.empty()) {
-        handle_name = GetMarkerObjectNameNoLock(handle);
-    }
+    std::string handle_name;
+    WithObjectName(handle, [&handle_name](const std::string& name) { handle_name = name; });
 
     std::ostringstream str;
     str << handle_type_name << " ";
@@ -778,12 +886,6 @@ VKAPI_ATTR void DeactivateInstanceDebugCallbacks(DebugReport* debug_report) {
     for (const auto& item : instance_report_callback_handles) {
         LayerDestroyCallback(debug_report, item);
     }
-}
-
-bool DebugReport::LogMessageVaList(VkFlags msg_flags, std::string_view vuid_text, const LogObjectList& objects, const Location& loc,
-                                   const char* format, va_list argptr) {
-    const std::string main_message = text::VFormat(format, argptr);
-    return LogMessage(msg_flags, vuid_text, objects, loc, main_message);
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL MessengerBreakCallback([[maybe_unused]] VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,

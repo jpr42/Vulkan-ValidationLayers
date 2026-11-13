@@ -102,10 +102,11 @@ bool DescriptorHashTable::Insert(uint64_t key, const Entry& entry, const DeviceS
             if (first_tombstone_index == vvl::kNoIndex32 && !limit_reported) {
                 limit_reported = true;
                 dev_data.LogError("DESCRIPTOR-HASHING-LIMIT", {}, loc,
-                                  "The internal descriptor_hashing hash map capacity is %" PRIu32
+                                  "The internal descriptor_hashing hash map capacity is {}"
                                   " which has been reached and no more descriptors hashes can be saved.\nThis can be adjusted "
                                   "setting VK_LAYER_DESCRIPTOR_HASHING_TOTAL_DESCRIPTORS (descriptor_hashing_total_descriptors) to "
-                                  "larger value (suggest %" PRIu32 ")",
+                                  "larger value (suggest {}"
+                                  ")",
                                   capacity, capacity << 1);
                 // We "could" just update the newer descriptor hash as it should be used,
                 // but better to just have the user increase the hashmap size
