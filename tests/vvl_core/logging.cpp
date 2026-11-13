@@ -42,7 +42,8 @@ struct CountsFormatting {
 template <>
 struct VVL_FMT_NS::formatter<CountsFormatting> {
     constexpr auto parse(VVL_FMT_NS::format_parse_context& ctx) { return ctx.begin(); }
-    auto format(const CountsFormatting& value, VVL_FMT_NS::format_context& ctx) const {
+    template <typename FormatContext>
+    auto format(const CountsFormatting& value, FormatContext& ctx) const {
         ++*value.count;
         return VVL_FMT_NS::format_to(ctx.out(), "counted");
     }
