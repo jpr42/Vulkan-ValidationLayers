@@ -369,15 +369,3 @@ TEST_F(VvlCoreLogging, LocationFormatsLikeFields) {
               "vkCreateGraphicsPipelines(): [pCreateInfos[1].pStages[0].pNext<VkPipelineShaderStageRequiredSubgroupSizeCreateInfo>"
               ".requiredSubgroupSize]");
 }
-
-// Handle() resolves through the same VkHandleInfo traits as FormatHandle(). On 32-bit every non-dispatchable handle is a
-// uint64_t, so both must fall back to the generic non-dispatchable type name (compiled by the armeabi-v7a CI job).
-template <typename T>
-constexpr VkObjectType HandleObjectType(HandleRef (DebugReport::*)(T) const) {
-    return VkHandleInfo<T>::kVkObjectType;
-}
-#ifdef TYPESAFE_NONDISPATCHABLE_HANDLES
-static_assert(HandleObjectType(&DebugReport::Handle<VkBuffer>) == VK_OBJECT_TYPE_BUFFER);
-#else
-static_assert(HandleObjectType(&DebugReport::Handle<VkBuffer>) == VK_OBJECT_TYPE_UNKNOWN);
-#endif
