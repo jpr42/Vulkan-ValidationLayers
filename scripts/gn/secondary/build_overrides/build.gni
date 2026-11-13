@@ -17,3 +17,11 @@ ignore_elf32_limitations = true
 linux_use_bundled_binutils_override = false
 use_system_xcode = true
 enable_java_templates = false
+
+# Required by //build/config/c++/c++.gni once Chromium's libc++ is used. Same choice as ANGLE: hardened libc++ on Windows
+# and Linux (turning it off breaks TSan there), not elsewhere.
+if (is_win || is_linux) {
+  enable_safe_libcxx = true
+} else {
+  enable_safe_libcxx = false
+}
